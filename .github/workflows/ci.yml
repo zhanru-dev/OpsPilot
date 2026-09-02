@@ -49,8 +49,8 @@ jobs:
       WEBHOOK_SECRET_ENCRYPTION_KEY: ci-webhook-encryption-key-that-is-long-enough
       WEBHOOK_RECEIVER_BASE_URL: http://localhost:4100/api/v1/demo/webhook-receiver
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -109,7 +109,7 @@ jobs:
       WEBHOOK_SECRET_ENCRYPTION_KEY: ci-webhook-encryption-key-that-is-long-enough
       WEBHOOK_RECEIVER_BASE_URL: http://localhost:4100/api/v1/demo/webhook-receiver
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker compose up -d --wait redis minio
       - name: Build production images
         run: |

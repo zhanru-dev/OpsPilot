@@ -683,7 +683,7 @@ async function main() {
     },
   });
 
-  console.info("Seeded OpsPilot v1.2 demo data.");
+  console.info("Seeded OpsPilot v1.5 demo data.");
   console.info("Operations Manager: alex.morgan@opspilot.demo / DemoPass123!");
   console.info("Analyst: maya.chen@opspilot.demo / DemoPass123!");
 }

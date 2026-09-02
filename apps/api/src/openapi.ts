@@ -32,7 +32,7 @@ export const openApiDocument = {
   openapi: '3.1.0',
   info: {
     title: 'OpsPilot API',
-    version: '1.2.0',
+    version: '1.5.0',
     description:
       'Workspace-scoped API for launch readiness, private media processing, reliable integrations, grounded AI advisory and persisted operational analytics.',
   },

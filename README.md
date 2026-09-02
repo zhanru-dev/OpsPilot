@@ -4,7 +4,7 @@
 
 OpsPilot is an English-first B2B operations platform for teams running complex online events. Its first vertical, **StreamOps**, turns fragmented event setup into an explainable launch-readiness workflow: accountable ownership, audience policy, critical runbooks, watch-page content, media state, recommendations and audit history in one control surface.
 
-`v1.2.0` is the current local flagship release. It is intentionally narrower than a livestream suite and deeper than a dashboard mock-up: the golden flow is database-backed, tenant-scoped, role-aware, asynchronous, measured, tested and documented.
+`v1.5.0` is the current release candidate. It keeps the verified v1.2 product scope and adds production configuration, independent deployable services and release smoke tests. The golden flow is database-backed, tenant-scoped, role-aware, asynchronous, measured, tested and documented.
 
 ## Product Thesis
 
@@ -12,7 +12,7 @@ OpsPilot is an English-first B2B operations platform for teams running complex o
 
 The centrepiece is **Launch Control**. A versioned rules engine converts operational evidence into a score out of 100, distinguishes hard blockers from non-blocking gaps, and prevents invalid state transitions. Recommendations explain both the evidence and the suggested action.
 
-## v1.2 Evidence
+## Platform Evidence
 
 - Next.js 16, React 19, TypeScript and Tailwind CSS application.
 - NestJS REST API with secure cookie sessions, token rotation and rate limiting.
@@ -166,7 +166,7 @@ Scores and evidence are calculated by the API. The UI does not decide whether a 
 
 ## Version Boundary
 
-`v1.2.0` adds grounded optional AI, persisted analytics, application error evidence and the public portfolio package while preserving deterministic launch authority. See the [v1.2 release record](docs/v1.2-release.md).
+`v1.5.0` freezes the v1.2 product scope and adds reproducible production images, fail-fast environment validation, deployment security controls and public smoke-test automation. The release becomes final when the hosted Web, API, worker and managed dependencies pass the deployment gate. See the [v1.2 product release record](docs/v1.2-release.md) and [v1.5 deployment scope](docs/product-strategy.md#105-v15-public-deployment-and-release-operations).
 
 - `v2`: HLS processing, live-session control, realtime updates, Portal Hub and advanced integration workflows.
 

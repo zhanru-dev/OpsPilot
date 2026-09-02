@@ -246,7 +246,7 @@ export default function CaseStudyPage() {
       <footer className="bg-white">
         <div className="mx-auto flex max-w-[1280px] flex-col justify-between gap-5 px-5 py-10 sm:flex-row sm:items-center sm:px-8">
           <div>
-            <p className="font-bold">OpsPilot v1.2</p>
+            <p className="font-bold">OpsPilot v1.5</p>
             <p className="mt-1 text-sm text-[var(--muted)]">
               Original clean-room portfolio implementation.
             </p>
