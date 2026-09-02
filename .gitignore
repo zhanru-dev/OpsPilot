@@ -1,0 +1,17 @@
+node_modules/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+.runtime/
+.env
+.env.local
+.env.*.local
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+prisma/dev.db*

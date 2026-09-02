@@ -1,0 +1,674 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  ADMIN
+  OPERATIONS_MANAGER
+  CONTENT_OPERATOR
+  ANALYST
+  VIEWER
+}
+
+enum EventStatus {
+  DRAFT
+  CONFIGURING
+  READY
+  LIVE
+  COMPLETED
+  ARCHIVED
+  CANCELLED
+}
+
+enum RunbookStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum AccessMode {
+  PUBLIC
+  REGISTRATION
+  EMAIL_DOMAIN
+  INVITE_ONLY
+}
+
+enum ContentBlockType {
+  HERO
+  AGENDA
+  SPEAKER
+  RESOURCE
+  ANNOUNCEMENT
+}
+
+enum MediaKind {
+  VIDEO
+  AUDIO
+}
+
+enum MediaStatus {
+  PENDING_UPLOAD
+  UPLOADING
+  PROCESSING
+  READY
+  FAILED
+  DELETED
+}
+
+enum MediaUploadStatus {
+  PENDING
+  UPLOADED
+  EXPIRED
+  CANCELLED
+}
+
+enum MediaProcessingJobStatus {
+  QUEUED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum MediaProcessingAttemptStatus {
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum MediaVariantKind {
+  PREVIEW
+  THUMBNAIL
+}
+
+enum OutboxStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
+enum WebhookEndpointStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERING
+  RETRYING
+  SUCCEEDED
+  FAILED
+}
+
+enum WebhookAttemptStatus {
+  SUCCEEDED
+  FAILED
+}
+
+enum RecommendationSeverity {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum RecommendationStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum RecommendationRunProvider {
+  DETERMINISTIC
+  OPENAI
+}
+
+enum RecommendationRunStatus {
+  APPLIED
+  AWAITING_CONFIRMATION
+  FALLBACK
+  REJECTED
+  FAILED
+}
+
+enum AnalyticsGranularity {
+  DAILY
+}
+
+enum ErrorReportSource {
+  WEB
+  API
+  WORKER
+}
+
+enum ErrorReportSeverity {
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum ErrorReportStatus {
+  OPEN
+  RESOLVED
+}
+
+model User {
+  id                          String                @id @default(uuid())
+  email                       String                @unique
+  passwordHash                String
+  name                        String
+  jobTitle                    String?
+  avatarInitials              String
+  createdAt                   DateTime              @default(now())
+  updatedAt                   DateTime              @updatedAt
+  memberships                 WorkspaceMembership[]
+  sessions                    Session[]
+  ownedEvents                 StreamEvent[]         @relation("EventOwner")
+  assignedTasks               RunbookItem[]         @relation("RunbookOwner")
+  resolvedActions             Recommendation[]      @relation("RecommendationResolver")
+  requestedRecommendationRuns RecommendationRun[]   @relation("RecommendationRunRequester")
+  confirmedRecommendationRuns RecommendationRun[]   @relation("RecommendationRunConfirmer")
+  updatedFeatureFlags         FeatureFlag[]         @relation("FeatureFlagUpdater")
+  errorReports                ErrorReport[]
+  auditLogs                   AuditLog[]            @relation("AuditActor")
+}
+
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  refreshTokenHash String
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Workspace {
+  id                 String                @id @default(uuid())
+  name               String
+  slug               String                @unique
+  timezone           String                @default("Europe/London")
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  memberships        WorkspaceMembership[]
+  events             StreamEvent[]
+  mediaAssets        MediaAsset[]
+  mediaUploads       MediaUpload[]
+  domainEvents       DomainEvent[]
+  webhookEndpoints   WebhookEndpoint[]
+  webhookDeliveries  WebhookDelivery[]
+  recommendationRuns RecommendationRun[]
+  analyticsSnapshots AnalyticsSnapshot[]
+  featureFlags       FeatureFlag[]
+  errorReports       ErrorReport[]
+  auditLogs          AuditLog[]
+}
+
+model WorkspaceMembership {
+  id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole
+  createdAt   DateTime      @default(now())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model StreamEvent {
+  id                   String                @id @default(uuid())
+  workspaceId          String
+  ownerId              String?
+  title                String
+  slug                 String
+  description          String
+  status               EventStatus           @default(DRAFT)
+  scheduledStart       DateTime
+  scheduledEnd         DateTime
+  timezone             String                @default("Europe/London")
+  expectedAttendees    Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner                User?                 @relation("EventOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  accessPolicy         AccessPolicy?
+  runbookItems         RunbookItem[]
+  readinessAssessments ReadinessAssessment[]
+  contentBlocks        ContentBlock[]
+  mediaAssets          EventMediaAsset[]
+  recommendations      Recommendation[]
+  recommendationRuns   RecommendationRun[]
+  auditLogs            AuditLog[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId, status, scheduledStart])
+  @@index([ownerId])
+}
+
+model RunbookItem {
+  id          String        @id @default(uuid())
+  eventId     String
+  ownerId     String?
+  title       String
+  description String?
+  status      RunbookStatus @default(TODO)
+  isCritical  Boolean       @default(false)
+  dueAt       DateTime?
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  event       StreamEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  owner       User?         @relation("RunbookOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([eventId, sortOrder])
+}
+
+model ReadinessAssessment {
+  id          String      @id @default(uuid())
+  eventId     String
+  score       Int
+  ruleVersion String      @default("1.0")
+  criteria    Json
+  blockers    Json
+  createdAt   DateTime    @default(now())
+  event       StreamEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, createdAt])
+}
+
+model AccessPolicy {
+  id                 String      @id @default(uuid())
+  eventId            String      @unique
+  mode               AccessMode
+  allowedDomains     String[]    @default([])
+  requiresConsent    Boolean     @default(true)
+  collectCompany     Boolean     @default(false)
+  collectJobTitle    Boolean     @default(false)
+  registrationFields Json?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  event              StreamEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model ContentBlock {
+  id        String           @id @default(uuid())
+  eventId   String
+  type      ContentBlockType
+  title     String
+  body      String
+  metadata  Json?
+  isVisible Boolean          @default(true)
+  sortOrder Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  event     StreamEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, sortOrder])
+}
+
+model MediaAsset {
+  id                 String               @id @default(uuid())
+  workspaceId        String
+  name               String
+  kind               MediaKind
+  status             MediaStatus
+  description        String?
+  durationSeconds    Int?
+  sizeBytes          Int?
+  width              Int?
+  height             Int?
+  sourceContentType  String?
+  originalObjectKey  String?
+  previewUrl         String?
+  thumbnailUrl       String?
+  failureReason      String?
+  processingProgress Int                  @default(0)
+  uploadedAt         DateTime?
+  processedAt        DateTime?
+  isSeeded           Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  workspace          Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  events             EventMediaAsset[]
+  uploads            MediaUpload[]
+  processingJobs     MediaProcessingJob[]
+  variants           MediaVariant[]
+
+  @@index([workspaceId, status, createdAt])
+}
+
+model MediaUpload {
+  id                String            @id @default(uuid())
+  mediaId           String
+  workspaceId       String
+  objectKey         String            @unique
+  contentType       String
+  expectedSizeBytes Int
+  status            MediaUploadStatus @default(PENDING)
+  expiresAt         DateTime
+  completedAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  media             MediaAsset        @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  workspace         Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status, expiresAt])
+  @@index([mediaId, createdAt])
+}
+
+model MediaProcessingJob {
+  id             String                   @id @default(uuid())
+  mediaId        String
+  status         MediaProcessingJobStatus @default(QUEUED)
+  profileVersion String                   @default("1.0")
+  bullJobId      String?                  @unique
+  traceId        String                   @unique @default(uuid())
+  attemptCount   Int                      @default(0)
+  maxAttempts    Int                      @default(3)
+  progress       Int                      @default(0)
+  failureCode    String?
+  failureReason  String?
+  queuedAt       DateTime                 @default(now())
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  media          MediaAsset               @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  attempts       MediaProcessingAttempt[]
+
+  @@index([mediaId, createdAt])
+  @@index([status, queuedAt])
+}
+
+model MediaProcessingAttempt {
+  id              String                       @id @default(uuid())
+  processingJobId String
+  attemptNumber   Int
+  status          MediaProcessingAttemptStatus @default(PROCESSING)
+  failureCode     String?
+  failureReason   String?
+  startedAt       DateTime                     @default(now())
+  finishedAt      DateTime?
+  processingJob   MediaProcessingJob           @relation(fields: [processingJobId], references: [id], onDelete: Cascade)
+
+  @@unique([processingJobId, attemptNumber])
+  @@index([status, startedAt])
+}
+
+model MediaVariant {
+  id              String           @id @default(uuid())
+  mediaId         String
+  kind            MediaVariantKind
+  profileVersion  String           @default("1.0")
+  objectKey       String           @unique
+  contentType     String
+  sizeBytes       Int
+  durationSeconds Int?
+  width           Int?
+  height          Int?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  media           MediaAsset       @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, kind, profileVersion])
+  @@index([mediaId, createdAt])
+}
+
+model EventMediaAsset {
+  eventId   String
+  mediaId   String
+  purpose   String      @default("supporting-content")
+  createdAt DateTime    @default(now())
+  event     StreamEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  media     MediaAsset  @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, mediaId])
+  @@index([mediaId])
+}
+
+model Recommendation {
+  id              String                 @id @default(uuid())
+  eventId         String
+  resolvedById    String?
+  key             String
+  severity        RecommendationSeverity
+  status          RecommendationStatus   @default(OPEN)
+  title           String
+  summary         String
+  evidence        Json
+  suggestedAction String
+  ruleVersion     String                 @default("1.0")
+  resolvedAt      DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  event           StreamEvent            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  resolvedBy      User?                  @relation("RecommendationResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, key, ruleVersion])
+  @@index([eventId, status, severity])
+}
+
+model RecommendationRun {
+  id             String                    @id @default(uuid())
+  workspaceId    String
+  eventId        String
+  requestedById  String
+  confirmedById  String?
+  provider       RecommendationRunProvider
+  status         RecommendationRunStatus
+  model          String?
+  promptVersion  String                    @default("1.2")
+  inputSnapshot  Json
+  output         Json?
+  fallbackReason String?
+  latencyMs      Int?
+  inputTokens    Int?
+  outputTokens   Int?
+  confirmedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  workspace      Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  event          StreamEvent               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  requestedBy    User                      @relation("RecommendationRunRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  confirmedBy    User?                     @relation("RecommendationRunConfirmer", fields: [confirmedById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([eventId, status, createdAt])
+  @@index([requestedById, createdAt])
+}
+
+model AnalyticsSnapshot {
+  id                      String               @id @default(uuid())
+  workspaceId             String
+  granularity             AnalyticsGranularity @default(DAILY)
+  periodStart             DateTime
+  periodEnd               DateTime
+  eventsTotal             Int                  @default(0)
+  readyEvents             Int                  @default(0)
+  atRiskEvents            Int                  @default(0)
+  blockedEvents           Int                  @default(0)
+  averageReadiness        Int                  @default(0)
+  mediaProcessed          Int                  @default(0)
+  mediaFailed             Int                  @default(0)
+  webhookSucceeded        Int                  @default(0)
+  webhookFailed           Int                  @default(0)
+  recommendationsOpened   Int                  @default(0)
+  recommendationsResolved Int                  @default(0)
+  webErrors               Int                  @default(0)
+  apiErrors               Int                  @default(0)
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  workspace               Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, granularity, periodStart])
+  @@index([workspaceId, periodStart])
+}
+
+model FeatureFlag {
+  id          String    @id @default(uuid())
+  workspaceId String
+  updatedById String?
+  key         String
+  description String
+  enabled     Boolean   @default(false)
+  config      Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedBy   User?     @relation("FeatureFlagUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId, enabled])
+}
+
+model ErrorReport {
+  id          String              @id @default(uuid())
+  workspaceId String
+  userId      String?
+  source      ErrorReportSource
+  severity    ErrorReportSeverity @default(ERROR)
+  status      ErrorReportStatus   @default(OPEN)
+  message     String
+  stack       String?
+  path        String?
+  fingerprint String
+  traceId     String?
+  metadata    Json?
+  resolvedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status, createdAt])
+  @@index([fingerprint, createdAt])
+  @@index([traceId])
+}
+
+model AuditLog {
+  id          String       @id @default(uuid())
+  workspaceId String
+  eventId     String?
+  actorId     String?
+  action      String
+  entityType  String
+  entityId    String
+  summary     String
+  changes     Json?
+  traceId     String?
+  createdAt   DateTime     @default(now())
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  event       StreamEvent? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  actor       User?        @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([eventId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model DomainEvent {
+  id            String            @id @default(uuid())
+  workspaceId   String
+  type          String
+  aggregateType String
+  aggregateId   String
+  payload       Json
+  traceId       String            @unique
+  occurredAt    DateTime          @default(now())
+  workspace     Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  outbox        OutboxEvent?
+  deliveries    WebhookDelivery[]
+
+  @@index([workspaceId, type, occurredAt])
+  @@index([aggregateType, aggregateId, occurredAt])
+}
+
+model OutboxEvent {
+  id            String       @id @default(uuid())
+  domainEventId String       @unique
+  status        OutboxStatus @default(PENDING)
+  availableAt   DateTime     @default(now())
+  publishedAt   DateTime?
+  attemptCount  Int          @default(0)
+  lastError     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  domainEvent   DomainEvent  @relation(fields: [domainEventId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+}
+
+model WebhookEndpoint {
+  id              String                @id @default(uuid())
+  workspaceId     String
+  name            String
+  url             String
+  secretEncrypted String
+  status          WebhookEndpointStatus @default(ACTIVE)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  workspace       Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscriptions   WebhookSubscription[]
+  deliveries      WebhookDelivery[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, status])
+}
+
+model WebhookSubscription {
+  id         String          @id @default(uuid())
+  endpointId String
+  eventType  String
+  createdAt  DateTime        @default(now())
+  endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@unique([endpointId, eventType])
+  @@index([eventType])
+}
+
+model WebhookDelivery {
+  id             String                   @id @default(uuid())
+  workspaceId    String
+  domainEventId  String
+  endpointId     String
+  status         WebhookDeliveryStatus    @default(PENDING)
+  attemptCount   Int                      @default(0)
+  responseStatus Int?
+  nextRetryAt    DateTime?
+  lastError      String?
+  lastAttemptAt  DateTime?
+  deliveredAt    DateTime?
+  traceId        String                   @unique
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  workspace      Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  domainEvent    DomainEvent              @relation(fields: [domainEventId], references: [id], onDelete: Cascade)
+  endpoint       WebhookEndpoint          @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  attempts       WebhookDeliveryAttempt[]
+
+  @@unique([domainEventId, endpointId])
+  @@index([workspaceId, status, createdAt])
+  @@index([endpointId, createdAt])
+}
+
+model WebhookDeliveryAttempt {
+  id             String               @id @default(uuid())
+  deliveryId     String
+  attemptNumber  Int
+  status         WebhookAttemptStatus
+  responseStatus Int?
+  durationMs     Int
+  error          String?
+  createdAt      DateTime             @default(now())
+  delivery       WebhookDelivery      @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@unique([deliveryId, attemptNumber])
+  @@index([status, createdAt])
+}

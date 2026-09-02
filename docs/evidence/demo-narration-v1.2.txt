@@ -1,0 +1,23 @@
+OpsPilot is a full-stack operations product for teams running complex online events. It focuses on one expensive question: is this event safe to launch, and can the team prove why?
+
+I built OpsPilot as an original clean-room portfolio application. The frontend uses Next.js, React, TypeScript and Tailwind CSS. The API uses NestJS and Prisma, with PostgreSQL for durable state, Redis and BullMQ for asynchronous work, and private S3-compatible storage for media.
+
+The product starts with one sign-in flow. These demo shortcuts fill credentials for two database-backed accounts. Alex is an Operations Manager. Maya is an Analyst. A role belongs to a workspace membership, and the API checks both the role and workspace on every protected query or command. The Analyst can inspect operational evidence, but cannot change events, refresh analytics, configure AI, or resolve errors.
+
+Launch Control is the centre of the product. This event is configuring and blocked at thirty-five out of one hundred. The API calculates six explicit criteria: accountable ownership, a valid schedule, an audience access policy, visible content, ready media, and completed critical runbook tasks. Hard blockers prevent the Ready transition. The frontend displays the result, but it never decides whether a launch is allowed.
+
+Recommendations are evidence-backed actions linked to those criteria. Version one point two adds an optional OpenAI provider behind a workspace feature flag. The provider receives only a bounded event and readiness snapshot. It must return strict structured output, use supported fields, keep unique keys, and cite evidence keys supplied by the application. Valid output is persisted for explicit manager confirmation or rejection. It cannot change readiness or event state.
+
+This public demo deliberately has no provider key. Instead of becoming incomplete, it records a visible deterministic fallback and continues to apply the authoritative rules. Timeouts, refusals, HTTP errors, empty output, and failed grounding validation follow the same audited fallback path. Five committed evaluation fixtures protect the output contract and known failure cases.
+
+Media is not a decorative file picker. The browser uploads a bounded audio or video source directly to private object storage through a short-lived signed URL. A BullMQ worker downloads the object, validates real stream metadata with ffprobe, and creates a browser-playable derivative with FFmpeg. Processing jobs, attempts, progress, error codes and variants are persisted. Playback uses another short-lived signed URL.
+
+Reliable integrations use the same evidence-first approach. When an event moves to Ready or Live, the business mutation and domain event are committed in one PostgreSQL transaction. A transactional outbox publishes the work to a background worker. The seeded webhook fails once with HTTP five-oh-three and then succeeds with HTTP two-oh-one. Both attempts, the stable idempotency key, signature checks and trace identifier remain visible to the operator.
+
+The Analytics workspace is also database-backed. Four operational indicators are derived from daily snapshots: average readiness, launch confidence, media reliability and webhook delivery reliability. Users can switch between seven, fourteen and thirty days. A manager can refresh today's snapshot, while every authorised role can export the same persisted rows as CSV.
+
+The AI assurance panel exposes whether the optional provider is enabled, configured and effective. It also reports the five contract evaluations. Browser and unexpected API failures are fingerprinted with request traces and appear as reliability evidence for manager triage.
+
+The repository includes explicit OpenAPI documentation, migrations, deterministic seed data, architecture decisions, a threat model, recovery runbooks and continuous integration. Unit tests protect business rules and AI boundaries. API integration tests cover authentication, tenant isolation, permissions, fallback, analytics and error triage. Playwright tests exercise the manager journey, the Analyst boundary, accessibility and mobile overflow.
+
+The main engineering trade-off is deliberate. OpsPilot does not try to reproduce an entire livestream platform. It implements one deep operational workflow, makes asynchronous failures recoverable, keeps AI advisory rather than authoritative, and supplies enough evidence for the system to challenge its own claims. That is the product and engineering story behind OpsPilot version one point two.

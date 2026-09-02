@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: opspilot
+          POSTGRES_PASSWORD: opspilot
+          POSTGRES_DB: opspilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U opspilot -d opspilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: "true"
+      DATABASE_URL: postgresql://opspilot:opspilot@localhost:5432/opspilot?schema=public
+      API_PORT: "4100"
+      WEB_ORIGIN: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:4100/api/v1
+      JWT_ACCESS_SECRET: ci-access-secret-that-is-long-enough-for-tests
+      JWT_REFRESH_SECRET: ci-refresh-secret-that-is-long-enough-for-tests
+      COOKIE_SECURE: "false"
+      REDIS_URL: redis://localhost:6379
+      S3_ENDPOINT: http://localhost:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: opspilot-media
+      S3_ACCESS_KEY: opspilot
+      S3_SECRET_KEY: opspilot-local-storage
+      WEBHOOK_SECRET_ENCRYPTION_KEY: ci-webhook-encryption-key-that-is-long-enough
+      WEBHOOK_RECEIVER_BASE_URL: http://localhost:4100/api/v1/demo/webhook-receiver
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: docker compose up -d --wait redis minio
+      - run: npm run db:generate
+      - run: npm run db:deploy
+      - run: npm run db:seed
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run test:e2e
+      - run: npm run build
+      - run: npm audit --omit=dev
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui

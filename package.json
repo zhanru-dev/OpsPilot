@@ -1,0 +1,47 @@
+{
+  "name": "opspilot-platform",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Launch readiness and operational control for complex online events.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n web,api,worker -c cyan,green,yellow \"npm run dev:web\" \"npm run dev:api\" \"npm run dev:worker\"",
+    "dev:web": "npm run dev --workspace=@opspilot/web",
+    "dev:api": "npm run start:dev --workspace=@opspilot/api",
+    "dev:worker": "npm run start:worker --workspace=@opspilot/api",
+    "build": "npm run build --workspace=@opspilot/api && npm run build --workspace=@opspilot/web",
+    "lint": "npm run lint --workspace=@opspilot/api && npm run lint --workspace=@opspilot/web",
+    "typecheck": "npm run typecheck --workspace=@opspilot/api && npm run typecheck --workspace=@opspilot/web",
+    "test": "npm run test --workspace=@opspilot/api",
+    "test:e2e": "npm run test:e2e --workspace=@opspilot/api",
+    "test:ui": "playwright test",
+    "test:ui:headed": "playwright test --headed",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset --force",
+    "db:studio": "prisma studio",
+    "services:up": "docker compose up -d postgres redis minio",
+    "services:down": "docker compose down",
+    "services:status": "docker compose ps"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1",
+    "concurrently": "^9.2.1",
+    "prisma": "6.19.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2"
+  }
+}
