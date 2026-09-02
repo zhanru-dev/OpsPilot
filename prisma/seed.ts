@@ -21,6 +21,15 @@ import {
 import * as argon2 from "argon2";
 import { createCipheriv, createHash, randomBytes } from "node:crypto";
 
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.DEMO_SEED_ALLOWED !== "true"
+) {
+  throw new Error(
+    "Refusing to seed a production database without DEMO_SEED_ALLOWED=true.",
+  );
+}
+
 const prisma = new PrismaClient();
 
 const ids = {

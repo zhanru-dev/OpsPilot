@@ -854,7 +854,24 @@ v1.1 is the intended flagship version because it connects the user's media-domai
 
 Implementation status: complete in `v1.2.0`; workspace invitation was deliberately omitted because it did not strengthen the target demo roles.
 
-### 10.5 v2.0: Advanced Media And Platform Expansion
+### 10.5 v1.5: Public Deployment And Release Operations
+
+**Status: in progress.** This release freezes the v1.2 product scope and turns the verified local system into a reproducible public portfolio deployment.
+
+- Fail-fast, typed production environment validation.
+- Secure cross-origin cookie configuration and mutation-origin enforcement.
+- Graceful API and worker shutdown behind a trusted proxy.
+- Separate non-root production images for API, worker and Next.js standalone web.
+- Database migrations executed from the release image before deployment.
+- Managed PostgreSQL, Redis and private S3-compatible object storage.
+- CI gates that build and smoke-test the production images.
+- Read-only HTTPS deployment smoke tests for health, login and recruiter-facing surfaces.
+- Controlled demo seeding with an explicit production safety switch.
+- Hosted health monitoring, failure alerts and a documented public release boundary.
+
+V1.5 does not add new product modules. It is complete only when the public URLs, managed dependencies, worker path and smoke workflow are verified together.
+
+### 10.6 v2.0: Advanced Media And Platform Expansion
 
 - Resumable or multipart large-file uploads.
 - Multiple media renditions and adaptive HLS playback.
@@ -867,7 +884,7 @@ Implementation status: complete in `v1.2.0`; workspace invitation was deliberate
 - API keys and developer-facing webhook management.
 - Additional OpsPilot vertical modules only after StreamOps is complete.
 
-### 10.6 Explicitly Out Of Scope
+### 10.7 Explicitly Out Of Scope
 
 - Production livestream ingest, RTMP gateways or large-scale delivery infrastructure.
 - Live multi-bitrate encoding, cloud directing or multi-party calling.
@@ -886,12 +903,13 @@ Build vertical slices that remain demonstrable after each phase.
 
 Do not wait for every planned capability before applying for roles.
 
-| Checkpoint    | State                            | Job-search use                                                                 |
-| ------------- | -------------------------------- | ------------------------------------------------------------------------------ |
-| After Phase 3 | Working private alpha            | Capture progress and practise the product story; do not present it as finished |
-| After Phase 5 | v1.0 public portfolio beta       | Begin applications with the complete launch-readiness workflow                 |
-| After Phase 8 | v1.1 flagship full-stack release | Lead with real media processing, reliability and observability                 |
-| After Phase 9 | v1.2 AI-enhanced case study      | Add evaluated AI and analytics where they match the vacancy                    |
+| Checkpoint     | State                            | Job-search use                                                                 |
+| -------------- | -------------------------------- | ------------------------------------------------------------------------------ |
+| After Phase 3  | Working private alpha            | Capture progress and practise the product story; do not present it as finished |
+| After Phase 5  | v1.0 public portfolio beta       | Begin applications with the complete launch-readiness workflow                 |
+| After Phase 8  | v1.1 flagship full-stack release | Lead with real media processing, reliability and observability                 |
+| After Phase 9  | v1.2 AI-enhanced case study      | Add evaluated AI and analytics where they match the vacancy                    |
+| After Phase 10 | v1.5 deployed portfolio release  | Use the public HTTPS demo and reproducible release evidence in applications    |
 
 This creates an early application point while preserving a clear route to the strongest version.
 
@@ -1045,6 +1063,26 @@ Exit evidence:
 - Public demo works with no LLM key.
 - Evaluation results and known failure cases are documented.
 - A recruiter can understand the project without reading the whole repository.
+
+### Phase 10: Public Deployment And Release Operations (v1.5)
+
+- Validate all production configuration before accepting traffic.
+- Build API, worker and standalone Web images as non-root processes.
+- Run migrations from the immutable API release image.
+- Provision managed PostgreSQL, Redis and private S3-compatible storage.
+- Configure secure cookies, exact CORS, mutation-origin checks and TLS-only public URLs.
+- Add image smoke gates to CI and read-only smoke checks against the deployed system.
+- Configure platform health checks, alerts and a bounded demo reset procedure.
+- Record deployment evidence without claiming unmeasured scale or availability.
+
+Exit evidence:
+
+- API, worker and Web images build and start from a clean checkout.
+- Readiness verifies database, queue and object-storage connectivity.
+- The public demo authenticates both seeded roles over HTTPS.
+- A bounded media job and signed webhook delivery complete through the deployed worker.
+- A scheduled read-only smoke test can detect deployment regressions.
+- Public documentation states the deployment limits, reset policy and measured evidence.
 
 ## 12. Portfolio Evidence Pack
 

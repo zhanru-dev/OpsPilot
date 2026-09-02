@@ -19,6 +19,7 @@
     "test:e2e": "npm run test:e2e --workspace=@opspilot/api",
     "test:ui": "playwright test",
     "test:ui:headed": "playwright test --headed",
+    "test:deployment": "playwright test --config=playwright.deployment.config.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
@@ -27,7 +28,8 @@
     "db:studio": "prisma studio",
     "services:up": "docker compose up -d postgres redis minio",
     "services:down": "docker compose down",
-    "services:status": "docker compose ps"
+    "services:status": "docker compose ps",
+    "containers:build": "docker build --target api -f apps/api/Dockerfile -t opspilot-api:local . && docker build --target worker -f apps/api/Dockerfile -t opspilot-worker:local . && docker build -f apps/web/Dockerfile -t opspilot-web:local ."
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

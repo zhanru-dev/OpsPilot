@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Request, Response } from 'express';
+import type { CookieOptions, Request, Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import type { AuthenticatedUser } from '../common/request-context';
@@ -56,8 +56,11 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     await this.auth.logout(user.sessionId);
-    response.clearCookie('opspilot_access');
-    response.clearCookie('opspilot_refresh');
+    response.clearCookie('opspilot_access', this.cookieOptions('/'));
+    response.clearCookie(
+      'opspilot_refresh',
+      this.cookieOptions('/api/v1/auth'),
+    );
   }
 
   @Get('me')
@@ -70,21 +73,25 @@ export class AuthController {
     accessToken: string,
     refreshToken: string,
   ) {
-    const secure = this.config.get<string>('COOKIE_SECURE', 'false') === 'true';
     response.cookie('opspilot_access', accessToken, {
-      httpOnly: true,
-      secure,
-      sameSite: 'lax',
-      path: '/',
+      ...this.cookieOptions('/'),
       maxAge: 15 * 60 * 1000,
     });
     response.cookie('opspilot_refresh', refreshToken, {
-      httpOnly: true,
-      secure,
-      sameSite: 'lax',
-      path: '/api/v1/auth',
+      ...this.cookieOptions('/api/v1/auth'),
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+  }
+
+  private cookieOptions(path: string): CookieOptions {
+    return {
+      httpOnly: true,
+      secure: this.config.getOrThrow<boolean>('COOKIE_SECURE'),
+      sameSite: this.config.getOrThrow<'lax' | 'strict' | 'none'>(
+        'COOKIE_SAME_SITE',
+      ),
+      path,
+    };
   }
 
   private publicUser(

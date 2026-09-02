@@ -15,13 +15,11 @@ import { MediaCleanupSchedulerService } from './media/media-cleanup-scheduler.se
 import { PrismaModule } from './prisma/prisma.module';
 import { ReadinessModule } from './readiness/readiness.module';
 import { RequestTraceModule } from './common/request-trace.module';
+import { configModuleOptions } from './config/environment';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: ['../../.env', '.env'],
-    }),
+    ConfigModule.forRoot(configModuleOptions),
     PrismaModule,
     RequestTraceModule,
     QueuesModule,

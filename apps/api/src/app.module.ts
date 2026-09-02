@@ -25,13 +25,11 @@ import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ErrorReportsModule } from './error-reports/error-reports.module';
 import { ApiExceptionFilter } from './error-reports/api-exception.filter';
+import { configModuleOptions } from './config/environment';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: ['../../.env', '.env'],
-    }),
+    ConfigModule.forRoot(configModuleOptions),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
     RequestTraceModule,

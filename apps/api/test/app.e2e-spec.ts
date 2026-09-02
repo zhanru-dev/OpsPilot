@@ -123,6 +123,22 @@ describe('OpsPilot API (e2e)', () => {
     expect(meBody.user.workspaceName).toBe('Brightline Events');
   });
 
+  it('rejects browser mutations from an untrusted origin', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .set('Origin', 'https://untrusted.example')
+      .send({
+        email: 'alex.morgan@opspilot.demo',
+        password: 'DemoPass123!',
+      })
+      .expect(403)
+      .expect({
+        statusCode: 403,
+        message: 'Cross-origin mutation is not allowed.',
+        error: 'Forbidden',
+      });
+  });
+
   it('provisions signed demo endpoints and authorises manual delivery retries', async () => {
     const endpointName = `E2E reliability endpoint ${Date.now()}`;
     await analyst
@@ -184,6 +200,27 @@ describe('OpsPilot API (e2e)', () => {
     await manager.post('/api/v1/auth/refresh').expect(200);
     await manager.post('/api/v1/auth/refresh').expect(200);
     await manager.get('/api/v1/auth/me').expect(200);
+  });
+
+  it('clears access and refresh cookies with their original paths', async () => {
+    const session = request.agent(app.getHttpServer());
+    await session
+      .post('/api/v1/auth/login')
+      .send({
+        email: 'alex.morgan@opspilot.demo',
+        password: 'DemoPass123!',
+      })
+      .expect(200);
+
+    const response = await session.post('/api/v1/auth/logout').expect(204);
+    const cookies = response.headers['set-cookie'] as unknown as string[];
+
+    expect(cookies).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^opspilot_access=;.*Path=\//),
+        expect.stringMatching(/^opspilot_refresh=;.*Path=\/api\/v1\/auth/),
+      ]),
+    );
   });
 
   it('creates a workspace-scoped event with an evidence-backed assessment', async () => {

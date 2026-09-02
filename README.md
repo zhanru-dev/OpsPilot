@@ -1,5 +1,7 @@
 # OpsPilot
 
+[![CI](https://github.com/zhanru-dev/OpsPilot/actions/workflows/ci.yml/badge.svg)](https://github.com/zhanru-dev/OpsPilot/actions/workflows/ci.yml)
+
 OpsPilot is an English-first B2B operations platform for teams running complex online events. Its first vertical, **StreamOps**, turns fragmented event setup into an explainable launch-readiness workflow: accountable ownership, audience policy, critical runbooks, watch-page content, media state, recommendations and audit history in one control surface.
 
 `v1.2.0` is the current local flagship release. It is intentionally narrower than a livestream suite and deeper than a dashboard mock-up: the golden flow is database-backed, tenant-scoped, role-aware, asynchronous, measured, tested and documented.
@@ -98,6 +100,26 @@ npm run dev
 | MinIO console | `http://localhost:9001`                   |
 
 The API uses `4100` by default and remains configurable through the environment.
+
+## Production Images
+
+The v1.5 release candidate packages each long-running process independently from the monorepo root:
+
+```powershell
+npm run containers:build
+```
+
+| Image                   | Process                             | Runtime probe               |
+| ----------------------- | ----------------------------------- | --------------------------- |
+| `opspilot-api:local`    | `node apps/api/dist/main.js`        | `/api/v1/health/ready`      |
+| `opspilot-worker:local` | `node apps/api/dist/worker.js`      | Process and queue telemetry |
+| `opspilot-web:local`    | Next.js standalone server on `PORT` | `/login`                    |
+
+The API image includes the Prisma CLI so a deployment can run `npm run db:deploy` from the exact release image before accepting traffic. Demo seeding is never automatic: in production, `npm run db:seed` refuses to run unless that one command explicitly receives `DEMO_SEED_ALLOWED=true`.
+
+The Web image requires `NEXT_PUBLIC_API_URL` as a build argument because browser-visible Next.js variables are compiled into the client bundle. The API accepts either `API_PORT` or a platform-provided `PORT`, validates all required dependencies at startup, and supports cross-site secure cookies through `COOKIE_SECURE=true` and `COOKIE_SAME_SITE=none`.
+
+A complete deployment uses separate API, worker and Web services with managed PostgreSQL, Redis and private S3-compatible storage. The worker has no public port. Production storage must exist before startup, use `S3_AUTO_CREATE_BUCKET=false`, and set `S3_FORCE_PATH_STYLE` to match the provider.
 
 ## Demo Accounts
 

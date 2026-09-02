@@ -7,8 +7,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
   configureApp(app);
+  app.enableShutdownHooks();
 
-  const port = config.get<number>('API_PORT', 4100);
-  await app.listen(port);
+  const host = config.getOrThrow<string>('API_HOST');
+  const port = config.getOrThrow<number>('API_PORT');
+  await app.listen(port, host);
 }
 void bootstrap();

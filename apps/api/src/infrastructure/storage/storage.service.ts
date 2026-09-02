@@ -136,7 +136,7 @@ export class StorageService implements OnModuleInit {
     return new S3Client({
       endpoint,
       region: this.config.getOrThrow<string>('S3_REGION'),
-      forcePathStyle: true,
+      forcePathStyle: this.config.getOrThrow<boolean>('S3_FORCE_PATH_STYLE'),
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',
       credentials: {
@@ -152,12 +152,26 @@ export class StorageService implements OnModuleInit {
         new HeadBucketCommand({ Bucket: this.bucket }),
       );
     } catch (error) {
-      const status = (error as { $metadata?: { httpStatusCode?: number } })
-        .$metadata?.httpStatusCode;
-      if (status !== 404) throw error;
-      await this.internalClient.send(
-        new CreateBucketCommand({ Bucket: this.bucket }),
+      const status = this.statusCode(error);
+      const autoCreate = this.config.getOrThrow<boolean>(
+        'S3_AUTO_CREATE_BUCKET',
       );
+      if (status !== 404 || !autoCreate) throw error;
+      try {
+        await this.internalClient.send(
+          new CreateBucketCommand({ Bucket: this.bucket }),
+        );
+      } catch (createError) {
+        if (this.statusCode(createError) !== 409) throw createError;
+        await this.internalClient.send(
+          new HeadBucketCommand({ Bucket: this.bucket }),
+        );
+      }
     }
+  }
+
+  private statusCode(error: unknown) {
+    return (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode;
   }
 }

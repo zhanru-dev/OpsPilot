@@ -5,6 +5,13 @@ on:
     branches: ["main"]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -60,3 +67,114 @@ jobs:
       - run: npm audit --omit=dev
       - run: npx playwright install --with-deps chromium
       - run: npm run test:ui
+
+  containers:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: opspilot
+          POSTGRES_PASSWORD: opspilot
+          POSTGRES_DB: opspilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U opspilot -d opspilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://opspilot:opspilot@localhost:5432/opspilot?schema=public
+      API_HOST: 0.0.0.0
+      API_PORT: "4100"
+      WEB_ORIGIN: http://localhost:3000
+      JWT_ACCESS_SECRET: ci-access-secret-that-is-long-enough-for-tests
+      JWT_REFRESH_SECRET: ci-refresh-secret-that-is-long-enough-for-tests
+      COOKIE_SECURE: "false"
+      COOKIE_SAME_SITE: lax
+      TRUST_PROXY: "false"
+      REDIS_URL: redis://localhost:6379
+      S3_ENDPOINT: http://localhost:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: opspilot-media
+      S3_ACCESS_KEY: opspilot
+      S3_SECRET_KEY: opspilot-local-storage
+      S3_FORCE_PATH_STYLE: "true"
+      S3_AUTO_CREATE_BUCKET: "true"
+      WEBHOOK_SECRET_ENCRYPTION_KEY: ci-webhook-encryption-key-that-is-long-enough
+      WEBHOOK_RECEIVER_BASE_URL: http://localhost:4100/api/v1/demo/webhook-receiver
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up -d --wait redis minio
+      - name: Build production images
+        run: |
+          docker build --target api -f apps/api/Dockerfile -t opspilot-api:ci .
+          docker build --target worker -f apps/api/Dockerfile -t opspilot-worker:ci .
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL=http://localhost:4100/api/v1 \
+            -f apps/web/Dockerfile \
+            -t opspilot-web:ci \
+            .
+      - name: Apply migrations from the API image
+        run: |
+          docker run --rm --network host \
+            -e DATABASE_URL \
+            opspilot-api:ci \
+            npm run db:deploy
+      - name: Start production containers
+        run: |
+          docker run -d --name opspilot-api-ci --network host \
+            -e NODE_ENV -e DATABASE_URL -e API_HOST -e API_PORT \
+            -e WEB_ORIGIN -e JWT_ACCESS_SECRET -e JWT_REFRESH_SECRET \
+            -e COOKIE_SECURE -e COOKIE_SAME_SITE -e TRUST_PROXY \
+            -e REDIS_URL -e S3_ENDPOINT -e S3_PUBLIC_ENDPOINT \
+            -e S3_REGION -e S3_BUCKET -e S3_ACCESS_KEY -e S3_SECRET_KEY \
+            -e S3_FORCE_PATH_STYLE -e S3_AUTO_CREATE_BUCKET \
+            -e WEBHOOK_SECRET_ENCRYPTION_KEY -e WEBHOOK_RECEIVER_BASE_URL \
+            opspilot-api:ci
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:4100/api/v1/health/ready > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail --silent http://localhost:4100/api/v1/health/ready
+          docker run -d --name opspilot-worker-ci --network host \
+            -e NODE_ENV -e DATABASE_URL -e API_HOST -e API_PORT \
+            -e WEB_ORIGIN -e JWT_ACCESS_SECRET -e JWT_REFRESH_SECRET \
+            -e COOKIE_SECURE -e COOKIE_SAME_SITE -e TRUST_PROXY \
+            -e REDIS_URL -e S3_ENDPOINT -e S3_PUBLIC_ENDPOINT \
+            -e S3_REGION -e S3_BUCKET -e S3_ACCESS_KEY -e S3_SECRET_KEY \
+            -e S3_FORCE_PATH_STYLE -e S3_AUTO_CREATE_BUCKET \
+            -e WEBHOOK_SECRET_ENCRYPTION_KEY -e WEBHOOK_RECEIVER_BASE_URL \
+            opspilot-worker:ci
+          docker run -d --name opspilot-web-ci --network host opspilot-web:ci
+      - name: Verify production containers
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:4100/api/v1/health/ready > /tmp/readiness.json \
+              && curl --fail --silent http://localhost:3000/login > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          cat /tmp/readiness.json
+          grep -q '"status":"ready"' /tmp/readiness.json
+          test "$(docker inspect -f '{{.State.Running}}' opspilot-worker-ci)" = "true"
+          docker logs opspilot-worker-ci 2>&1 | grep -q "OpsPilot background worker is ready."
+      - name: Print container logs on failure
+        if: failure()
+        run: |
+          docker logs opspilot-api-ci 2>&1 || true
+          docker logs opspilot-worker-ci 2>&1 || true
+          docker logs opspilot-web-ci 2>&1 || true
+      - name: Clean up containers
+        if: always()
+        run: |
+          docker rm -f opspilot-api-ci opspilot-worker-ci opspilot-web-ci 2>/dev/null || true
+          docker compose down --volumes
