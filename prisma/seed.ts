@@ -6,6 +6,8 @@ import {
   ErrorReportSource,
   ErrorReportStatus,
   EventStatus,
+  LiveSessionStatus,
+  LiveSessionUpdateSeverity,
   MediaKind,
   MediaStatus,
   OutboxStatus,
@@ -50,6 +52,7 @@ const ids = {
   featureFlag: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
   recommendationRun: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1",
   errorReport: "cccccccc-cccc-4ccc-8ccc-ccccccccccc1",
+  liveSession: "dddddddd-dddd-4ddd-8ddd-ddddddddddd1",
 };
 
 function encryptWebhookSecret(value: string) {
@@ -189,7 +192,7 @@ async function main() {
         slug: "partner-enablement-live",
         description:
           "A private enablement session for certified implementation partners.",
-        status: EventStatus.READY,
+        status: EventStatus.LIVE,
         scheduledStart: new Date(now + 6 * 24 * 60 * 60 * 1000),
         scheduledEnd: new Date(now + 6 * 24 * 60 * 60 * 1000 + 90 * 60 * 1000),
         timezone: "Europe/London",
@@ -581,6 +584,40 @@ async function main() {
     ],
   });
 
+  await prisma.liveSession.create({
+    data: {
+      id: ids.liveSession,
+      workspaceId: workspace.id,
+      eventId: ids.partnerLive,
+      startedById: operationsManager.id,
+      status: LiveSessionStatus.ACTIVE,
+      startedAt: new Date(now - 18 * 60 * 1000),
+      updates: {
+        create: [
+          {
+            actorId: operationsManager.id,
+            severity: LiveSessionUpdateSeverity.INFO,
+            message: "Partner Enablement Live went live.",
+            createdAt: new Date(now - 18 * 60 * 1000),
+          },
+          {
+            actorId: operationsManager.id,
+            severity: LiveSessionUpdateSeverity.WARNING,
+            message:
+              "Backup speaker joined after a brief connection delay; primary programme remains on schedule.",
+            createdAt: new Date(now - 7 * 60 * 1000),
+          },
+          {
+            actorId: operationsManager.id,
+            severity: LiveSessionUpdateSeverity.INFO,
+            message: "Audience audio route checked and stable.",
+            createdAt: new Date(now - 3 * 60 * 1000),
+          },
+        ],
+      },
+    },
+  });
+
   await prisma.auditLog.createMany({
     data: [
       {
@@ -610,6 +647,15 @@ async function main() {
         entityId: ids.partnerLive,
         summary: "Marked Partner Enablement Live as ready.",
       },
+      {
+        workspaceId: workspace.id,
+        eventId: ids.partnerLive,
+        actorId: operationsManager.id,
+        action: "event.live",
+        entityType: "StreamEvent",
+        entityId: ids.partnerLive,
+        summary: "Moved Partner Enablement Live from READY to LIVE.",
+      },
     ],
   });
 
@@ -621,7 +667,12 @@ async function main() {
       url: `${process.env.WEBHOOK_RECEIVER_BASE_URL ?? "http://localhost:4100/api/v1/demo/webhook-receiver"}?mode=fail-once`,
       secretEncrypted: encryptWebhookSecret("opspilot-seeded-webhook-secret"),
       subscriptions: {
-        create: [{ eventType: "event.ready" }, { eventType: "event.started" }],
+        create: [
+          { eventType: "event.ready" },
+          { eventType: "event.started" },
+          { eventType: "event.completed" },
+          { eventType: "live-session.update.recorded" },
+        ],
       },
     },
   });

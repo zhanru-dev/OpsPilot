@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   LayoutDashboard,
   Library,
+  MonitorUp,
   PlugZap,
   LogOut,
   Menu,
@@ -28,6 +29,7 @@ const navigation = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/streamops/events", label: "Events", icon: RadioTower },
+  { href: "/streamops/live", label: "Live Operations", icon: MonitorUp },
   { href: "/streamops/media", label: "Media Library", icon: Library },
   { href: "/integrations", label: "Integration Centre", icon: PlugZap },
   { href: "/audit-logs", label: "Audit Logs", icon: ClipboardCheck },
@@ -89,9 +91,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-label="Primary navigation"
       >
         {navigation.map(({ href, label, icon: Icon }) => {
+          const liveRoomPath =
+            pathname.startsWith("/streamops/events/") &&
+            pathname.endsWith("/live");
           const active =
-            pathname === href ||
-            (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+            href === "/streamops/live"
+              ? pathname === href || liveRoomPath
+              : href === "/streamops/events"
+                ? !liveRoomPath &&
+                  (pathname === href || pathname.startsWith(`${href}/`))
+                : pathname === href ||
+                  (href !== "/dashboard" && pathname.startsWith(`${href}/`));
           return (
             <Link
               key={href}

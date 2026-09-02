@@ -431,6 +431,144 @@ describe('OpsPilot API (e2e)', () => {
     expect(attachment).toBeNull();
   });
 
+  it('creates and closes a workspace-scoped live operations session', async () => {
+    const eventId = createdEventIds[0];
+    const detail = await manager
+      .get(`/api/v1/stream-events/${eventId}`)
+      .expect(200);
+    const runbookItems = (
+      detail.body as unknown as {
+        runbookItems: Array<{ id: string }>;
+      }
+    ).runbookItems;
+
+    for (const item of runbookItems) {
+      await manager
+        .patch(`/api/v1/runbook-items/${item.id}`)
+        .send({ status: 'DONE' })
+        .expect(200);
+    }
+    await manager
+      .post(`/api/v1/stream-events/${eventId}/transitions`)
+      .send({ status: 'CONFIGURING' })
+      .expect(201);
+    await manager
+      .post(`/api/v1/stream-events/${eventId}/transitions`)
+      .send({ status: 'READY' })
+      .expect(201);
+    await manager
+      .post(`/api/v1/stream-events/${eventId}/transitions`)
+      .send({ status: 'LIVE' })
+      .expect(201);
+
+    const active = await manager
+      .get(`/api/v1/stream-events/${eventId}/live-session`)
+      .expect(200);
+    const activeBody = active.body as unknown as {
+      session: { id: string };
+    };
+    expect(activeBody).toMatchObject({
+      event: { id: eventId, status: 'LIVE' },
+      session: {
+        status: 'ACTIVE',
+        startedBy: { name: 'Alex Morgan' },
+        updates: [
+          expect.objectContaining({
+            severity: 'INFO',
+            message: 'E2E Launch Readiness Review went live.',
+          }),
+        ],
+      },
+    });
+
+    await analyst
+      .post(`/api/v1/stream-events/${eventId}/live-session/updates`)
+      .send({ severity: 'WARNING', message: 'Read-only attempt.' })
+      .expect(403);
+    const updated = await manager
+      .post(`/api/v1/stream-events/${eventId}/live-session/updates`)
+      .send({
+        severity: 'WARNING',
+        message: 'Backup speaker is joining the session.',
+      })
+      .expect(201);
+    const updatedBody = updated.body as unknown as {
+      session: { updates: Array<{ severity: string; message: string }> };
+    };
+    expect(
+      updatedBody.session.updates.some(
+        (update) =>
+          update.severity === 'WARNING' &&
+          update.message === 'Backup speaker is joining the session.',
+      ),
+    ).toBe(true);
+
+    const sessions = await analyst.get('/api/v1/live-sessions').expect(200);
+    const sessionsBody = sessions.body as unknown as {
+      items: Array<{
+        eventId: string;
+        status: string;
+        _count: { updates: number };
+      }>;
+    };
+    expect(
+      sessionsBody.items.some(
+        (session) =>
+          session.eventId === eventId &&
+          session.status === 'ACTIVE' &&
+          session._count.updates === 2,
+      ),
+    ).toBe(true);
+
+    await manager
+      .post(`/api/v1/stream-events/${eventId}/transitions`)
+      .send({ status: 'COMPLETED' })
+      .expect(201);
+    const ended = await manager
+      .get(`/api/v1/stream-events/${eventId}/live-session`)
+      .expect(200);
+    const endedBody = ended.body as unknown as {
+      event: { status: string };
+      session: { status: string; endedBy: { name: string }; endedAt: unknown };
+    };
+    expect(endedBody).toMatchObject({
+      event: { status: 'COMPLETED' },
+      session: {
+        status: 'ENDED',
+        endedBy: { name: 'Alex Morgan' },
+      },
+    });
+    expect(typeof endedBody.session.endedAt).toBe('string');
+    await manager
+      .post(`/api/v1/stream-events/${eventId}/live-session/updates`)
+      .send({ severity: 'INFO', message: 'Late update.' })
+      .expect(400);
+
+    const evidence = await prisma.domainEvent.findMany({
+      where: {
+        aggregateId: { in: [eventId, activeBody.session.id] },
+      },
+      select: { id: true, type: true },
+    });
+    createdDomainEventIds.push(...evidence.map(({ id }) => id));
+    expect(evidence.map(({ type }) => type)).toEqual(
+      expect.arrayContaining([
+        'event.ready',
+        'event.started',
+        'live-session.update.recorded',
+        'event.completed',
+      ]),
+    );
+    await expect(
+      prisma.auditLog.findFirst({
+        where: {
+          eventId,
+          action: 'live_session.update_recorded',
+        },
+      }),
+    ).resolves.not.toBeNull();
+  });
+
   it('treats archived events as immutable across mutation routes', async () => {
     const eventId = createdEventIds[0];
     const runbookItem = await prisma.runbookItem.findFirstOrThrow({

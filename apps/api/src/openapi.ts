@@ -43,6 +43,7 @@ export const openApiDocument = {
     { name: 'Dashboard' },
     { name: 'Stream events' },
     { name: 'Launch control' },
+    { name: 'Live operations' },
     { name: 'Media' },
     { name: 'Integrations' },
     { name: 'Analytics' },
@@ -223,6 +224,56 @@ export const openApiDocument = {
           400: {
             description: 'The transition is invalid or readiness is blocked.',
           },
+          403: responses.forbidden,
+          404: responses.notFound,
+        },
+      },
+    },
+    '/live-sessions': {
+      get: {
+        tags: ['Live operations'],
+        summary: 'List active and recent workspace live sessions',
+        responses: { 200: responses.ok, 401: responses.unauthorized },
+      },
+    },
+    '/stream-events/{eventId}/live-session': {
+      get: {
+        tags: ['Live operations'],
+        summary: 'Get the operational timeline for an event',
+        parameters: [uuidParameter('eventId', 'Stream event ID')],
+        responses: {
+          200: responses.ok,
+          404: responses.notFound,
+        },
+      },
+    },
+    '/stream-events/{eventId}/live-session/stream': {
+      get: {
+        tags: ['Live operations'],
+        summary: 'Stream authoritative live-session snapshots over SSE',
+        parameters: [uuidParameter('eventId', 'Stream event ID')],
+        responses: {
+          200: {
+            description: 'A live stream of workspace-scoped session snapshots.',
+            content: {
+              'text/event-stream': { schema: { type: 'string' } },
+            },
+          },
+          404: responses.notFound,
+        },
+      },
+    },
+    '/stream-events/{eventId}/live-session/updates': {
+      post: {
+        tags: ['Live operations'],
+        summary: 'Record an actor-attributed operational update',
+        parameters: [uuidParameter('eventId', 'Stream event ID')],
+        requestBody: jsonBody({
+          $ref: '#/components/schemas/LiveSessionUpdateRequest',
+        }),
+        responses: {
+          201: responses.created,
+          400: { description: 'The event does not have an active session.' },
           403: responses.forbidden,
           404: responses.notFound,
         },
@@ -900,6 +951,15 @@ export const openApiDocument = {
             description: 'All fields are optional for updates.',
           },
         ],
+      },
+      LiveSessionUpdateRequest: {
+        type: 'object',
+        required: ['severity', 'message'],
+        additionalProperties: false,
+        properties: {
+          severity: { enum: ['INFO', 'WARNING', 'CRITICAL'] },
+          message: { type: 'string', minLength: 2, maxLength: 500 },
+        },
       },
       AccessPolicyRequest: {
         type: 'object',

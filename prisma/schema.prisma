@@ -25,6 +25,17 @@ enum EventStatus {
   CANCELLED
 }
 
+enum LiveSessionStatus {
+  ACTIVE
+  ENDED
+}
+
+enum LiveSessionUpdateSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
 enum RunbookStatus {
   TODO
   IN_PROGRESS
@@ -174,6 +185,9 @@ model User {
   updatedFeatureFlags         FeatureFlag[]         @relation("FeatureFlagUpdater")
   errorReports                ErrorReport[]
   auditLogs                   AuditLog[]            @relation("AuditActor")
+  startedLiveSessions         LiveSession[]         @relation("LiveSessionStarter")
+  endedLiveSessions           LiveSession[]         @relation("LiveSessionEnder")
+  liveSessionUpdates          LiveSessionUpdate[]   @relation("LiveSessionUpdateActor")
 }
 
 model Session {
@@ -207,6 +221,7 @@ model Workspace {
   featureFlags       FeatureFlag[]
   errorReports       ErrorReport[]
   auditLogs          AuditLog[]
+  liveSessions       LiveSession[]
 }
 
 model WorkspaceMembership {
@@ -246,10 +261,44 @@ model StreamEvent {
   recommendations      Recommendation[]
   recommendationRuns   RecommendationRun[]
   auditLogs            AuditLog[]
+  liveSession          LiveSession?
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status, scheduledStart])
   @@index([ownerId])
+}
+
+model LiveSession {
+  id          String              @id @default(uuid())
+  workspaceId String
+  eventId     String              @unique
+  startedById String?
+  endedById   String?
+  status      LiveSessionStatus   @default(ACTIVE)
+  startedAt   DateTime            @default(now())
+  endedAt     DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  event       StreamEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  startedBy   User?               @relation("LiveSessionStarter", fields: [startedById], references: [id], onDelete: SetNull)
+  endedBy     User?               @relation("LiveSessionEnder", fields: [endedById], references: [id], onDelete: SetNull)
+  updates     LiveSessionUpdate[]
+
+  @@index([workspaceId, status, startedAt])
+}
+
+model LiveSessionUpdate {
+  id        String                    @id @default(uuid())
+  sessionId String
+  actorId   String?
+  severity  LiveSessionUpdateSeverity @default(INFO)
+  message   String
+  createdAt DateTime                  @default(now())
+  session   LiveSession               @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  actor     User?                     @relation("LiveSessionUpdateActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, createdAt])
 }
 
 model RunbookItem {

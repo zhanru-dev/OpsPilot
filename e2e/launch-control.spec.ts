@@ -13,6 +13,7 @@ test.afterAll(async () => {
 test("operations manager completes the launch-readiness golden flow", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.goto("/login");
   const loginAccessibility = await new AxeBuilder({ page }).analyze();
   expect(
@@ -91,8 +92,37 @@ test("operations manager completes the launch-readiness golden flow", async ({
 
   await page.getByRole("button", { name: "Go live" }).click();
   await expect(page.getByText("Event moved to Live.")).toBeVisible();
+  await page.getByRole("link", { name: "Live room" }).click();
+  await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  await expect(page.getByText("Live updates connected")).toBeVisible();
+
+  await page.getByLabel("Severity").selectOption("WARNING");
+  await page
+    .getByLabel("Update")
+    .fill("Backup speaker joined and the programme remains on schedule.");
+  await page.getByRole("button", { name: "Record update" }).click();
+  await expect(
+    page.getByText(
+      "Backup speaker joined and the programme remains on schedule.",
+    ),
+  ).toBeVisible();
+
+  const liveRoomAccessibility = await new AxeBuilder({ page }).analyze();
+  expect(
+    liveRoomAccessibility.violations.filter((violation) =>
+      ["critical", "serious"].includes(violation.impact ?? ""),
+    ),
+  ).toEqual([]);
+
   await page.getByRole("button", { name: "Complete event" }).click();
-  await expect(page.getByText("Event moved to Completed.")).toBeVisible();
+  const completionDialog = page.getByRole("dialog", {
+    name: "Complete this live event?",
+  });
+  await completionDialog
+    .getByRole("button", { name: "Complete event" })
+    .click();
+  await expect(page.getByText("Ended", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Launch Control" }).click();
   await page.getByRole("button", { name: "Archive" }).click();
   await expect(page.getByText("Event moved to Archived.")).toBeVisible();
 
@@ -123,6 +153,24 @@ test("analyst receives a read-only product surface", async ({ page }) => {
   await page.goto("/streamops/events/new");
   await expect(page).toHaveURL(/\/streamops\/events$/);
   await expect(page.getByRole("heading", { name: "Events" })).toBeVisible();
+
+  await page.goto("/streamops/live");
+  await expect(
+    page.getByRole("heading", { name: "Live Operations" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Open room" }).first().click();
+  await expect(
+    page.getByRole("heading", { name: "Partner Enablement Live" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Audience audio route checked and stable."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Record operational update" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Complete event" }),
+  ).toHaveCount(0);
 });
 
 test("v1.1 reliability surfaces expose bounded media and webhook evidence", async ({
@@ -255,6 +303,8 @@ test("core operations pages do not overflow a mobile viewport", async ({
     "/dashboard",
     "/streamops/events",
     "/streamops/media",
+    "/streamops/live",
+    "/streamops/events/33333333-3333-4333-8333-333333333332/live",
     "/integrations",
     "/analytics",
   ]) {

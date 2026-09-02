@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { assertEventNotArchived } from '../common/event-mutations';
 import type { AuthenticatedUser } from '../common/request-context';
 import { DomainEventsService } from '../domain-events/domain-events.service';
+import { LiveSessionsService } from '../live-sessions/live-sessions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReadinessService } from '../readiness/readiness.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -30,6 +31,7 @@ export class EventsService {
     private readonly readiness: ReadinessService,
     private readonly audit: AuditService,
     private readonly domainEvents: DomainEventsService,
+    private readonly liveSessions: LiveSessionsService,
   ) {}
 
   async list(
@@ -250,6 +252,11 @@ export class EventsService {
         where: { id: eventId },
         data: { status: nextStatus },
       });
+      if (nextStatus === EventStatus.LIVE) {
+        await this.liveSessions.startForEvent(event, user.id, transaction);
+      } else if (nextStatus === EventStatus.COMPLETED) {
+        await this.liveSessions.endForEvent(event, user.id, transaction);
+      }
       await this.audit.record(
         {
           workspaceId: user.workspaceId,
@@ -268,7 +275,9 @@ export class EventsService {
           ? 'event.ready'
           : nextStatus === EventStatus.LIVE
             ? 'event.started'
-            : null;
+            : nextStatus === EventStatus.COMPLETED
+              ? 'event.completed'
+              : null;
       if (domainEventType) {
         await this.domainEvents.record(
           {

@@ -19,7 +19,12 @@ import type { CreateDemoWebhookDto } from './dto/create-demo-webhook.dto';
 import type { WebhookDeliveryJobData } from './integration-job.types';
 import { WebhookCryptoService } from './webhook-crypto.service';
 
-const subscribedEventTypes = ['event.ready', 'event.started'] as const;
+const subscribedEventTypes = [
+  'event.ready',
+  'event.started',
+  'event.completed',
+  'live-session.update.recorded',
+] as const;
 
 @Injectable()
 export class IntegrationsService {

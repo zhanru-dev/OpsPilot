@@ -12,6 +12,7 @@ import {
   KeyRound,
   Library,
   Lightbulb,
+  MonitorUp,
   Pencil,
   Play,
   Plus,
@@ -298,6 +299,14 @@ export function LaunchControl({ eventId }: { eventId: string }) {
               <Button variant="secondary" onClick={() => setDialog("event")}>
                 <Pencil className="size-4" /> Edit event
               </Button>
+            ) : null}
+            {["LIVE", "COMPLETED"].includes(event.status) ? (
+              <Link
+                href={`/streamops/events/${eventId}/live`}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--brand)] bg-[var(--brand)] px-4 text-sm font-semibold text-white hover:bg-[var(--brand-strong)]"
+              >
+                <MonitorUp className="size-4" /> Live room
+              </Link>
             ) : null}
             {actions.map((action) => {
               const blocked =

@@ -294,3 +294,58 @@ export type AuditLog = {
   createdAt: string;
   actor: { id: string; name: string; avatarInitials: string } | null;
 };
+
+export type LiveSessionUpdateSeverity = "INFO" | "WARNING" | "CRITICAL";
+
+export type LiveSessionActor = {
+  id: string;
+  name: string;
+  avatarInitials: string;
+};
+
+export type LiveSessionUpdate = {
+  id: string;
+  severity: LiveSessionUpdateSeverity;
+  message: string;
+  createdAt: string;
+  actor: LiveSessionActor | null;
+};
+
+export type LiveSession = {
+  id: string;
+  eventId: string;
+  status: "ACTIVE" | "ENDED";
+  startedAt: string;
+  endedAt: string | null;
+  startedBy: LiveSessionActor | null;
+  endedBy: LiveSessionActor | null;
+  updates: LiveSessionUpdate[];
+  _count?: { updates: number };
+};
+
+export type LiveSessionEvent = {
+  id: string;
+  title: string;
+  status: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  timezone: string;
+  expectedAttendees?: number;
+};
+
+export type LiveSessionSnapshot = {
+  serverTime: string;
+  event: LiveSessionEvent;
+  session: LiveSession | null;
+};
+
+export type LiveSessionListResponse = {
+  serverTime: string;
+  items: Array<
+    LiveSession & {
+      event: LiveSessionEvent;
+      updates: LiveSessionUpdate[];
+      _count: { updates: number };
+    }
+  >;
+};
