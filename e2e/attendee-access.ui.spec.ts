@@ -108,7 +108,9 @@ test("opening another link in the same tab replaces the old confirmation state",
   ).toBeEnabled();
 });
 
-test("restricted events never expose a confirmation form", async ({ page }) => {
+test("unavailable events never expose a confirmation form", async ({
+  page,
+}) => {
   const state = await mockAttendeeApi(page);
   state.eventStatus = 404;
   await page.goto(`${path}#token=${token}`);

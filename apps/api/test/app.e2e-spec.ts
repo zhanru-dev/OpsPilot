@@ -849,7 +849,7 @@ describe('OpsPilot API (e2e)', () => {
     expect(JSON.stringify(evidence)).not.toContain('Sam Patel');
   });
 
-  it('keeps restricted and unpublished events out of public registration', async () => {
+  it('redacts restricted events, silently rejects ineligible addresses, and hides unpublished events', async () => {
     const event = await prisma.streamEvent.create({
       data: {
         workspaceId: '11111111-1111-4111-8111-111111111111',
@@ -866,17 +866,23 @@ describe('OpsPilot API (e2e)', () => {
     });
     createdEventIds.push(event.id);
     const path = `/api/v1/public/events/${event.id}`;
-    const dto = { name: 'Guest', email: 'guest@example.test', consent: true };
+    const dto = { name: 'Guest', email: 'guest@other.test', consent: true };
     for (const mode of ['EMAIL_DOMAIN', 'INVITE_ONLY'] as const) {
       await prisma.accessPolicy.update({
         where: { eventId: event.id },
         data: { mode },
       });
-      await request(app.getHttpServer()).get(path).expect(404);
+      const entry = await request(app.getHttpServer()).get(path).expect(200);
+      expect(entry.body as unknown).toMatchObject({
+        restricted: true,
+        registrationOpen: true,
+      });
+      expect(JSON.stringify(entry.body)).not.toContain('Private programme');
+      expect(JSON.stringify(entry.body)).not.toContain('example.test');
       await request(app.getHttpServer())
         .post(`${path}/registrations`)
         .send(dto)
-        .expect(404);
+        .expect(202);
     }
     await prisma.accessPolicy.update({
       where: { eventId: event.id },

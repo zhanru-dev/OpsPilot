@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
-import type { PublicEvent } from "./types";
+import type { RegistrationEvent } from "./types";
+import { EventEntryHeading } from "./event-entry-heading";
 import { RequestVerification } from "./request-verification";
 
 type RegistrationInput = {
@@ -28,7 +29,7 @@ export function PublicRegistration({ eventId }: { eventId: string }) {
   const eventQuery = useQuery({
     queryKey: ["public-event", eventId],
     queryFn: () =>
-      apiFetch<PublicEvent>(`/public/events/${eventId}`, {}, false),
+      apiFetch<RegistrationEvent>(`/public/events/${eventId}`, {}, false),
     retry: false,
   });
   const registration = useMutation({
@@ -78,33 +79,32 @@ export function PublicRegistration({ eventId }: { eventId: string }) {
           />
         ) : (
           <>
-            <p className="text-sm font-semibold text-[var(--brand)]">
-              {event.organiser}
-            </p>
-            <h1 className="mt-3 break-words text-3xl font-bold leading-tight">
-              {event.title}
-            </h1>
-            <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-[var(--muted)]">
-              {event.description}
-            </p>
-            <dl className="my-6 grid gap-4 border-y border-[var(--border)] py-5 sm:grid-cols-2">
-              <div>
-                <dt className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                  <CalendarDays className="size-4" /> Starts
-                </dt>
-                <dd className="mt-2 text-sm font-semibold">
-                  {formatDate(event.scheduledStart, true, event.timezone)}
-                </dd>
-              </div>
-              <div>
-                <dt className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                  <Clock3 className="size-4" /> Ends ({event.timezone})
-                </dt>
-                <dd className="mt-2 text-sm font-semibold">
-                  {formatDate(event.scheduledEnd, true, event.timezone)}
-                </dd>
-              </div>
-            </dl>
+            <EventEntryHeading event={event} />
+            {!event.restricted ? (
+              <>
+                <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-[var(--muted)]">
+                  {event.description}
+                </p>
+                <dl className="my-6 grid gap-4 border-y border-[var(--border)] py-5 sm:grid-cols-2">
+                  <div>
+                    <dt className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                      <CalendarDays className="size-4" /> Starts
+                    </dt>
+                    <dd className="mt-2 text-sm font-semibold">
+                      {formatDate(event.scheduledStart, true, event.timezone)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                      <Clock3 className="size-4" /> Ends ({event.timezone})
+                    </dt>
+                    <dd className="mt-2 text-sm font-semibold">
+                      {formatDate(event.scheduledEnd, true, event.timezone)}
+                    </dd>
+                  </div>
+                </dl>
+              </>
+            ) : null}
             {registration.isSuccess ? (
               <section role="status" className="py-4">
                 <CheckCircle2
@@ -115,9 +115,9 @@ export function PublicRegistration({ eventId }: { eventId: string }) {
                   Registration received
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                  Check your inbox for a verification link. The link expires
-                  after 15 minutes. Your event access is not confirmed until you
-                  verify your email.
+                  If your email address is eligible, a verification link will
+                  arrive shortly. Links expire after 15 minutes. Your event
+                  access is not confirmed until you verify your email.
                 </p>
                 <RequestVerification
                   eventId={eventId}
@@ -197,7 +197,10 @@ export function PublicRegistration({ eventId }: { eventId: string }) {
                       />
                       <span>
                         I agree to share my registration details with{" "}
-                        {event.organiser} for this event.
+                        {event.restricted
+                          ? "the event organiser"
+                          : event.organiser}{" "}
+                        for this event.
                       </span>
                     </label>
                   ) : null}

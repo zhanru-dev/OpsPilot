@@ -10,9 +10,17 @@ describe('AttendeeMailService', () => {
   const findMany = jest.fn();
   const updateMany = jest.fn();
   const sendMail = jest.fn();
+  const invitations = jest.fn();
+  const invitationUpdate = jest.fn();
+  const invitationLookup = jest.fn();
   const prisma = {
     attendeeVerification: { findMany, updateMany, deleteMany: jest.fn() },
     attendeeSession: { deleteMany: jest.fn() },
+    eventInvitation: {
+      findMany: invitations,
+      updateMany: invitationUpdate,
+      findUnique: invitationLookup,
+    },
   } as unknown as PrismaService;
   const config = new ConfigService({
     ATTENDEE_EMAIL_ENABLED: true,
@@ -47,6 +55,9 @@ describe('AttendeeMailService', () => {
     findMany.mockResolvedValue([record]);
     updateMany.mockResolvedValue({ count: 1 });
     sendMail.mockResolvedValue({});
+    invitations.mockResolvedValue([]);
+    invitationUpdate.mockResolvedValue({ count: 1 });
+    invitationLookup.mockResolvedValue(null);
   });
 
   it('sends a fragment link over TLS and erases the pending bearer credential', async () => {
@@ -105,7 +116,7 @@ describe('AttendeeMailService', () => {
     });
   });
 
-  it('cancels delivery when the event becomes restricted', async () => {
+  it('cancels verification delivery when an invitation is missing', async () => {
     findMany.mockResolvedValue([
       {
         ...record,
@@ -121,5 +132,78 @@ describe('AttendeeMailService', () => {
       where: { id: 'challenge', usedAt: null },
       data: { usedAt: expect.any(Date) as Date, tokenEncrypted: null },
     });
+  });
+
+  it('sends invitation links without granting access and guards delivery updates by version', async () => {
+    findMany.mockResolvedValue([]);
+    invitations.mockResolvedValue([
+      {
+        id: 'invite',
+        eventId: 'event',
+        email: 'invited@example.test',
+        mailAttemptCount: 0,
+        mailVersion: 3,
+      },
+    ]);
+    await service.dispatch();
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: { address: 'invited@example.test', name: '' },
+        messageId: '<invitation-invite-3@opspilot.invalid>',
+        text: expect.stringContaining('/events/event/register') as string,
+      }),
+    );
+    expect(invitationUpdate).toHaveBeenLastCalledWith({
+      where: { id: 'invite', mailVersion: 3, revokedAt: null },
+      data: { mailSentAt: expect.any(Date) as Date },
+    });
+    expect(invitations).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          event: {
+            status: { in: ['READY', 'LIVE'] },
+            accessPolicy: { mode: 'INVITE_ONLY' },
+          },
+        }) as unknown,
+      }),
+    );
+  });
+
+  it('does not send an invitation revoked or reclaimed after the batch read', async () => {
+    findMany.mockResolvedValue([]);
+    invitations.mockResolvedValue([
+      {
+        id: 'invite',
+        eventId: 'event',
+        email: 'invited@example.test',
+        mailAttemptCount: 0,
+        mailVersion: 3,
+      },
+    ]);
+    invitationUpdate.mockResolvedValue({ count: 0 });
+    await service.dispatch();
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it('retries invitation mail without recording addresses in failure details', async () => {
+    findMany.mockResolvedValue([]);
+    invitations.mockResolvedValue([
+      {
+        id: 'invite',
+        eventId: 'event',
+        email: 'invited@example.test',
+        mailAttemptCount: 0,
+        mailVersion: 3,
+      },
+    ]);
+    sendMail.mockRejectedValue(new Error('invited@example.test SMTP failure'));
+    await service.dispatch();
+    expect(invitationUpdate).toHaveBeenLastCalledWith({
+      where: { id: 'invite', mailVersion: 3, revokedAt: null },
+      data: { mailAvailableAt: expect.any(Date) as Date },
+    });
+    expect(JSON.stringify(invitationUpdate.mock.calls)).not.toContain(
+      'invited@example.test',
+    );
   });
 });

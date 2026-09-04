@@ -10,8 +10,18 @@ import type { AuthenticatedUser } from '../common/request-context';
 import { DomainEventsService } from '../domain-events/domain-events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateRegistrationDto } from './dto/create-registration.dto';
+import {
+  attendeeEventSelect,
+  attendeeEventView,
+  isAttendeeEligible,
+} from '../attendee-access/attendee-eligibility';
 
-const publicModes = [AccessMode.PUBLIC, AccessMode.REGISTRATION];
+const publicModes = [
+  AccessMode.PUBLIC,
+  AccessMode.REGISTRATION,
+  AccessMode.EMAIL_DOMAIN,
+  AccessMode.INVITE_ONLY,
+];
 const registrationStates: EventStatus[] = [EventStatus.READY, EventStatus.LIVE];
 const consentVersion = 'event-registration-v1';
 const pageSize = 25;
@@ -32,34 +42,11 @@ export class EventRegistrationsService {
         status: { in: [...registrationStates, EventStatus.COMPLETED] },
         accessPolicy: { mode: { in: publicModes } },
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        scheduledStart: true,
-        scheduledEnd: true,
-        timezone: true,
-        status: true,
-        workspace: { select: { name: true } },
-        accessPolicy: {
-          select: {
-            mode: true,
-            requiresConsent: true,
-            collectCompany: true,
-            collectJobTitle: true,
-          },
-        },
-      },
+      select: attendeeEventSelect,
     });
     if (!event || !event.accessPolicy)
       throw new NotFoundException('Event registration is unavailable.');
-    const { workspace, accessPolicy, ...detail } = event;
-    return {
-      ...detail,
-      organiser: workspace.name,
-      registrationOpen: registrationStates.includes(event.status),
-      policy: accessPolicy,
-    };
+    return attendeeEventView(event);
   }
 
   async register(eventId: string, dto: CreateRegistrationDto) {
@@ -75,7 +62,12 @@ export class EventRegistrationsService {
           status: { in: registrationStates },
           accessPolicy: { mode: { in: publicModes } },
         },
-        select: { id: true, workspaceId: true, accessPolicy: true },
+        select: {
+          id: true,
+          workspaceId: true,
+          status: true,
+          accessPolicy: true,
+        },
       });
       if (!event?.accessPolicy)
         throw new NotFoundException('Event registration is unavailable.');
@@ -95,6 +87,9 @@ export class EventRegistrationsService {
           'This event does not collect job titles.',
         );
       }
+      this.attendeeAccess.assertEnabled();
+      // A receipt must not disclose whether this address is invited or eligible.
+      if (!(await isAttendeeEligible(transaction, event, email))) return;
       const existing = await transaction.eventRegistration.findUnique({
         where: { eventId_email: { eventId, email } },
         select: { id: true },

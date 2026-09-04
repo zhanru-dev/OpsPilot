@@ -57,13 +57,15 @@ export const openApiDocument = {
     '/public/events/{eventId}': {
       get: {
         tags: ['Registration'],
-        summary: 'Get public registration details for an unrestricted event',
+        summary: 'Get an event registration entry screen',
+        description:
+          'PUBLIC and REGISTRATION events expose basic event details. EMAIL_DOMAIN and INVITE_ONLY events return only a restricted entry screen, collection flags and consent requirements. Private titles, descriptions, organisers, schedules and domain allowlists are withheld. Unpublished events return 404.',
         security: [],
         parameters: [uuidParameter('eventId', 'Event identifier')],
         responses: {
           200: responses.ok,
           404: {
-            description: 'Event is unavailable or requires verified access.',
+            description: 'Event is unavailable or unpublished.',
           },
         },
       },
@@ -73,7 +75,7 @@ export const openApiDocument = {
         tags: ['Registration'],
         summary: 'Submit registration details without granting event access',
         description:
-          'Available for READY or LIVE events with PUBLIC or REGISTRATION access. Queues a single-use verification email. Repeated submissions return the same receipt without changing details. Email requests are limited to one per minute and five per hour per registration. This endpoint does not issue a session.',
+          'Available for READY or LIVE events. EMAIL_DOMAIN requires an exact, normalised domain match; subdomains are not implicitly accepted. INVITE_ONLY requires an active invitation for this event and email. Ineligible addresses receive the same receipt but create no registration and receive no email. Eligible submissions queue single-use verification email, limited to one per minute and five per hour per registration. Repeated submissions do not overwrite details. This endpoint does not issue a session.',
         security: [],
         parameters: [uuidParameter('eventId', 'Event identifier')],
         requestBody: jsonBody({
@@ -95,7 +97,7 @@ export const openApiDocument = {
               properties: { status: { const: 'RECEIVED' } },
               required: ['status'],
             },
-            'Registration received; email ownership is not verified.',
+            'Request received; eligibility and email ownership are not disclosed.',
           ),
           400: {
             description: 'Invalid details or required consent is missing.',
@@ -162,6 +164,8 @@ export const openApiDocument = {
       get: {
         tags: ['Registration'],
         summary: 'Read the current event-scoped attendee session',
+        description:
+          'Rechecks current event lifecycle, email-domain or invitation eligibility and consent. Eligible verified attendees receive basic event details, never internal operational data or domain allowlists. Revoked invitations and expired or invalidated sessions return 401.',
         security: [{ attendeeCookie: [] }],
         parameters: [uuidParameter('eventId', 'Event identifier')],
         responses: { 200: responses.ok, 401: responses.unauthorized },
@@ -174,6 +178,98 @@ export const openApiDocument = {
         security: [{ attendeeCookie: [] }],
         parameters: [uuidParameter('eventId', 'Event identifier')],
         responses: { 204: responses.noContent },
+      },
+    },
+    '/stream-events/{eventId}/invitations': {
+      get: {
+        tags: ['Registration'],
+        summary:
+          'List event invitations for an administrator or operations manager',
+        parameters: [
+          uuidParameter('eventId', 'Workspace-scoped event identifier'),
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 10000, default: 1 },
+          },
+        ],
+        responses: {
+          200: responses.ok,
+          401: responses.unauthorized,
+          403: responses.forbidden,
+          404: responses.notFound,
+        },
+      },
+      post: {
+        tags: ['Registration'],
+        summary: 'Invite an email address to an invite-only event',
+        description:
+          'Workspace administrators and operations managers only. Creates an idempotent invitation, not a registration or verified identity. Email is queued until the event is READY or LIVE. Creating an existing revoked invitation does not restore access.',
+        parameters: [
+          uuidParameter('eventId', 'Workspace-scoped event identifier'),
+        ],
+        requestBody: jsonBody({
+          type: 'object',
+          required: ['email'],
+          additionalProperties: false,
+          properties: {
+            email: { type: 'string', format: 'email', maxLength: 254 },
+          },
+        }),
+        responses: {
+          201: responses.created,
+          400: {
+            description:
+              'Invalid email or the event does not accept invitations.',
+          },
+          401: responses.unauthorized,
+          403: responses.forbidden,
+          404: responses.notFound,
+          429: { description: 'Request limit exceeded.' },
+          503: { description: 'Email delivery is not configured.' },
+        },
+      },
+    },
+    '/stream-events/{eventId}/invitations/{invitationId}/resend': {
+      post: {
+        tags: ['Registration'],
+        summary: 'Resend or reissue a revoked invitation',
+        description:
+          'Administrator or operations manager only. A one-minute cooldown applies per invitation. Reissuing does not restore old attendee sessions or verification links; fresh email verification is required.',
+        parameters: [
+          uuidParameter('eventId', 'Workspace-scoped event identifier'),
+          uuidParameter('invitationId', 'Event-scoped invitation identifier'),
+        ],
+        responses: {
+          200: responses.ok,
+          400: {
+            description: 'Cooldown is active or invitations cannot be changed.',
+          },
+          401: responses.unauthorized,
+          403: responses.forbidden,
+          404: responses.notFound,
+          429: { description: 'Request limit exceeded.' },
+          503: { description: 'Email delivery is not configured.' },
+        },
+      },
+    },
+    '/stream-events/{eventId}/invitations/{invitationId}/revoke': {
+      post: {
+        tags: ['Registration'],
+        summary: 'Revoke an invitation and invalidate attendee access',
+        description:
+          'Administrator or operations manager only. Atomically revokes the invitation and invalidates pending verification links and attendee sessions for the email and event.',
+        parameters: [
+          uuidParameter('eventId', 'Workspace-scoped event identifier'),
+          uuidParameter('invitationId', 'Event-scoped invitation identifier'),
+        ],
+        responses: {
+          204: responses.noContent,
+          400: { description: 'Invitations cannot be changed.' },
+          401: responses.unauthorized,
+          403: responses.forbidden,
+          404: responses.notFound,
+        },
       },
     },
     '/stream-events/{eventId}/registrations': {

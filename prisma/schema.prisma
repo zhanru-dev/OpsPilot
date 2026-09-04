@@ -271,6 +271,7 @@ model StreamEvent {
   auditLogs            AuditLog[]
   liveSession          LiveSession?
   registrations        EventRegistration[]
+  invitations          EventInvitation[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status, scheduledStart])
@@ -295,6 +296,25 @@ model EventRegistration {
 
   @@unique([eventId, email])
   @@index([eventId, createdAt, id])
+}
+
+model EventInvitation {
+  id               String      @id @default(uuid())
+  eventId          String
+  email            String
+  revokedAt        DateTime?
+  mailRequestedAt  DateTime    @default(now())
+  mailSentAt       DateTime?
+  mailAttemptCount Int         @default(0)
+  mailAvailableAt  DateTime    @default(now())
+  mailVersion      Int         @default(1)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  event            StreamEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, email])
+  @@index([eventId, createdAt, id])
+  @@index([mailAvailableAt])
 }
 
 model AttendeeVerification {

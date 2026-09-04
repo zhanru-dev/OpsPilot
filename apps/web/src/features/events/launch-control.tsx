@@ -310,9 +310,17 @@ export function LaunchControl({ eventId }: { eventId: string }) {
                 <Users className="size-4" /> Registrations
               </Link>
             ) : null}
+            {roleCanManage && event.accessPolicy?.mode === "INVITE_ONLY" ? (
+              <Link
+                href={`/streamops/events/${eventId}/invitations`}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-white px-3 text-sm font-semibold"
+              >
+                <Users className="size-4" />
+                Invitations
+              </Link>
+            ) : null}
             {["READY", "LIVE", "COMPLETED"].includes(event.status) &&
-            event.accessPolicy &&
-            ["PUBLIC", "REGISTRATION"].includes(event.accessPolicy.mode) ? (
+            event.accessPolicy ? (
               <Link
                 href={`/events/${eventId}/register`}
                 className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-white px-3 text-sm font-semibold"

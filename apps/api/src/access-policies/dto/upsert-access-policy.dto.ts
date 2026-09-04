@@ -1,11 +1,13 @@
 import { AccessMode } from '@prisma/client';
+import { Transform } from 'class-transformer';
+import { canonicalDomain } from '../../attendee-access/attendee-eligibility';
 import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsEnum,
   IsString,
-  Matches,
+  IsFQDN,
 } from 'class-validator';
 
 export class UpsertAccessPolicyDto {
@@ -13,9 +15,16 @@ export class UpsertAccessPolicyDto {
   mode!: AccessMode;
 
   @IsArray()
+  @Transform(({ value }: { value: unknown }) =>
+    Array.isArray(value)
+      ? value.map((domain: unknown) =>
+          typeof domain === 'string' ? canonicalDomain(domain) : domain,
+        )
+      : value,
+  )
   @ArrayMaxSize(20)
   @IsString({ each: true })
-  @Matches(/^[a-z0-9.-]+\.[a-z]{2,}$/i, { each: true })
+  @IsFQDN({}, { each: true })
   allowedDomains!: string[];
 
   @IsBoolean()

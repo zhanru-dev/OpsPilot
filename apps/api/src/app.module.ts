@@ -28,6 +28,7 @@ import { ApiExceptionFilter } from './error-reports/api-exception.filter';
 import { configModuleOptions } from './config/environment';
 import { LivePollsModule } from './live-polls/live-polls.module';
 import { EventRegistrationsModule } from './event-registrations/event-registrations.module';
+import { EventInvitationsModule } from './event-invitations/event-invitations.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { EventRegistrationsModule } from './event-registrations/event-registrati
     EventsModule,
     LivePollsModule,
     EventRegistrationsModule,
+    EventInvitationsModule,
     AccessPoliciesModule,
     ContentBlocksModule,
     MediaModule,

@@ -8,9 +8,15 @@ import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { apiFetch } from "@/lib/api";
 import { RequestVerification } from "./request-verification";
-import type { PublicEvent } from "./types";
+import type { PublicEvent, RegistrationEvent } from "./types";
+import { EventEntryHeading } from "./event-entry-heading";
 
-type AttendeeSession = { eventId: string; email: string; expiresAt: string };
+type AttendeeSession = {
+  eventId: string;
+  email: string;
+  expiresAt: string;
+  event: PublicEvent;
+};
 
 export function ConfirmAttendee({ eventId }: { eventId: string }) {
   const [token, setToken] = useState(() => {
@@ -22,7 +28,7 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
   const eventQuery = useQuery({
     queryKey: ["public-event", eventId],
     queryFn: () =>
-      apiFetch<PublicEvent>(`/public/events/${eventId}`, {}, false),
+      apiFetch<RegistrationEvent>(`/public/events/${eventId}`, {}, false),
     retry: false,
   });
   const session = useQuery({
@@ -89,6 +95,7 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
     verify.mutate(new FormData(event.currentTarget).get("consent") === "on");
   };
   const event = eventQuery.data;
+  const visibleEvent = (!session.error && session.data?.event) || event;
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-[var(--border)]">
@@ -110,12 +117,7 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
           />
         ) : (
           <>
-            <p className="text-sm font-semibold text-[var(--brand)]">
-              {event.organiser}
-            </p>
-            <h1 className="mt-3 break-words text-3xl font-bold leading-tight">
-              {event.title}
-            </h1>
+            <EventEntryHeading event={visibleEvent!} />
             {!event.registrationOpen ? (
               <p className="mt-6">
                 This event has finished. Attendee access is closed.
@@ -144,7 +146,10 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
                         />
                         <span>
                           I agree to share my registration details with{" "}
-                          {event.organiser} for this event.
+                          {event.restricted
+                            ? "the event organiser"
+                            : event.organiser}{" "}
+                          for this event.
                         </span>
                       </label>
                     ) : null}

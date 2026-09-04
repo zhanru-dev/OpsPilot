@@ -321,7 +321,7 @@ test("a guest registers, verifies an email, and signs out without workspace acce
     });
     await page.reload();
     await expect(
-      page.getByText("Registration is unavailable for this event."),
+      page.getByRole("heading", { name: "Private event", exact: true }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: event.title })).toHaveCount(
       0,

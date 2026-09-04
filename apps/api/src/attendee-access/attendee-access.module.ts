@@ -7,6 +7,6 @@ import { AttendeeTokenService } from './attendee-token.service';
 @Module({
   controllers: [AttendeeAccessController],
   providers: [AttendeeAccessService, AttendeeMailService, AttendeeTokenService],
-  exports: [AttendeeAccessService, AttendeeMailService],
+  exports: [AttendeeAccessService, AttendeeMailService, AttendeeTokenService],
 })
 export class AttendeeAccessModule {}

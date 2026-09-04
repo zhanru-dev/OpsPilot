@@ -3,7 +3,13 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AccessMode, EventStatus, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import {
+  attendeeEventSelect,
+  attendeeEventView,
+  attendeeStates,
+  isAttendeeEligible,
+} from './attendee-eligibility';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AttendeeTokenService,
@@ -13,8 +19,7 @@ import {
 } from './attendee-token.service';
 
 const eligibleEvent = {
-  status: { in: [EventStatus.READY, EventStatus.LIVE] },
-  accessPolicy: { mode: { in: [AccessMode.PUBLIC, AccessMode.REGISTRATION] } },
+  status: { in: attendeeStates },
 };
 const consentVersion = 'event-registration-v1';
 
@@ -24,6 +29,10 @@ export class AttendeeAccessService {
     private readonly prisma: PrismaService,
     private readonly tokens: AttendeeTokenService,
   ) {}
+
+  assertEnabled() {
+    this.tokens.assertEnabled();
+  }
 
   // Call while holding the event lock, in the registration transaction.
   async enqueue(registrationId: string, transaction: Prisma.TransactionClient) {
@@ -67,9 +76,17 @@ export class AttendeeAccessService {
           email: email.trim().toLowerCase(),
           event: eligibleEvent,
         },
-        select: { id: true },
+        include: { event: { select: attendeeEventSelect } },
       });
-      if (registration) await this.enqueue(registration.id, transaction);
+      if (
+        registration &&
+        (await isAttendeeEligible(
+          transaction,
+          registration.event,
+          registration.email,
+        ))
+      )
+        await this.enqueue(registration.id, transaction);
     });
     return { status: 'RECEIVED' as const };
   }
@@ -87,11 +104,18 @@ export class AttendeeAccessService {
         },
         include: {
           registration: {
-            include: { event: { include: { accessPolicy: true } } },
+            include: { event: { select: attendeeEventSelect } },
           },
         },
       });
-      if (!challenge)
+      if (
+        !challenge ||
+        !(await isAttendeeEligible(
+          transaction,
+          challenge.registration.event,
+          challenge.registration.email,
+        ))
+      )
         throw new BadRequestException(
           'This verification link is invalid or has expired. Request a new link.',
         );
@@ -154,15 +178,18 @@ export class AttendeeAccessService {
             email: true,
             consentedAt: true,
             consentVersion: true,
-            event: {
-              select: { accessPolicy: { select: { requiresConsent: true } } },
-            },
+            event: { select: attendeeEventSelect },
           },
         },
       },
     });
     if (
       !session ||
+      !(await isAttendeeEligible(
+        this.prisma,
+        session.registration.event,
+        session.registration.email,
+      )) ||
       (session.registration.event.accessPolicy?.requiresConsent &&
         (!session.registration.consentedAt ||
           session.registration.consentVersion !== consentVersion))
@@ -173,6 +200,7 @@ export class AttendeeAccessService {
       registrationId: session.registration.id,
       email: session.registration.email,
       expiresAt: session.expiresAt,
+      event: attendeeEventView(session.registration.event, true),
     };
   }
 

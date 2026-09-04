@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Get,
   NotFoundException,
@@ -7,7 +8,8 @@ import {
   ParseUUIDPipe,
   Put,
 } from '@nestjs/common';
-import { Prisma, WorkspaceRole } from '@prisma/client';
+import { AccessMode, Prisma, WorkspaceRole } from '@prisma/client';
+import { canonicalDomain } from '../attendee-access/attendee-eligibility';
 import { AuditService } from '../audit/audit.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -45,6 +47,9 @@ export class AccessPoliciesController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const event = await this.requireEvent(eventId, user.workspaceId);
+    dto.allowedDomains = [...new Set(dto.allowedDomains.map(canonicalDomain))];
+    if (dto.mode === AccessMode.EMAIL_DOMAIN && dto.allowedDomains.length === 0)
+      throw new BadRequestException('At least one email domain is required.');
     assertEventNotArchived(event.status);
     const policy = await this.prisma.$transaction(async (transaction) => {
       await transaction.$queryRaw(Prisma.sql`
@@ -58,11 +63,29 @@ export class AccessPoliciesController {
       });
       if (!current) throw new NotFoundException('Stream event was not found.');
       assertEventNotArchived(current.status);
+      const previous = await transaction.accessPolicy.findUnique({
+        where: { eventId },
+      });
       const saved = await transaction.accessPolicy.upsert({
         where: { eventId },
         create: { eventId, ...dto },
         update: dto,
       });
+      const accessChanged =
+        !previous ||
+        previous.mode !== saved.mode ||
+        previous.requiresConsent !== saved.requiresConsent ||
+        JSON.stringify([...previous.allowedDomains].sort()) !==
+          JSON.stringify([...saved.allowedDomains].sort());
+      if (accessChanged) {
+        await transaction.attendeeSession.deleteMany({
+          where: { registration: { eventId } },
+        });
+        await transaction.attendeeVerification.updateMany({
+          where: { registration: { eventId }, usedAt: null },
+          data: { usedAt: new Date(), tokenEncrypted: null },
+        });
+      }
       await this.audit.record(
         {
           workspaceId: user.workspaceId,

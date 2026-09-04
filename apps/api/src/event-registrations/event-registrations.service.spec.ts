@@ -36,7 +36,7 @@ describe('EventRegistrationsService', () => {
     prisma,
     { record: audit } as unknown as AuditService,
     { record: domainEvent } as unknown as DomainEventsService,
-    { enqueue } as unknown as AttendeeAccessService,
+    { enqueue, assertEnabled: jest.fn() } as unknown as AttendeeAccessService,
   );
   const dto = {
     name: '  Sam Patel  ',
@@ -47,6 +47,7 @@ describe('EventRegistrationsService', () => {
   const event = {
     id: 'event',
     workspaceId: 'workspace',
+    status: EventStatus.READY,
     accessPolicy: {
       mode: 'REGISTRATION',
       requiresConsent: true,
@@ -140,9 +141,13 @@ describe('EventRegistrationsService', () => {
       where: {
         id: 'event',
         status: { in: ['READY', 'LIVE'] },
-        accessPolicy: { mode: { in: ['PUBLIC', 'REGISTRATION'] } },
+        accessPolicy: {
+          mode: {
+            in: ['PUBLIC', 'REGISTRATION', 'EMAIL_DOMAIN', 'INVITE_ONLY'],
+          },
+        },
       },
-      select: { id: true, workspaceId: true, accessPolicy: true },
+      select: { id: true, workspaceId: true, status: true, accessPolicy: true },
     });
     expect(createRegistration).not.toHaveBeenCalled();
   });
@@ -189,6 +194,7 @@ describe('EventRegistrationsService', () => {
           accessPolicy: {
             select: {
               mode: true,
+              allowedDomains: true,
               requiresConsent: true,
               collectCompany: true,
               collectJobTitle: true,
