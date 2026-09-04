@@ -16,6 +16,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ReadinessModule } from './readiness/readiness.module';
 import { RequestTraceModule } from './common/request-trace.module';
 import { configModuleOptions } from './config/environment';
+import { AttendeeAccessModule } from './attendee-access/attendee-access.module';
+import { AttendeeMailProcessor } from './attendee-access/attendee-mail.processor';
 
 @Module({
   imports: [
@@ -28,6 +30,7 @@ import { configModuleOptions } from './config/environment';
     DomainEventsModule,
     IntegrationsModule,
     ReadinessModule,
+    AttendeeAccessModule,
   ],
   providers: [
     MediaProcessingProcessor,
@@ -37,6 +40,7 @@ import { configModuleOptions } from './config/environment';
     OutboxProcessor,
     OutboxSchedulerService,
     WebhookDeliveryProcessor,
+    AttendeeMailProcessor,
   ],
 })
 export class WorkerModule {}

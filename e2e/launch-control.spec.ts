@@ -386,8 +386,8 @@ test("v1.1 reliability surfaces expose bounded media and webhook evidence", asyn
     page.getByRole("row", { name: /Launch reliability demo.*Active/ }),
   ).toBeVisible();
   await page
+    .getByRole("row", { name: /event\.ready.*99999999/ })
     .getByRole("button", { name: "View delivery attempts" })
-    .first()
     .click();
   const deliveryDialog = page.getByRole("dialog", {
     name: "event.ready delivery",

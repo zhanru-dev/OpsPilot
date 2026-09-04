@@ -48,6 +48,12 @@ jobs:
       S3_SECRET_KEY: opspilot-local-storage
       WEBHOOK_SECRET_ENCRYPTION_KEY: ci-webhook-encryption-key-that-is-long-enough
       WEBHOOK_RECEIVER_BASE_URL: http://localhost:4100/api/v1/demo/webhook-receiver
+      ATTENDEE_EMAIL_ENABLED: "true"
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+      MAIL_FROM: events@opspilot.test
+      ATTENDEE_TOKEN_ENCRYPTION_KEY: ci-attendee-token-encryption-key-only-for-tests
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -55,7 +61,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: docker compose up -d --wait redis minio
+      - run: docker compose up -d --wait redis minio mailpit
       - run: npm run db:generate
       - run: npm run db:deploy
       - run: npm run db:seed

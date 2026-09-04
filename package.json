@@ -27,7 +27,7 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
-    "services:up": "docker compose up -d postgres redis minio",
+    "services:up": "docker compose up -d postgres redis minio mailpit",
     "services:down": "docker compose down",
     "services:status": "docker compose ps",
     "containers:build": "docker build --target api -f apps/api/Dockerfile -t opspilot-api:local . && docker build --target worker -f apps/api/Dockerfile -t opspilot-worker:local . && docker build -f apps/web/Dockerfile -t opspilot-web:local ."

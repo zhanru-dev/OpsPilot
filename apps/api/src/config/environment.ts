@@ -1,4 +1,5 @@
 import type { ConfigModuleOptions } from '@nestjs/config';
+import { validateAttendeeMail } from '../attendee-access/attendee-mail.config';
 
 type Environment = Record<string, unknown>;
 
@@ -66,6 +67,7 @@ function assertUrl(value: string, key: string, protocols: string[]) {
 export function validateEnvironment(environment: Environment) {
   const errors: string[] = [];
   const validated: Environment = { ...environment };
+  Object.assign(validated, validateAttendeeMail(environment));
 
   for (const key of REQUIRED_VALUES) {
     const value = stringValue(environment, key);

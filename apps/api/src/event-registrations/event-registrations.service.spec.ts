@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EventStatus, Prisma, WorkspaceRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
+import { AttendeeAccessService } from '../attendee-access/attendee-access.service';
 import { DomainEventsService } from '../domain-events/domain-events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventRegistrationsService } from './event-registrations.service';
@@ -14,6 +15,7 @@ describe('EventRegistrationsService', () => {
   const domainEvent = jest.fn();
   const findMany = jest.fn();
   const count = jest.fn();
+  const enqueue = jest.fn();
   const transaction = {
     $queryRaw: lock,
     streamEvent: { findFirst: findEvent },
@@ -34,6 +36,7 @@ describe('EventRegistrationsService', () => {
     prisma,
     { record: audit } as unknown as AuditService,
     { record: domainEvent } as unknown as DomainEventsService,
+    { enqueue } as unknown as AttendeeAccessService,
   );
   const dto = {
     name: '  Sam Patel  ',

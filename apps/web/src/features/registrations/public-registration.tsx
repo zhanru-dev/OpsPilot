@@ -14,6 +14,7 @@ import { ErrorState, LoadingState } from "@/components/ui/states";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { PublicEvent } from "./types";
+import { RequestVerification } from "./request-verification";
 
 type RegistrationInput = {
   name: string;
@@ -114,9 +115,15 @@ export function PublicRegistration({ eventId }: { eventId: string }) {
                   Registration received
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                  Your details have been received for this event. Email
-                  verification and event access are not yet confirmed.
+                  Check your inbox for a verification link. The link expires
+                  after 15 minutes. Your event access is not confirmed until you
+                  verify your email.
                 </p>
+                <RequestVerification
+                  eventId={eventId}
+                  email={registration.variables?.email}
+                  initialCooldown={60}
+                />
               </section>
             ) : !event.registrationOpen ? (
               <section className="py-4">

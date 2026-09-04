@@ -2,11 +2,12 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 
-test("a guest registers and a manager sees the unverified registration", async ({
+test("a guest registers, verifies an email, and signs out without workspace access", async ({
   page,
   browser,
+  request,
 }, testInfo) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   const prisma = new PrismaClient();
   const event = await prisma.streamEvent.create({
     data: {
@@ -145,11 +146,169 @@ test("a guest registers and a manager sees the unverified registration", async (
       fullPage: true,
     });
 
+    const verification = await prisma.attendeeVerification.findFirstOrThrow({
+      where: { registrationId: registrations[0].id },
+    });
+    let messageId = "";
+    await expect
+      .poll(
+        async () => {
+          const response = await request.get(
+            "http://localhost:8025/api/v1/messages",
+          );
+          const inbox = (await response.json()) as {
+            messages: { ID: string; MessageID: string }[];
+          };
+          messageId =
+            inbox.messages.find(
+              (message) =>
+                message.MessageID ===
+                `attendee-${verification.id}@opspilot.invalid`,
+            )?.ID ?? "";
+          return Boolean(messageId);
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(true);
+    const messageResponse = await request.get(
+      `http://localhost:8025/api/v1/message/${messageId}`,
+    );
+    const message = (await messageResponse.json()) as { Text: string };
+    const confirmationUrl = message.Text.match(
+      /http:\/\/localhost:3000\/events\/[^\s]+/,
+    )?.[0];
+    expect(confirmationUrl).toBeTruthy();
+    await page.goto(confirmationUrl!);
+    await expect(
+      page.getByRole("heading", { name: "Confirm your registration" }),
+    ).toBeVisible();
+    await expect(page).toHaveURL(
+      `http://localhost:3000/events/${event.id}/confirm`,
+    );
+    expect(
+      (
+        await prisma.attendeeVerification.findUniqueOrThrow({
+          where: { id: verification.id },
+        })
+      ).usedAt,
+    ).toBeNull();
+    await page
+      .getByRole("button", { name: "Confirm registration", exact: true })
+      .click();
+    expect(
+      (
+        await prisma.eventRegistration.findUniqueOrThrow({
+          where: { id: registrations[0].id },
+        })
+      ).emailVerifiedAt,
+    ).toBeNull();
+    await page.getByRole("checkbox").check();
+    await page.route(
+      `**/public/events/${event.id}/attendee/verify`,
+      (route) =>
+        route.fulfill({
+          status: 503,
+          json: {
+            message:
+              "Verification is temporarily unavailable. Please try again.",
+          },
+        }),
+      { times: 1 },
+    );
+    await page
+      .getByRole("button", { name: "Confirm registration", exact: true })
+      .click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "temporarily unavailable" }),
+    ).toBeVisible();
+    await expect(page.getByRole("checkbox")).toBeChecked();
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.screenshot({
+        path: testInfo.outputPath(`confirm-${width}.png`),
+        fullPage: true,
+      });
+      expect(
+        await page
+          .locator("main input, main button")
+          .evaluateAll((elements) =>
+            elements.every(
+              (element) =>
+                element.getBoundingClientRect().right <=
+                document.documentElement.clientWidth,
+            ),
+          ),
+      ).toBe(true);
+    }
+    const confirmAccessibility = await new AxeBuilder({ page }).analyze();
+    expect(
+      confirmAccessibility.violations.filter((violation) =>
+        ["critical", "serious"].includes(violation.impact ?? ""),
+      ),
+    ).toEqual([]);
+    await page
+      .getByRole("button", { name: "Confirm registration", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Email verified" }),
+    ).toBeVisible();
+    const cookies = (await page.context().cookies()).filter((cookie) =>
+      cookie.name.startsWith("opspilot_"),
+    );
+    expect(cookies.map((cookie) => cookie.name)).toEqual(["opspilot_attendee"]);
+    expect(cookies[0].httpOnly).toBe(true);
+    expect(
+      (await page.request.get("http://localhost:4100/api/v1/auth/me")).status(),
+    ).toBe(401);
+    await page.reload();
+    await expect(
+      page.getByRole("heading", { name: "Email verified" }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath("attendee-verified-mobile.png"),
+      fullPage: true,
+    });
+    await manager
+      .getByRole("button", { name: "Refresh registrations" })
+      .click();
+    await expect(
+      attendee.getByText("Email verified", { exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Signed out" }),
+    ).toBeVisible();
+    expect(
+      (
+        await page.request.get(
+          `http://localhost:4100/api/v1/public/events/${event.id}/attendee/session`,
+        )
+      ).status(),
+    ).toBe(401);
+    await page.goto(confirmationUrl!);
+    await page.getByRole("checkbox").check();
+    await page
+      .getByRole("button", { name: "Confirm registration", exact: true })
+      .click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "invalid or has expired" }),
+    ).toBeVisible();
+    await page.getByLabel("Email address").fill("sam.patel@example.test");
+    await page.getByRole("button", { name: "Send verification link" }).click();
+    await expect(
+      page.getByText(
+        "If this address is registered and eligible, a new link will be sent. Please check your inbox.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Send verification link" }),
+    ).toBeDisabled();
+
     await prisma.streamEvent.update({
       where: { id: event.id },
       data: { status: "COMPLETED" },
     });
-    await page.reload();
+    await page.goto(`/events/${event.id}/register`);
     await expect(
       page.getByRole("heading", { name: "Registration closed" }),
     ).toBeVisible();
@@ -168,9 +327,12 @@ test("a guest registers and a manager sees the unverified registration", async (
       0,
     );
   } finally {
-    await managerContext.close();
-    await prisma.domainEvent.deleteMany({ where: { aggregateId: event.id } });
-    await prisma.streamEvent.delete({ where: { id: event.id } });
-    await prisma.$disconnect();
+    try {
+      await managerContext.close();
+    } finally {
+      await prisma.domainEvent.deleteMany({ where: { aggregateId: event.id } });
+      await prisma.streamEvent.delete({ where: { id: event.id } });
+      await prisma.$disconnect();
+    }
   }
 });

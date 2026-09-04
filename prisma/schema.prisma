@@ -278,21 +278,52 @@ model StreamEvent {
 }
 
 model EventRegistration {
-  id              String      @id @default(uuid())
-  eventId         String
-  email           String
-  name            String
-  company         String?
-  jobTitle        String?
-  emailVerifiedAt DateTime?
-  consentedAt     DateTime?
-  consentVersion  String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  event           StreamEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id               String                 @id @default(uuid())
+  eventId          String
+  email            String
+  name             String
+  company          String?
+  jobTitle         String?
+  emailVerifiedAt  DateTime?
+  consentedAt      DateTime?
+  consentVersion   String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  event            StreamEvent            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  verifications    AttendeeVerification[]
+  attendeeSessions AttendeeSession[]
 
   @@unique([eventId, email])
   @@index([eventId, createdAt, id])
+}
+
+model AttendeeVerification {
+  id             String            @id @default(uuid())
+  registrationId String
+  tokenHash      String            @unique
+  tokenEncrypted String?
+  expiresAt      DateTime
+  usedAt         DateTime?
+  sentAt         DateTime?
+  attemptCount   Int               @default(0)
+  availableAt    DateTime          @default(now())
+  createdAt      DateTime          @default(now())
+  registration   EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@index([registrationId, createdAt])
+  @@index([availableAt, expiresAt])
+}
+
+model AttendeeSession {
+  id             String            @id @default(uuid())
+  registrationId String
+  tokenHash      String            @unique
+  expiresAt      DateTime
+  createdAt      DateTime          @default(now())
+  registration   EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@index([registrationId])
+  @@index([expiresAt])
 }
 
 model LiveSession {

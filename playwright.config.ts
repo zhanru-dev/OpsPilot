@@ -20,6 +20,11 @@ export default defineConfig({
   },
   webServer: [
     {
+      command: "npm run dev:worker",
+      wait: { stdout: /OpsPilot background worker is ready/ },
+      timeout: 120_000,
+    },
+    {
       command: "npm run dev:api",
       url: "http://localhost:4100/api/v1/health/ready",
       reuseExistingServer: !process.env.CI,

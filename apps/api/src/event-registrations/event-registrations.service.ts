@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { AccessMode, EventStatus, Prisma } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
+import { AttendeeAccessService } from '../attendee-access/attendee-access.service';
 import type { AuthenticatedUser } from '../common/request-context';
 import { DomainEventsService } from '../domain-events/domain-events.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -21,6 +22,7 @@ export class EventRegistrationsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly domainEvents: DomainEventsService,
+    private readonly attendeeAccess: AttendeeAccessService,
   ) {}
 
   async publicEvent(eventId: string) {
@@ -98,7 +100,10 @@ export class EventRegistrationsService {
         select: { id: true },
       });
       // A repeated request neither reveals nor overwrites another registration.
-      if (existing) return;
+      if (existing) {
+        await this.attendeeAccess.enqueue(existing.id, transaction);
+        return;
+      }
       const registration = await transaction.eventRegistration.create({
         data: {
           eventId,
@@ -113,6 +118,7 @@ export class EventRegistrationsService {
         },
         select: { id: true },
       });
+      await this.attendeeAccess.enqueue(registration.id, transaction);
       await this.audit.record(
         {
           workspaceId: event.workspaceId,

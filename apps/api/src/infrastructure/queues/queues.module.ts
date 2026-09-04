@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import {
   MEDIA_PROCESSING_QUEUE,
   MAINTENANCE_QUEUE,
+  ATTENDEE_MAIL_QUEUE,
   OUTBOX_QUEUE,
   WEBHOOK_DELIVERY_QUEUE,
 } from './queue.constants';
@@ -27,6 +28,7 @@ import { redisConnectionFromUrl } from './redis-connection';
       { name: OUTBOX_QUEUE },
       { name: WEBHOOK_DELIVERY_QUEUE },
       { name: MAINTENANCE_QUEUE },
+      { name: ATTENDEE_MAIL_QUEUE },
     ),
   ],
   exports: [BullModule],

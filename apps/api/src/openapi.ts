@@ -73,7 +73,7 @@ export const openApiDocument = {
         tags: ['Registration'],
         summary: 'Submit registration details without granting event access',
         description:
-          'Available for READY or LIVE events with PUBLIC or REGISTRATION access. Repeated email submissions return the same receipt without changing existing details. No session or verified identity is issued.',
+          'Available for READY or LIVE events with PUBLIC or REGISTRATION access. Queues a single-use verification email. Repeated submissions return the same receipt without changing details. Email requests are limited to one per minute and five per hour per registration. This endpoint does not issue a session.',
         security: [],
         parameters: [uuidParameter('eventId', 'Event identifier')],
         requestBody: jsonBody({
@@ -102,7 +102,78 @@ export const openApiDocument = {
           },
           404: { description: 'Registration is closed or unavailable.' },
           429: { description: 'Too many registration attempts.' },
+          503: { description: 'Email verification is not configured.' },
         },
+      },
+    },
+    '/public/events/{eventId}/attendee/resend': {
+      post: {
+        tags: ['Registration'],
+        summary: 'Request another verification email',
+        security: [],
+        description:
+          'Returns the same receipt for unknown, ineligible, and rate-limited registrations. Links expire after 15 minutes. Sending a new link invalidates the previous one.',
+        parameters: [uuidParameter('eventId', 'Event identifier')],
+        requestBody: jsonBody({
+          type: 'object',
+          additionalProperties: false,
+          required: ['email'],
+          properties: {
+            email: { type: 'string', format: 'email', maxLength: 254 },
+          },
+        }),
+        responses: {
+          202: responses.ok,
+          400: { description: 'Invalid email.' },
+          429: { description: 'Request limit exceeded.' },
+          503: { description: 'Email verification is not configured.' },
+        },
+      },
+    },
+    '/public/events/{eventId}/attendee/verify': {
+      post: {
+        tags: ['Registration'],
+        summary:
+          'Exchange a single-use link for an event-scoped attendee session',
+        security: [],
+        description:
+          'Requires an explicit POST. Atomically consumes the token, verifies email, records required consent, and sets a separate HttpOnly opspilot_attendee cookie scoped to this event for 12 hours. Previous attendee sessions for this registration are revoked. Attendee cookies never authorise workspace APIs.',
+        parameters: [uuidParameter('eventId', 'Event identifier')],
+        requestBody: jsonBody({
+          type: 'object',
+          additionalProperties: false,
+          required: ['token', 'consent'],
+          properties: {
+            token: { type: 'string', pattern: '^[A-Za-z0-9_-]{43}$' },
+            consent: { type: 'boolean' },
+          },
+        }),
+        responses: {
+          200: responses.ok,
+          400: {
+            description:
+              'Invalid, expired, used, or ineligible link, or missing consent.',
+          },
+          429: { description: 'Request limit exceeded.' },
+        },
+      },
+    },
+    '/public/events/{eventId}/attendee/session': {
+      get: {
+        tags: ['Registration'],
+        summary: 'Read the current event-scoped attendee session',
+        security: [{ attendeeCookie: [] }],
+        parameters: [uuidParameter('eventId', 'Event identifier')],
+        responses: { 200: responses.ok, 401: responses.unauthorized },
+      },
+    },
+    '/public/events/{eventId}/attendee/logout': {
+      post: {
+        tags: ['Registration'],
+        summary: 'Revoke the attendee session and clear its cookie',
+        security: [{ attendeeCookie: [] }],
+        parameters: [uuidParameter('eventId', 'Event identifier')],
+        responses: { 204: responses.noContent },
       },
     },
     '/stream-events/{eventId}/registrations': {
@@ -895,6 +966,11 @@ export const openApiDocument = {
   },
   components: {
     securitySchemes: {
+      attendeeCookie: {
+        type: 'apiKey',
+        in: 'cookie',
+        name: 'opspilot_attendee',
+      },
       accessCookie: { type: 'apiKey', in: 'cookie', name: 'opspilot_access' },
       refreshCookie: { type: 'apiKey', in: 'cookie', name: 'opspilot_refresh' },
     },
