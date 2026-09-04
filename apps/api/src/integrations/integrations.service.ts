@@ -24,6 +24,10 @@ const subscribedEventTypes = [
   'event.started',
   'event.completed',
   'live-session.update.recorded',
+  'live-poll.created',
+  'live-poll.opened',
+  'live-poll.closed',
+  'live-poll.response.recorded',
 ] as const;
 
 @Injectable()

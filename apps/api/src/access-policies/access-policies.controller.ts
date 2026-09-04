@@ -7,7 +7,7 @@ import {
   ParseUUIDPipe,
   Put,
 } from '@nestjs/common';
-import { WorkspaceRole } from '@prisma/client';
+import { Prisma, WorkspaceRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -47,6 +47,17 @@ export class AccessPoliciesController {
     const event = await this.requireEvent(eventId, user.workspaceId);
     assertEventNotArchived(event.status);
     const policy = await this.prisma.$transaction(async (transaction) => {
+      await transaction.$queryRaw(Prisma.sql`
+        SELECT "id" FROM "StreamEvent"
+        WHERE "id" = ${eventId} AND "workspaceId" = ${user.workspaceId}
+        FOR UPDATE
+      `);
+      const current = await transaction.streamEvent.findFirst({
+        where: { id: eventId, workspaceId: user.workspaceId },
+        select: { status: true },
+      });
+      if (!current) throw new NotFoundException('Stream event was not found.');
+      assertEventNotArchived(current.status);
       const saved = await transaction.accessPolicy.upsert({
         where: { eventId },
         create: { eventId, ...dto },

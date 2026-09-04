@@ -67,6 +67,7 @@ jobs:
       - run: npm audit --omit=dev
       - run: npx playwright install --with-deps chromium
       - run: npm run test:ui
+      - run: npm run test:ui:isolated
 
   containers:
     needs: quality

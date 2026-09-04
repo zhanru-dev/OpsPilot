@@ -44,6 +44,7 @@ export const openApiDocument = {
     { name: 'Stream events' },
     { name: 'Launch control' },
     { name: 'Live operations' },
+    { name: 'Registration' },
     { name: 'Media' },
     { name: 'Integrations' },
     { name: 'Analytics' },
@@ -53,6 +54,78 @@ export const openApiDocument = {
   ],
   security: [{ accessCookie: [] }],
   paths: {
+    '/public/events/{eventId}': {
+      get: {
+        tags: ['Registration'],
+        summary: 'Get public registration details for an unrestricted event',
+        security: [],
+        parameters: [uuidParameter('eventId', 'Event identifier')],
+        responses: {
+          200: responses.ok,
+          404: {
+            description: 'Event is unavailable or requires verified access.',
+          },
+        },
+      },
+    },
+    '/public/events/{eventId}/registrations': {
+      post: {
+        tags: ['Registration'],
+        summary: 'Submit registration details without granting event access',
+        description:
+          'Available for READY or LIVE events with PUBLIC or REGISTRATION access. Repeated email submissions return the same receipt without changing existing details. No session or verified identity is issued.',
+        security: [],
+        parameters: [uuidParameter('eventId', 'Event identifier')],
+        requestBody: jsonBody({
+          type: 'object',
+          required: ['name', 'email', 'consent'],
+          additionalProperties: false,
+          properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            email: { type: 'string', format: 'email', maxLength: 254 },
+            company: { type: 'string', maxLength: 120 },
+            jobTitle: { type: 'string', maxLength: 120 },
+            consent: { type: 'boolean' },
+          },
+        }),
+        responses: {
+          202: jsonResponse(
+            {
+              type: 'object',
+              properties: { status: { const: 'RECEIVED' } },
+              required: ['status'],
+            },
+            'Registration received; email ownership is not verified.',
+          ),
+          400: {
+            description: 'Invalid details or required consent is missing.',
+          },
+          404: { description: 'Registration is closed or unavailable.' },
+          429: { description: 'Too many registration attempts.' },
+        },
+      },
+    },
+    '/stream-events/{eventId}/registrations': {
+      get: {
+        tags: ['Registration'],
+        summary:
+          'List registrations for an administrator or operations manager',
+        parameters: [
+          uuidParameter('eventId', 'Workspace-scoped event identifier'),
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 10000, default: 1 },
+          },
+        ],
+        responses: {
+          200: responses.ok,
+          401: responses.unauthorized,
+          403: responses.forbidden,
+          404: responses.notFound,
+        },
+      },
+    },
     '/health/live': {
       get: {
         tags: ['Health'],
@@ -276,6 +349,61 @@ export const openApiDocument = {
           400: { description: 'The event does not have an active session.' },
           403: responses.forbidden,
           404: responses.notFound,
+        },
+      },
+    },
+    '/stream-events/{eventId}/live-polls': {
+      post: {
+        tags: ['Live operations'],
+        summary: 'Create a draft poll for the active live session',
+        parameters: [uuidParameter('eventId', 'Stream event ID')],
+        requestBody: jsonBody({
+          $ref: '#/components/schemas/CreateLivePollRequest',
+        }),
+        responses: {
+          201: responses.created,
+          400: { description: 'The event does not have an active session.' },
+          403: responses.forbidden,
+          404: responses.notFound,
+        },
+      },
+    },
+    '/stream-events/{eventId}/live-polls/{pollId}/status': {
+      patch: {
+        tags: ['Live operations'],
+        summary: 'Open or close a live poll',
+        parameters: [
+          uuidParameter('eventId', 'Stream event ID'),
+          uuidParameter('pollId', 'Live poll ID'),
+        ],
+        requestBody: jsonBody({
+          $ref: '#/components/schemas/TransitionLivePollRequest',
+        }),
+        responses: {
+          200: responses.ok,
+          400: { description: 'The requested poll transition is invalid.' },
+          403: responses.forbidden,
+          404: responses.notFound,
+          409: { description: 'Another poll is already open.' },
+        },
+      },
+    },
+    '/stream-events/{eventId}/live-polls/{pollId}/responses': {
+      post: {
+        tags: ['Live operations'],
+        summary: 'Create or change the current workspace user’s poll response',
+        parameters: [
+          uuidParameter('eventId', 'Stream event ID'),
+          uuidParameter('pollId', 'Live poll ID'),
+        ],
+        requestBody: jsonBody({
+          $ref: '#/components/schemas/VoteLivePollRequest',
+        }),
+        responses: {
+          201: responses.created,
+          400: { description: 'The poll is not accepting responses.' },
+          404: responses.notFound,
+          429: { description: 'The response rate limit was exceeded.' },
         },
       },
     },
@@ -960,6 +1088,32 @@ export const openApiDocument = {
           severity: { enum: ['INFO', 'WARNING', 'CRITICAL'] },
           message: { type: 'string', minLength: 2, maxLength: 500 },
         },
+      },
+      CreateLivePollRequest: {
+        type: 'object',
+        required: ['question', 'options'],
+        additionalProperties: false,
+        properties: {
+          question: { type: 'string', minLength: 5, maxLength: 180 },
+          options: {
+            type: 'array',
+            minItems: 2,
+            maxItems: 6,
+            items: { type: 'string', minLength: 1, maxLength: 80 },
+          },
+        },
+      },
+      TransitionLivePollRequest: {
+        type: 'object',
+        required: ['status'],
+        additionalProperties: false,
+        properties: { status: { enum: ['OPEN', 'CLOSED'] } },
+      },
+      VoteLivePollRequest: {
+        type: 'object',
+        required: ['optionId'],
+        additionalProperties: false,
+        properties: { optionId: { type: 'string', format: 'uuid' } },
       },
       AccessPolicyRequest: {
         type: 'object',

@@ -1,6 +1,7 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import {
   EventStatus,
+  LivePollStatus,
   LiveSessionStatus,
   LiveSessionUpdateSeverity,
   Prisma,
@@ -14,12 +15,16 @@ import { LiveSessionsService } from './live-sessions.service';
 
 describe('LiveSessionsService', () => {
   const findEvent = jest.fn();
+  const lockEvent = jest.fn();
+  const findLockedEvent = jest.fn();
   const findSessions = jest.fn();
   const createUpdate = jest.fn();
   const createSession = jest.fn();
   const findSession = jest.fn();
   const updateSession = jest.fn();
   const transaction = {
+    $queryRaw: lockEvent,
+    streamEvent: { findFirst: findLockedEvent },
     liveSessionUpdate: { create: createUpdate },
     liveSession: {
       create: createSession,
@@ -51,32 +56,37 @@ describe('LiveSessionsService', () => {
     sessionId: 'session-id',
   };
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    lockEvent.mockReset().mockResolvedValue([]);
+    findEvent.mockReset();
+    findLockedEvent.mockReset();
+  });
 
   it('records an operational update with audit and domain-event evidence', async () => {
-    findEvent
-      .mockResolvedValueOnce({
-        id: 'event-id',
-        title: 'Partner Live',
-        status: EventStatus.LIVE,
-        liveSession: {
-          id: 'live-session-id',
-          status: LiveSessionStatus.ACTIVE,
-        },
-      })
-      .mockResolvedValueOnce({
-        id: 'event-id',
-        title: 'Partner Live',
-        status: EventStatus.LIVE,
-        scheduledStart: new Date('2027-01-01T10:00:00.000Z'),
-        scheduledEnd: new Date('2027-01-01T11:00:00.000Z'),
-        timezone: 'Europe/London',
-        expectedAttendees: 100,
-        liveSession: {
-          id: 'live-session-id',
-          updates: [],
-        },
-      });
+    findLockedEvent.mockResolvedValueOnce({
+      id: 'event-id',
+      title: 'Partner Live',
+      status: EventStatus.LIVE,
+      liveSession: {
+        id: 'live-session-id',
+        status: LiveSessionStatus.ACTIVE,
+      },
+    });
+    findEvent.mockResolvedValueOnce({
+      id: 'event-id',
+      title: 'Partner Live',
+      status: EventStatus.LIVE,
+      scheduledStart: new Date('2027-01-01T10:00:00.000Z'),
+      scheduledEnd: new Date('2027-01-01T11:00:00.000Z'),
+      timezone: 'Europe/London',
+      expectedAttendees: 100,
+      liveSession: {
+        id: 'live-session-id',
+        updates: [],
+        polls: [],
+      },
+    });
     createUpdate.mockResolvedValue({ id: 'update-id' });
 
     await service.addUpdate(
@@ -113,7 +123,7 @@ describe('LiveSessionsService', () => {
   });
 
   it('rejects updates when the event is not actively live', async () => {
-    findEvent.mockResolvedValue({
+    findLockedEvent.mockResolvedValue({
       id: 'event-id',
       title: 'Partner Live',
       status: EventStatus.COMPLETED,
@@ -130,6 +140,70 @@ describe('LiveSessionsService', () => {
         user,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(createUpdate).not.toHaveBeenCalled();
+  });
+
+  it('rechecks event state only after the completion lock is acquired', async () => {
+    let releaseLock!: () => void;
+    lockEvent.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        releaseLock = resolve;
+      }),
+    );
+    const pending = service.addUpdate(
+      'event-id',
+      { severity: LiveSessionUpdateSeverity.INFO, message: 'Late update' },
+      user,
+    );
+    expect(findLockedEvent).not.toHaveBeenCalled();
+    expect(createUpdate).not.toHaveBeenCalled();
+    findLockedEvent.mockResolvedValueOnce({
+      id: 'event-id',
+      status: EventStatus.COMPLETED,
+      liveSession: { id: 'live-session-id', status: LiveSessionStatus.ENDED },
+    });
+    releaseLock();
+
+    await expect(pending).rejects.toBeInstanceOf(BadRequestException);
+    expect(lockEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ values: ['event-id', 'workspace-id'] }),
+    );
+    expect(findLockedEvent).toHaveBeenCalledWith({
+      where: { id: 'event-id', workspaceId: 'workspace-id' },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        liveSession: { select: { id: true, status: true } },
+      },
+    });
+    expect(createUpdate).not.toHaveBeenCalled();
+    expect(auditRecord).not.toHaveBeenCalled();
+    expect(domainEventRecord).not.toHaveBeenCalled();
+  });
+
+  it('rejects an inaccessible event without writing an update', async () => {
+    findLockedEvent.mockResolvedValueOnce(null);
+    await expect(
+      service.addUpdate(
+        'foreign-event',
+        { severity: LiveSessionUpdateSeverity.INFO, message: 'An update' },
+        user,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(createUpdate).not.toHaveBeenCalled();
+    expect(auditRecord).not.toHaveBeenCalled();
+  });
+
+  it('rejects blank messages before opening a transaction', async () => {
+    await expect(
+      service.addUpdate(
+        'event-id',
+        { severity: LiveSessionUpdateSeverity.INFO, message: '  ' },
+        user,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(lockEvent).not.toHaveBeenCalled();
     expect(createUpdate).not.toHaveBeenCalled();
   });
 
@@ -186,6 +260,15 @@ describe('LiveSessionsService', () => {
         status: LiveSessionStatus.ENDED,
         endedAt: updateInput.data.endedAt,
         endedById: 'user-id',
+        polls: {
+          updateMany: {
+            where: { status: LivePollStatus.OPEN },
+            data: {
+              status: LivePollStatus.CLOSED,
+              closedAt: updateInput.data.endedAt,
+            },
+          },
+        },
         updates: {
           create: {
             actorId: 'user-id',

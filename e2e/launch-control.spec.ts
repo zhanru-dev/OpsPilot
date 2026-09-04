@@ -4,10 +4,175 @@ import { PrismaClient } from "@prisma/client";
 
 test.afterAll(async () => {
   const prisma = new PrismaClient();
+  const events = await prisma.streamEvent.findMany({
+    where: { title: { startsWith: "E2E UI launch " } },
+    select: {
+      id: true,
+      liveSession: { select: { id: true, polls: { select: { id: true } } } },
+    },
+  });
+  const aggregateIds = events.flatMap((event) => [
+    event.id,
+    ...(event.liveSession
+      ? [
+          event.liveSession.id,
+          ...event.liveSession.polls.map((poll) => poll.id),
+        ]
+      : []),
+  ]);
+  await prisma.domainEvent.deleteMany({
+    where: { aggregateId: { in: aggregateIds } },
+  });
   await prisma.streamEvent.deleteMany({
     where: { title: { startsWith: "E2E UI launch " } },
   });
   await prisma.$disconnect();
+});
+
+test("live poll responses update across manager and analyst sessions", async ({
+  page,
+  browser,
+}, testInfo) => {
+  test.setTimeout(60_000);
+  const prisma = new PrismaClient();
+  const title = `E2E UI launch poll session ${Date.now()}`;
+  let eventId: string;
+  try {
+    const event = await prisma.streamEvent.create({
+      data: {
+        workspaceId: "11111111-1111-4111-8111-111111111111",
+        title,
+        slug: `e2e-ui-polls-${Date.now()}`,
+        description: "Browser-tested live poll session.",
+        status: "LIVE",
+        scheduledStart: new Date(),
+        scheduledEnd: new Date(Date.now() + 3_600_000),
+        liveSession: {
+          create: { workspaceId: "11111111-1111-4111-8111-111111111111" },
+        },
+      },
+    });
+    eventId = event.id;
+  } finally {
+    await prisma.$disconnect();
+  }
+  const livePath = `/streamops/events/${eventId}/live`;
+  const question = "Which topic should we cover next?";
+  await page.goto("/login");
+  await page
+    .getByRole("button", { name: "Use Alex Morgan demo account" })
+    .click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Launch readiness at a glance" }),
+  ).toBeVisible();
+  await page.goto(livePath);
+  await page.getByRole("button", { name: "New poll" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create live poll" });
+  await dialog.getByLabel("Poll question").fill(question);
+  await dialog.getByLabel("Option 1", { exact: true }).fill("Reliability");
+  await dialog
+    .getByLabel("Option 2", { exact: true })
+    .fill("Audience insights");
+  await dialog.getByRole("button", { name: "Add option" }).click();
+  await dialog.getByLabel("Option 3", { exact: true }).fill("Media workflows");
+  await dialog
+    .getByRole("button", { name: "Create poll", exact: true })
+    .click();
+  const managerPoll = page.getByRole("article", { name: question });
+  await expect(managerPoll).toBeVisible();
+  await managerPoll.getByRole("button", { name: "Open poll" }).click();
+  await expect(managerPoll.getByText("Open", { exact: true })).toBeVisible();
+
+  const analystContext = await browser.newContext();
+  try {
+    const analystPage = await analystContext.newPage();
+    await analystPage.goto("http://localhost:3000/login");
+    await analystPage
+      .getByRole("button", { name: "Use Maya Chen demo account" })
+      .click();
+    await analystPage
+      .getByRole("button", { name: "Sign in", exact: true })
+      .click();
+    await expect(
+      analystPage.getByRole("heading", {
+        name: "Launch readiness at a glance",
+      }),
+    ).toBeVisible();
+    await analystPage.goto(`http://localhost:3000${livePath}`);
+    await expect(analystPage.getByText("Live updates connected")).toBeVisible();
+    await expect(
+      analystPage.getByRole("button", { name: "New poll" }),
+    ).toHaveCount(0);
+    const analystPoll = analystPage.getByRole("article", { name: question });
+    await expect(
+      analystPoll.getByRole("button", { name: "Close poll" }),
+    ).toHaveCount(0);
+    await analystPoll
+      .getByRole("radio", { name: "Reliability", exact: true })
+      .check();
+    await analystPoll.getByRole("button", { name: "Submit response" }).click();
+    await expect(analystPoll.getByText("Response saved")).toBeVisible();
+    await expect(
+      managerPoll.getByText("1 response", { exact: true }),
+    ).toBeVisible({ timeout: 8_000 });
+    await analystPoll
+      .getByRole("radio", { name: "Audience insights", exact: true })
+      .check();
+    await analystPoll.getByRole("button", { name: "Update response" }).click();
+    await expect(
+      managerPoll.getByRole("meter", {
+        name: "Audience insights response share",
+      }),
+    ).toHaveAttribute("aria-valuenow", "100", { timeout: 8_000 });
+    await expect(
+      managerPoll.getByText("1 response", { exact: true }),
+    ).toBeVisible();
+    await managerPoll
+      .getByRole("radio", { name: "Reliability", exact: true })
+      .check();
+    await managerPoll.getByRole("button", { name: "Submit response" }).click();
+    await expect(
+      managerPoll.getByText("2 responses", { exact: true }),
+    ).toBeVisible();
+
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(
+      accessibility.violations.filter((violation) =>
+        ["critical", "serious"].includes(violation.impact ?? ""),
+      ),
+    ).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath("polls-desktop.png"),
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({
+      path: testInfo.outputPath("polls-mobile.png"),
+      fullPage: true,
+    });
+    expect(
+      await managerPoll.locator("button, input").evaluateAll((elements) =>
+        elements.every((element) => {
+          const rect = element.getBoundingClientRect();
+          return (
+            rect.left >= 0 && rect.right <= document.documentElement.clientWidth
+          );
+        }),
+      ),
+    ).toBe(true);
+    await managerPoll.getByRole("button", { name: "Close poll" }).click();
+    await page
+      .getByRole("dialog", { name: "Close this poll?" })
+      .getByRole("button", { name: "Close poll", exact: true })
+      .click();
+    await expect(analystPoll.getByText("Closed", { exact: true })).toBeVisible({
+      timeout: 8_000,
+    });
+    await expect(analystPoll.getByRole("radio")).toHaveCount(0);
+  } finally {
+    await analystContext.close();
+  }
 });
 
 test("operations manager completes the launch-readiness golden flow", async ({
@@ -158,7 +323,14 @@ test("analyst receives a read-only product surface", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Live Operations" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Open room" }).first().click();
+  await page
+    .getByRole("link", { name: "Open room" })
+    .and(
+      page.locator(
+        'a[href="/streamops/events/33333333-3333-4333-8333-333333333332/live"]',
+      ),
+    )
+    .click();
   await expect(
     page.getByRole("heading", { name: "Partner Enablement Live" }),
   ).toBeVisible();

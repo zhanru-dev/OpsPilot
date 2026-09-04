@@ -6,6 +6,7 @@ import {
   ErrorReportSource,
   ErrorReportStatus,
   EventStatus,
+  LivePollStatus,
   LiveSessionStatus,
   LiveSessionUpdateSeverity,
   MediaKind,
@@ -43,6 +44,7 @@ const ids = {
   partnerLive: "33333333-3333-4333-8333-333333333332",
   townHall: "33333333-3333-4333-8333-333333333333",
   securityWorkshop: "33333333-3333-4333-8333-333333333334",
+  publicForum: "33333333-3333-4333-8333-333333333335",
   videoReady: "44444444-4444-4444-8444-444444444441",
   audioReady: "44444444-4444-4444-8444-444444444442",
   videoFailed: "44444444-4444-4444-8444-444444444443",
@@ -53,6 +55,11 @@ const ids = {
   recommendationRun: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1",
   errorReport: "cccccccc-cccc-4ccc-8ccc-ccccccccccc1",
   liveSession: "dddddddd-dddd-4ddd-8ddd-ddddddddddd1",
+  livePoll: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1",
+  draftPoll: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2",
+  pollOptionOne: "ffffffff-ffff-4fff-8fff-fffffffffff1",
+  pollOptionTwo: "ffffffff-ffff-4fff-8fff-fffffffffff2",
+  pollOptionThree: "ffffffff-ffff-4fff-8fff-fffffffffff3",
 };
 
 function encryptWebhookSecret(value: string) {
@@ -395,6 +402,58 @@ async function main() {
     },
   });
 
+  await prisma.streamEvent.create({
+    data: {
+      id: ids.publicForum,
+      workspaceId: workspace.id,
+      ownerId: operationsManager.id,
+      title: "Product Operations Forum",
+      slug: "product-operations-forum",
+      description:
+        "A practical discussion on launch readiness, reliable event operations and the handover from planning to delivery.",
+      status: EventStatus.READY,
+      scheduledStart: new Date(now + 7 * 24 * 60 * 60 * 1000),
+      scheduledEnd: new Date(now + 7 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
+      expectedAttendees: 150,
+      accessPolicy: {
+        create: {
+          mode: AccessMode.REGISTRATION,
+          requiresConsent: true,
+          collectCompany: true,
+          collectJobTitle: true,
+        },
+      },
+      runbookItems: {
+        create: {
+          title: "Confirm public registration details",
+          ownerId: operationsManager.id,
+          isCritical: true,
+          status: RunbookStatus.DONE,
+        },
+      },
+      contentBlocks: {
+        create: {
+          type: ContentBlockType.AGENDA,
+          title: "Programme",
+          body: "Launch readiness, operational handover and audience questions.",
+        },
+      },
+      mediaAssets: {
+        create: { mediaId: ids.videoReady, purpose: "event-opener" },
+      },
+      registrations: {
+        create: {
+          name: "Sam Patel",
+          email: "sam.patel@example.test",
+          company: "Example Studio",
+          jobTitle: "Operations Lead",
+          consentedAt: new Date(now),
+          consentVersion: "event-registration-v1",
+        },
+      },
+    },
+  });
+
   await prisma.recommendation.createMany({
     data: [
       {
@@ -618,6 +677,52 @@ async function main() {
     },
   });
 
+  await prisma.livePoll.create({
+    data: {
+      id: ids.livePoll,
+      sessionId: ids.liveSession,
+      createdById: operationsManager.id,
+      question: "Which topic should we prioritise in the next session?",
+      status: LivePollStatus.OPEN,
+      openedAt: new Date(now - 5 * 60 * 1000),
+      options: {
+        create: [
+          { id: ids.pollOptionOne, label: "Launch reliability", sortOrder: 0 },
+          { id: ids.pollOptionTwo, label: "Audience insights", sortOrder: 1 },
+          { id: ids.pollOptionThree, label: "Media workflows", sortOrder: 2 },
+        ],
+      },
+    },
+  });
+  await prisma.livePollResponse.createMany({
+    data: [
+      { userId: ids.analystUser, optionId: ids.pollOptionTwo },
+      { userId: ids.adminUser, optionId: ids.pollOptionOne },
+    ].map(({ userId, optionId }) => ({
+      pollId: ids.livePoll,
+      optionId,
+      userId,
+      voterKeyHash: createHash("sha256")
+        .update(`workspace-user:${userId}`)
+        .digest("hex"),
+    })),
+  });
+  await prisma.livePoll.create({
+    data: {
+      id: ids.draftPoll,
+      sessionId: ids.liveSession,
+      createdById: operationsManager.id,
+      question: "How confident are you about the release handover?",
+      options: {
+        create: [
+          { label: "Ready to proceed", sortOrder: 0 },
+          { label: "Need more detail", sortOrder: 1 },
+          { label: "Follow-up required", sortOrder: 2 },
+        ],
+      },
+    },
+  });
+
   await prisma.auditLog.createMany({
     data: [
       {
@@ -672,6 +777,9 @@ async function main() {
           { eventType: "event.started" },
           { eventType: "event.completed" },
           { eventType: "live-session.update.recorded" },
+          { eventType: "live-poll.created" },
+          { eventType: "live-poll.opened" },
+          { eventType: "live-poll.closed" },
         ],
       },
     },

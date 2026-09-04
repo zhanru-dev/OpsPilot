@@ -311,6 +311,25 @@ export type LiveSessionUpdate = {
   actor: LiveSessionActor | null;
 };
 
+export type LivePoll = {
+  id: string;
+  sessionId: string;
+  question: string;
+  status: "DRAFT" | "OPEN" | "CLOSED";
+  openedAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  createdBy: LiveSessionActor | null;
+  currentUserOptionId: string | null;
+  responseCount: number;
+  options: Array<{
+    id: string;
+    label: string;
+    sortOrder: number;
+    responseCount: number;
+  }>;
+};
+
 export type LiveSession = {
   id: string;
   eventId: string;
@@ -320,7 +339,8 @@ export type LiveSession = {
   startedBy: LiveSessionActor | null;
   endedBy: LiveSessionActor | null;
   updates: LiveSessionUpdate[];
-  _count?: { updates: number };
+  polls: LivePoll[];
+  _count?: { updates: number; polls: number };
 };
 
 export type LiveSessionEvent = {
@@ -342,10 +362,10 @@ export type LiveSessionSnapshot = {
 export type LiveSessionListResponse = {
   serverTime: string;
   items: Array<
-    LiveSession & {
+    Omit<LiveSession, "polls"> & {
       event: LiveSessionEvent;
       updates: LiveSessionUpdate[];
-      _count: { updates: number };
+      _count: { updates: number; polls: number };
     }
   >;
 };

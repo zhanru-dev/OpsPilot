@@ -22,6 +22,8 @@ import {
   Sparkles,
   Trash2,
   X,
+  Users,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -299,6 +301,24 @@ export function LaunchControl({ eventId }: { eventId: string }) {
               <Button variant="secondary" onClick={() => setDialog("event")}>
                 <Pencil className="size-4" /> Edit event
               </Button>
+            ) : null}
+            {roleCanManage ? (
+              <Link
+                href={`/streamops/events/${eventId}/registrations`}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-white px-3 text-sm font-semibold"
+              >
+                <Users className="size-4" /> Registrations
+              </Link>
+            ) : null}
+            {["READY", "LIVE", "COMPLETED"].includes(event.status) &&
+            event.accessPolicy &&
+            ["PUBLIC", "REGISTRATION"].includes(event.accessPolicy.mode) ? (
+              <Link
+                href={`/events/${eventId}/register`}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-white px-3 text-sm font-semibold"
+              >
+                <ExternalLink className="size-4" /> Registration page
+              </Link>
             ) : null}
             {["LIVE", "COMPLETED"].includes(event.status) ? (
               <Link

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   EventStatus,
+  LivePollStatus,
   LiveSessionStatus,
   LiveSessionUpdateSeverity,
   Prisma,
@@ -14,6 +15,7 @@ import { Observable, exhaustMap, from, map, timer } from 'rxjs';
 import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../common/request-context';
 import { DomainEventsService } from '../domain-events/domain-events.service';
+import { livePollVoterKey } from '../live-polls/live-poll-voter';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateLiveSessionUpdateDto } from './dto/create-live-session-update.dto';
 
@@ -52,7 +54,7 @@ export class LiveSessionsService {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
-        _count: { select: { updates: true } },
+        _count: { select: { updates: true, polls: true } },
       },
       orderBy: [{ status: 'asc' }, { startedAt: 'desc' }],
       take: 50,
@@ -81,6 +83,21 @@ export class LiveSessionsService {
               orderBy: { createdAt: 'desc' },
               take: 100,
             },
+            polls: {
+              orderBy: { createdAt: 'desc' },
+              include: {
+                createdBy: { select: actorSelect },
+                options: {
+                  orderBy: { sortOrder: 'asc' },
+                  include: { _count: { select: { responses: true } } },
+                },
+                responses: {
+                  where: { voterKeyHash: livePollVoterKey(user.id) },
+                  select: { optionId: true },
+                  take: 1,
+                },
+              },
+            },
           },
         },
       },
@@ -89,15 +106,29 @@ export class LiveSessionsService {
     if (!event) throw new NotFoundException('Stream event was not found.');
     const { liveSession, ...eventDetail } = event;
 
+    const session = liveSession
+      ? {
+          ...liveSession,
+          updates: [...liveSession.updates].reverse(),
+          polls: liveSession.polls.map(({ responses, options, ...poll }) => ({
+            ...poll,
+            currentUserOptionId: responses[0]?.optionId ?? null,
+            responseCount: options.reduce(
+              (total, option) => total + option._count.responses,
+              0,
+            ),
+            options: options.map(({ _count, ...option }) => ({
+              ...option,
+              responseCount: _count.responses,
+            })),
+          })),
+        }
+      : null;
+
     return {
       serverTime: new Date().toISOString(),
       event: eventDetail,
-      session: liveSession
-        ? {
-            ...liveSession,
-            updates: [...liveSession.updates].reverse(),
-          }
-        : null,
+      session,
     };
   }
 
@@ -116,25 +147,6 @@ export class LiveSessionsService {
     dto: CreateLiveSessionUpdateDto,
     user: AuthenticatedUser,
   ) {
-    const event = await this.prisma.streamEvent.findFirst({
-      where: { id: eventId, workspaceId: user.workspaceId },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        liveSession: { select: { id: true, status: true } },
-      },
-    });
-    if (!event) throw new NotFoundException('Stream event was not found.');
-    const session = event.liveSession;
-    if (
-      event.status !== EventStatus.LIVE ||
-      session?.status !== LiveSessionStatus.ACTIVE
-    ) {
-      throw new BadRequestException(
-        'Operational updates can only be recorded while the event is live.',
-      );
-    }
     const message = dto.message.trim();
     if (message.length < 2) {
       throw new BadRequestException(
@@ -143,6 +155,31 @@ export class LiveSessionsService {
     }
 
     await this.prisma.$transaction(async (transaction) => {
+      // Recheck lifecycle state after acquiring the same row lock as completion.
+      await transaction.$queryRaw(Prisma.sql`
+        SELECT "id" FROM "StreamEvent"
+        WHERE "id" = ${eventId} AND "workspaceId" = ${user.workspaceId}
+        FOR UPDATE
+      `);
+      const event = await transaction.streamEvent.findFirst({
+        where: { id: eventId, workspaceId: user.workspaceId },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          liveSession: { select: { id: true, status: true } },
+        },
+      });
+      if (!event) throw new NotFoundException('Stream event was not found.');
+      const session = event.liveSession;
+      if (
+        event.status !== EventStatus.LIVE ||
+        session?.status !== LiveSessionStatus.ACTIVE
+      ) {
+        throw new BadRequestException(
+          'Operational updates can only be recorded while the event is live.',
+        );
+      }
       const update = await transaction.liveSessionUpdate.create({
         data: {
           sessionId: session.id,
@@ -221,12 +258,19 @@ export class LiveSessionsService {
     });
     if (!session || session.status === LiveSessionStatus.ENDED) return null;
 
+    const endedAt = new Date();
     return transaction.liveSession.update({
       where: { id: session.id },
       data: {
         status: LiveSessionStatus.ENDED,
-        endedAt: new Date(),
+        endedAt,
         endedById: actorId,
+        polls: {
+          updateMany: {
+            where: { status: LivePollStatus.OPEN },
+            data: { status: LivePollStatus.CLOSED, closedAt: endedAt },
+          },
+        },
         updates: {
           create: {
             actorId,

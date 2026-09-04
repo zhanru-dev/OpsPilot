@@ -10,6 +10,7 @@ export function ConfirmationDialog({
   description,
   confirmLabel,
   loading,
+  error,
   onClose,
   onConfirm,
 }: {
@@ -18,15 +19,26 @@ export function ConfirmationDialog({
   description: string;
   confirmLabel: string;
   loading?: boolean;
+  error?: string;
   onClose: () => void;
   onConfirm: () => void;
 }) {
   return (
-    <Dialog open={open} onClose={onClose} title={title} description={description}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={title}
+      description={description}
+    >
       <div className="flex items-start gap-3 rounded-md bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]">
         <AlertTriangle className="mt-0.5 size-5 shrink-0" />
         <p>This action changes launch evidence and will be recorded.</p>
       </div>
+      {error ? (
+        <p role="alert" className="mt-4 text-sm text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel

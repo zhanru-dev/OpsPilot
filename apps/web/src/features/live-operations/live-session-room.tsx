@@ -26,6 +26,7 @@ import type {
   LiveSessionUpdateSeverity,
 } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
+import { LivePollsPanel } from "./live-polls-panel";
 
 type ConnectionState = "connecting" | "live" | "reconnecting";
 
@@ -199,6 +200,12 @@ export function LiveSessionRoom({ eventId }: { eventId: string }) {
       ) : (
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-5">
+            <LivePollsPanel
+              eventId={eventId}
+              polls={session.polls}
+              active={active}
+              canManage={canManage}
+            />
             {active && canManage ? (
               <section className="border border-[var(--border)] bg-white">
                 <header className="border-b border-[var(--border)] px-5 py-4">
@@ -258,15 +265,16 @@ export function LiveSessionRoom({ eventId }: { eventId: string }) {
             ) : null}
 
             <section className="border border-[var(--border)] bg-white">
-              <header className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
-                <div>
+              <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
+                <div className="min-w-0">
                   <h2 className="font-bold">Operational timeline</h2>
                   <p className="mt-1 text-xs text-[var(--muted)]">
                     Most recent actor-attributed updates first
                   </p>
                 </div>
-                <span className="text-xs font-semibold text-[var(--muted)]">
-                  {session.updates.length} updates
+                <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-[var(--muted)]">
+                  {session.updates.length}{" "}
+                  {session.updates.length === 1 ? "update" : "updates"}
                 </span>
               </header>
               <div className="divide-y divide-[var(--border)]">

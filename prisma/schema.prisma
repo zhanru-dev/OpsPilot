@@ -36,6 +36,12 @@ enum LiveSessionUpdateSeverity {
   CRITICAL
 }
 
+enum LivePollStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
 enum RunbookStatus {
   TODO
   IN_PROGRESS
@@ -188,6 +194,8 @@ model User {
   startedLiveSessions         LiveSession[]         @relation("LiveSessionStarter")
   endedLiveSessions           LiveSession[]         @relation("LiveSessionEnder")
   liveSessionUpdates          LiveSessionUpdate[]   @relation("LiveSessionUpdateActor")
+  createdLivePolls            LivePoll[]            @relation("LivePollCreator")
+  livePollResponses           LivePollResponse[]
 }
 
 model Session {
@@ -262,10 +270,29 @@ model StreamEvent {
   recommendationRuns   RecommendationRun[]
   auditLogs            AuditLog[]
   liveSession          LiveSession?
+  registrations        EventRegistration[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status, scheduledStart])
   @@index([ownerId])
+}
+
+model EventRegistration {
+  id              String      @id @default(uuid())
+  eventId         String
+  email           String
+  name            String
+  company         String?
+  jobTitle        String?
+  emailVerifiedAt DateTime?
+  consentedAt     DateTime?
+  consentVersion  String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  event           StreamEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, email])
+  @@index([eventId, createdAt, id])
 }
 
 model LiveSession {
@@ -284,6 +311,7 @@ model LiveSession {
   startedBy   User?               @relation("LiveSessionStarter", fields: [startedById], references: [id], onDelete: SetNull)
   endedBy     User?               @relation("LiveSessionEnder", fields: [endedById], references: [id], onDelete: SetNull)
   updates     LiveSessionUpdate[]
+  polls       LivePoll[]
 
   @@index([workspaceId, status, startedAt])
 }
@@ -299,6 +327,53 @@ model LiveSessionUpdate {
   actor     User?                     @relation("LiveSessionUpdateActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([sessionId, createdAt])
+}
+
+model LivePoll {
+  id          String             @id @default(uuid())
+  sessionId   String
+  createdById String?
+  question    String
+  status      LivePollStatus     @default(DRAFT)
+  openedAt    DateTime?
+  closedAt    DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  session     LiveSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdBy   User?              @relation("LivePollCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  options     LivePollOption[]
+  responses   LivePollResponse[]
+
+  @@index([sessionId, status, createdAt])
+}
+
+model LivePollOption {
+  id        String             @id @default(uuid())
+  pollId    String
+  label     String
+  sortOrder Int
+  createdAt DateTime           @default(now())
+  poll      LivePoll           @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  responses LivePollResponse[]
+
+  @@unique([pollId, sortOrder])
+}
+
+model LivePollResponse {
+  id           String         @id @default(uuid())
+  pollId       String
+  optionId     String
+  userId       String?
+  voterKeyHash String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  poll         LivePoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option       LivePollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([pollId, voterKeyHash])
+  @@index([optionId])
+  @@index([userId])
 }
 
 model RunbookItem {

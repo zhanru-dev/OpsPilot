@@ -26,6 +26,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { ErrorReportsModule } from './error-reports/error-reports.module';
 import { ApiExceptionFilter } from './error-reports/api-exception.filter';
 import { configModuleOptions } from './config/environment';
+import { LivePollsModule } from './live-polls/live-polls.module';
+import { EventRegistrationsModule } from './event-registrations/event-registrations.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { configModuleOptions } from './config/environment';
     AuditModule,
     ReadinessModule,
     EventsModule,
+    LivePollsModule,
+    EventRegistrationsModule,
     AccessPoliciesModule,
     ContentBlocksModule,
     MediaModule,

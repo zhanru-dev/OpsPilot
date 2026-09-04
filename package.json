@@ -18,6 +18,7 @@
     "test": "npm run test --workspace=@opspilot/api",
     "test:e2e": "npm run test:e2e --workspace=@opspilot/api",
     "test:ui": "playwright test",
+    "test:ui:isolated": "playwright test --config=playwright.ui.config.ts",
     "test:ui:headed": "playwright test --headed",
     "test:deployment": "playwright test --config=playwright.deployment.config.ts",
     "db:generate": "prisma generate",
