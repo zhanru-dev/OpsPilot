@@ -180,6 +180,43 @@ export const openApiDocument = {
         responses: { 204: responses.noContent },
       },
     },
+    '/public/events/{eventId}/attendee/live-polls': {
+      get: {
+        tags: ['Live operations'],
+        summary: 'List live polls for a verified attendee',
+        description:
+          'Requires the event-scoped attendee cookie and rechecks lifecycle, consent and current invitation or domain eligibility. Draft polls and voter identities are never returned.',
+        security: [{ attendeeCookie: [] }],
+        parameters: [uuidParameter('eventId', 'Event identifier')],
+        responses: {
+          200: responses.ok,
+          401: responses.unauthorized,
+        },
+      },
+    },
+    '/public/events/{eventId}/attendee/live-polls/{pollId}/responses': {
+      post: {
+        tags: ['Live operations'],
+        summary: 'Create or change a verified attendee poll response',
+        description:
+          'Serialises against event completion and access-policy changes. The response uses a one-way event-registration voter key and is not linked to a workspace user. One response per attendee per poll is retained.',
+        security: [{ attendeeCookie: [] }],
+        parameters: [
+          uuidParameter('eventId', 'Event identifier'),
+          uuidParameter('pollId', 'Live poll identifier'),
+        ],
+        requestBody: jsonBody({
+          $ref: '#/components/schemas/VoteLivePollRequest',
+        }),
+        responses: {
+          201: responses.created,
+          400: { description: 'The poll is not accepting responses.' },
+          401: responses.unauthorized,
+          404: responses.notFound,
+          429: { description: 'The response rate limit was exceeded.' },
+        },
+      },
+    },
     '/stream-events/{eventId}/invitations': {
       get: {
         tags: ['Registration'],

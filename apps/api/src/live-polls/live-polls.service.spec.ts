@@ -11,16 +11,19 @@ import {
   WorkspaceRole,
 } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
+import { AttendeeAccessService } from '../attendee-access/attendee-access.service';
 import type { AuthenticatedUser } from '../common/request-context';
 import { DomainEventsService } from '../domain-events/domain-events.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { livePollVoterKey } from './live-poll-voter';
+import { attendeeLivePollVoterKey, livePollVoterKey } from './live-poll-voter';
 import { LivePollsService } from './live-polls.service';
 
 describe('LivePollsService', () => {
   const findEvent = jest.fn();
   const findPoll = jest.fn();
+  const findPolls = jest.fn();
   const findOption = jest.fn();
+  const findSession = jest.fn();
   const createPoll = jest.fn();
   const updatePoll = jest.fn();
   const upsertResponse = jest.fn();
@@ -28,13 +31,18 @@ describe('LivePollsService', () => {
   const transaction = {
     $queryRaw: lockEvent,
     streamEvent: { findFirst: findEvent },
-    livePoll: { create: createPoll, update: updatePoll, findFirst: findPoll },
+    livePoll: {
+      create: createPoll,
+      update: updatePoll,
+      findFirst: findPoll,
+    },
+    liveSession: { findUniqueOrThrow: findSession },
     livePollOption: { findFirst: findOption },
     livePollResponse: { upsert: upsertResponse },
   } as unknown as Prisma.TransactionClient;
   const prisma = {
     streamEvent: { findFirst: findEvent },
-    livePoll: { findFirst: findPoll },
+    livePoll: { findFirst: findPoll, findMany: findPolls },
     livePollOption: { findFirst: findOption },
     $transaction: jest.fn((callback: (client: typeof transaction) => unknown) =>
       callback(transaction),
@@ -42,10 +50,14 @@ describe('LivePollsService', () => {
   } as unknown as PrismaService;
   const auditRecord = jest.fn();
   const domainEventRecord = jest.fn();
+  const authenticateAttendee = jest.fn();
   const service = new LivePollsService(
     prisma,
     { record: auditRecord } as unknown as AuditService,
     { record: domainEventRecord } as unknown as DomainEventsService,
+    {
+      authenticate: authenticateAttendee,
+    } as unknown as AttendeeAccessService,
   );
   const user: AuthenticatedUser = {
     id: 'user-id',
@@ -98,12 +110,15 @@ describe('LivePollsService', () => {
     jest.clearAllMocks();
     for (const mock of [
       findPoll,
+      findPolls,
       findOption,
+      findSession,
       createPoll,
       updatePoll,
       upsertResponse,
       auditRecord,
       domainEventRecord,
+      authenticateAttendee,
     ]) {
       mock.mockReset();
     }
@@ -240,6 +255,130 @@ describe('LivePollsService', () => {
       update: { optionId: 'option-two', userId: 'user-id' },
     });
     expect(result.currentUserOptionId).toBe('option-two');
+  });
+
+  it('returns attendee-visible polls with one private selection', async () => {
+    authenticateAttendee.mockResolvedValue({
+      registration: { id: 'registration-id' },
+    });
+    findPolls.mockResolvedValue([
+      {
+        ...pollSnapshot,
+        status: LivePollStatus.OPEN,
+        responses: [{ optionId: 'option-one' }],
+      },
+    ]);
+
+    const result = await service.listForAttendee('event-id', 'a'.repeat(43));
+
+    const voterKeyHash = attendeeLivePollVoterKey('registration-id');
+    expect(authenticateAttendee).toHaveBeenCalledWith(
+      'event-id',
+      'a'.repeat(43),
+      prisma,
+    );
+    expect(findPolls).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: [LivePollStatus.OPEN, LivePollStatus.CLOSED] },
+          session: expect.objectContaining({ eventId: 'event-id' }) as unknown,
+        }) as unknown,
+        include: expect.objectContaining({
+          responses: expect.objectContaining({
+            where: { voterKeyHash },
+          }) as unknown,
+        }) as unknown,
+      }),
+    );
+    expect(result.polls[0]).toMatchObject({
+      currentUserOptionId: 'option-one',
+      responseCount: 5,
+    });
+    expect(result.polls[0]).not.toHaveProperty('sessionId');
+    expect(result.polls[0].options[0]).not.toHaveProperty('pollId');
+    expect(JSON.stringify(result)).not.toContain(voterKeyHash);
+  });
+
+  it('records an attendee response without linking it to a workspace user', async () => {
+    authenticateAttendee.mockResolvedValue({
+      registration: { id: 'registration-id' },
+    });
+    findPoll
+      .mockResolvedValueOnce({
+        id: 'poll-id',
+        sessionId: 'live-session-id',
+        status: LivePollStatus.OPEN,
+      })
+      .mockResolvedValueOnce({
+        ...pollSnapshot,
+        status: LivePollStatus.OPEN,
+        responses: [{ optionId: 'option-two' }],
+      });
+    findOption.mockResolvedValue({ id: 'option-two' });
+    findSession.mockResolvedValue({ workspaceId: 'workspace-id' });
+    upsertResponse.mockResolvedValue({ id: 'response-id' });
+
+    const result = await service.voteAsAttendee(
+      'event-id',
+      'poll-id',
+      { optionId: 'option-two' },
+      'a'.repeat(43),
+    );
+
+    const voterKeyHash = attendeeLivePollVoterKey('registration-id');
+    expect(authenticateAttendee).toHaveBeenCalledWith(
+      'event-id',
+      'a'.repeat(43),
+      transaction,
+    );
+    expect(upsertResponse).toHaveBeenCalledWith({
+      where: { pollId_voterKeyHash: { pollId: 'poll-id', voterKeyHash } },
+      create: {
+        pollId: 'poll-id',
+        optionId: 'option-two',
+        voterKeyHash,
+      },
+      update: { optionId: 'option-two', userId: null },
+    });
+    expect(domainEventRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({ source: 'attendee' }) as unknown,
+      }),
+      transaction,
+    );
+    expect(result.currentUserOptionId).toBe('option-two');
+  });
+
+  it('locks the event before authenticating an attendee vote', async () => {
+    let releaseLock!: () => void;
+    lockEvent.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        releaseLock = resolve;
+      }),
+    );
+    authenticateAttendee.mockResolvedValue({
+      registration: { id: 'registration-id' },
+    });
+    findPoll.mockResolvedValueOnce(null);
+
+    const pending = service.voteAsAttendee(
+      'event-id',
+      'poll-id',
+      { optionId: 'option-one' },
+      'a'.repeat(43),
+    );
+    const rejected = expect(pending).rejects.toBeInstanceOf(NotFoundException);
+    expect(authenticateAttendee).not.toHaveBeenCalled();
+    expect(findPoll).not.toHaveBeenCalled();
+    releaseLock();
+
+    await rejected;
+    expect(authenticateAttendee).toHaveBeenCalledWith(
+      'event-id',
+      'a'.repeat(43),
+      transaction,
+    );
+    expect(upsertResponse).not.toHaveBeenCalled();
   });
 
   it('rejects a second open poll without changing either poll', async () => {

@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/api";
 import { RequestVerification } from "./request-verification";
 import type { PublicEvent, RegistrationEvent } from "./types";
 import { EventEntryHeading } from "./event-entry-heading";
+import { AttendeeLivePolls } from "./attendee-live-polls";
 
 type AttendeeSession = {
   eventId: string;
@@ -181,6 +182,10 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
                 <p className="text-sm">
                   Your attendee session is active for this event.
                 </p>
+                <AttendeeLivePolls
+                  eventId={eventId}
+                  onAccessLost={session.refetch}
+                />
                 {logout.error ? (
                   <p role="alert" className="text-sm text-[var(--danger)]">
                     {logout.error.message}

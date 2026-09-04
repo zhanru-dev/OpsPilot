@@ -157,9 +157,24 @@ export class AttendeeAccessService {
   }
 
   async session(eventId: string, token?: string) {
+    const session = await this.authenticate(eventId, token, this.prisma);
+    return {
+      eventId,
+      registrationId: session.registration.id,
+      email: session.registration.email,
+      expiresAt: session.expiresAt,
+      event: attendeeEventView(session.registration.event, true),
+    };
+  }
+
+  async authenticate(
+    eventId: string,
+    token: string | undefined,
+    database: PrismaService | Prisma.TransactionClient,
+  ) {
     if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token))
       throw new UnauthorizedException('Attendee session is unavailable.');
-    const session = await this.prisma.attendeeSession.findFirst({
+    const session = await database.attendeeSession.findFirst({
       where: {
         tokenHash: tokenHash(token),
         expiresAt: { gt: new Date() },
@@ -186,7 +201,7 @@ export class AttendeeAccessService {
     if (
       !session ||
       !(await isAttendeeEligible(
-        this.prisma,
+        database,
         session.registration.event,
         session.registration.email,
       )) ||
@@ -195,13 +210,7 @@ export class AttendeeAccessService {
           session.registration.consentVersion !== consentVersion))
     )
       throw new UnauthorizedException('Attendee session is unavailable.');
-    return {
-      eventId,
-      registrationId: session.registration.id,
-      email: session.registration.email,
-      expiresAt: session.expiresAt,
-      event: attendeeEventView(session.registration.event, true),
-    };
+    return session;
   }
 
   async logout(eventId: string, token?: string) {

@@ -21,6 +21,7 @@ describe('Attendee verification (e2e)', () => {
   let access: AttendeeAccessService;
   let tokens: AttendeeTokenService;
   const eventIds: string[] = [];
+  const pollIds: string[] = [];
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -35,7 +36,7 @@ describe('Attendee verification (e2e)', () => {
   });
   afterAll(async () => {
     await prisma.domainEvent.deleteMany({
-      where: { aggregateId: { in: eventIds } },
+      where: { aggregateId: { in: [...eventIds, ...pollIds] } },
     });
     await prisma.streamEvent.deleteMany({ where: { id: { in: eventIds } } });
     await app.close();
@@ -246,6 +247,105 @@ describe('Attendee verification (e2e)', () => {
         where: { registrationId: registration.id },
       }),
     ).toBe(5);
+  });
+
+  it('lets a verified attendee read and update one anonymous live-poll response', async () => {
+    const { event, registration, token } = await fixture();
+    await prisma.streamEvent.update({
+      where: { id: event.id },
+      data: {
+        status: EventStatus.LIVE,
+        liveSession: {
+          create: { workspaceId: event.workspaceId },
+        },
+      },
+    });
+    const liveSession = await prisma.liveSession.findUniqueOrThrow({
+      where: { eventId: event.id },
+    });
+    const openPoll = await prisma.livePoll.create({
+      data: {
+        sessionId: liveSession.id,
+        question: 'Which topic should we explore next?',
+        status: 'OPEN',
+        openedAt: new Date(),
+        options: {
+          create: [
+            { label: 'Operational resilience', sortOrder: 0 },
+            { label: 'Audience analytics', sortOrder: 1 },
+          ],
+        },
+      },
+      include: { options: { orderBy: { sortOrder: 'asc' } } },
+    });
+    const draftPoll = await prisma.livePoll.create({
+      data: {
+        sessionId: liveSession.id,
+        question: 'This draft must stay private',
+        options: {
+          create: [
+            { label: 'Hidden one', sortOrder: 0 },
+            { label: 'Hidden two', sortOrder: 1 },
+          ],
+        },
+      },
+    });
+    pollIds.push(openPoll.id, draftPoll.id);
+    const verified = await access.verify(event.id, token, true);
+    const cookie = `opspilot_attendee=${verified.sessionToken}`;
+    const base = `/api/v1/public/events/${event.id}/attendee/live-polls`;
+
+    await request(app.getHttpServer()).get(base).expect(401);
+    const list = await request(app.getHttpServer())
+      .get(base)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(list.headers['cache-control']).toBe('no-store');
+    expect(list.body as unknown).toMatchObject({
+      polls: [
+        {
+          id: openPoll.id,
+          status: 'OPEN',
+          currentUserOptionId: null,
+          responseCount: 0,
+        },
+      ],
+    });
+    expect(JSON.stringify(list.body)).not.toContain(draftPoll.question);
+    await request(app.getHttpServer())
+      .post(`${base}/${openPoll.id}/responses`)
+      .set('Cookie', cookie)
+      .send({ optionId: draftPoll.id })
+      .expect(404);
+
+    for (const option of openPoll.options) {
+      const vote = await request(app.getHttpServer())
+        .post(`${base}/${openPoll.id}/responses`)
+        .set('Cookie', cookie)
+        .send({ optionId: option.id })
+        .expect(201);
+      expect(vote.body as unknown).toMatchObject({
+        responseCount: 1,
+        currentUserOptionId: option.id,
+      });
+    }
+    const responses = await prisma.livePollResponse.findMany({
+      where: { pollId: openPoll.id },
+    });
+    expect(responses).toHaveLength(1);
+    expect(responses[0]).toMatchObject({ userId: null });
+    expect(responses[0].voterKeyHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(responses[0].voterKeyHash).not.toContain(registration.email);
+
+    await prisma.livePoll.update({
+      where: { id: openPoll.id },
+      data: { status: 'CLOSED', closedAt: new Date() },
+    });
+    await request(app.getHttpServer())
+      .post(`${base}/${openPoll.id}/responses`)
+      .set('Cookie', cookie)
+      .send({ optionId: openPoll.options[0].id })
+      .expect(400);
   });
 
   it('rejects expired tokens and rechecks lifecycle and access mode at confirmation and on every session read', async () => {

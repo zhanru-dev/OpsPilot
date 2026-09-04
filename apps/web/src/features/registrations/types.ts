@@ -46,6 +46,27 @@ export type InvitationList = {
   pageSize: number;
 };
 
+export type AttendeeLivePoll = {
+  id: string;
+  question: string;
+  status: "OPEN" | "CLOSED";
+  openedAt: string | null;
+  closedAt: string | null;
+  currentUserOptionId: string | null;
+  responseCount: number;
+  options: Array<{
+    id: string;
+    label: string;
+    sortOrder: number;
+    responseCount: number;
+  }>;
+};
+
+export type AttendeeLivePollList = {
+  serverTime: string;
+  polls: AttendeeLivePoll[];
+};
+
 export type RegistrationList = {
   event: { id: string; title: string };
   items: Array<{

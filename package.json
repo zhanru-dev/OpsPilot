@@ -1,6 +1,6 @@
 {
   "name": "opspilot-platform",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Launch readiness and operational control for complex online events.",
   "workspaces": [

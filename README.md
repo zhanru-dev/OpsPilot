@@ -4,7 +4,7 @@
 
 OpsPilot is an English-first B2B operations platform for teams running complex online events. Its first vertical, **StreamOps**, turns fragmented event setup into an explainable launch-readiness workflow: accountable ownership, audience policy, critical runbooks, watch-page content, media state, recommendations and audit history in one control surface.
 
-`v1.5.0` is the current release candidate. It keeps the verified v1.2 product scope and adds production configuration, independent deployable services and release smoke tests. The golden flow is database-backed, tenant-scoped, role-aware, asynchronous, measured, tested and documented.
+`v2.0.0` is the current release candidate. It extends the production-ready v1.5 platform with live-session control, public registration, scoped attendee identity, restricted access and live audience polling. The golden flow is database-backed, tenant-scoped, role-aware, asynchronous, measured, tested and documented.
 
 ## Product Thesis
 
@@ -19,6 +19,11 @@ The centrepiece is **Launch Control**. A versioned rules engine converts operati
 - PostgreSQL and Prisma schema for users, workspaces, memberships, events and evidence.
 - Workspace-scoped RBAC for operations managers and read-only analysts.
 - Guarded `DRAFT -> CONFIGURING -> READY -> LIVE -> COMPLETED -> ARCHIVED` lifecycle.
+- Event-scoped live operations room with durable updates and realtime refresh.
+- Draft, open and closed live polls with serialised lifecycle controls.
+- Public registration with single-use email verification and scoped HttpOnly attendee sessions.
+- Invitation-only and exact email-domain access with immediate session revocation.
+- Pseudonymous attendee poll responses separated from workspace user identities.
 - Archived-event immutability enforced by both the API and Launch Control.
 - Versioned, deterministic readiness and recommendation engines.
 - Optional grounded OpenAI recommendation provider behind a workspace feature flag.
@@ -166,9 +171,7 @@ Scores and evidence are calculated by the API. The UI does not decide whether a 
 
 ## Version Boundary
 
-`v1.5.0` freezes the v1.2 product scope and adds reproducible production images, fail-fast environment validation, deployment security controls and public smoke-test automation. The release becomes final when the hosted Web, API, worker and managed dependencies pass the deployment gate. See the [v1.2 product release record](docs/v1.2-release.md) and [v1.5 deployment scope](docs/product-strategy.md#105-v15-public-deployment-and-release-operations).
-
-- `v2`: HLS processing, live-session control, realtime updates, Portal Hub and advanced integration workflows.
+`v2.0.0` adds the live event and audience-engagement layer while preserving the v1.5 deployment boundary: independently deployable Web, API and worker processes; fail-fast production configuration; private media storage; and release smoke tests. This candidate is intentionally not deployed. A hosted release still requires the deployment gate against managed dependencies.
 
 ## Clean-Room Boundary
 

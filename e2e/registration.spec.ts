@@ -31,6 +31,7 @@ test("a guest registers, verifies an email, and signs out without workspace acce
     },
   });
   const managerContext = await browser.newContext();
+  let livePollId: string | undefined;
   try {
     await page.goto(`/events/${event.id}/register`);
     await expect(
@@ -264,6 +265,55 @@ test("a guest registers, verifies an email, and signs out without workspace acce
     await expect(
       page.getByRole("heading", { name: "Email verified" }),
     ).toBeVisible();
+    await prisma.streamEvent.update({
+      where: { id: event.id },
+      data: {
+        status: "LIVE",
+        liveSession: { create: { workspaceId: event.workspaceId } },
+      },
+    });
+    const liveSession = await prisma.liveSession.findUniqueOrThrow({
+      where: { eventId: event.id },
+    });
+    const poll = await prisma.livePoll.create({
+      data: {
+        sessionId: liveSession.id,
+        question: "Which session was most useful?",
+        status: "OPEN",
+        openedAt: new Date(),
+        options: {
+          create: [
+            { label: "Launch planning", sortOrder: 0 },
+            { label: "Incident response", sortOrder: 1 },
+          ],
+        },
+      },
+      include: { options: { orderBy: { sortOrder: "asc" } } },
+    });
+    livePollId = poll.id;
+    await page.reload();
+    const attendeePoll = page.getByRole("article", {
+      name: "Which session was most useful?",
+    });
+    await attendeePoll.getByRole("radio", { name: "Launch planning" }).check();
+    await attendeePoll.getByRole("button", { name: "Submit response" }).click();
+    await expect(attendeePoll.getByText("Response saved")).toBeVisible();
+    await expect(
+      attendeePoll.getByText("1 · 100%", { exact: true }),
+    ).toBeVisible();
+    const response = await prisma.livePollResponse.findFirstOrThrow({
+      where: { pollId: poll.id },
+    });
+    expect(response.userId).toBeNull();
+    expect(response.voterKeyHash).toMatch(/^[a-f0-9]{64}$/);
+    await prisma.livePoll.update({
+      where: { id: poll.id },
+      data: { status: "CLOSED", closedAt: new Date() },
+    });
+    await page.getByRole("button", { name: "Refresh live poll" }).click();
+    await expect(
+      attendeePoll.getByText("Closed", { exact: true }),
+    ).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath("attendee-verified-mobile.png"),
       fullPage: true,
@@ -330,7 +380,11 @@ test("a guest registers, verifies an email, and signs out without workspace acce
     try {
       await managerContext.close();
     } finally {
-      await prisma.domainEvent.deleteMany({ where: { aggregateId: event.id } });
+      await prisma.domainEvent.deleteMany({
+        where: {
+          aggregateId: { in: [event.id, ...(livePollId ? [livePollId] : [])] },
+        },
+      });
       await prisma.streamEvent.delete({ where: { id: event.id } });
       await prisma.$disconnect();
     }
