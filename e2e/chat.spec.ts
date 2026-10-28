@@ -7,6 +7,7 @@ import {
 } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { createHash, randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222221";
@@ -422,8 +423,10 @@ test("disconnect replay retains an older reading anchor across multiple pages an
       .count(),
     fixture: "direct committed journal; actual REST and WebSocket recovery",
   };
+  const metricsPath = testInfo.outputPath("chat-local-observations.json");
+  await writeFile(metricsPath, JSON.stringify(metrics, null, 2));
   await testInfo.attach("chat-local-observations", {
-    body: JSON.stringify(metrics, null, 2),
+    path: metricsPath,
     contentType: "application/json",
   });
   // Revocation while connected must promptly remove private state and disable sending.

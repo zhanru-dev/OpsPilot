@@ -27,6 +27,7 @@ export type ChatCapability = 'read' | 'send' | 'moderate';
 export function chatCapabilities(
   role: WorkspaceRole | 'ATTENDEE',
   active: boolean,
+  archived = false,
 ) {
   return {
     read: true,
@@ -35,7 +36,7 @@ export function chatCapabilities(
       ['ADMIN', 'OPERATIONS_MANAGER', 'CONTENT_OPERATOR', 'ATTENDEE'].includes(
         role,
       ),
-    moderate: role === 'ADMIN' || role === 'OPERATIONS_MANAGER',
+    moderate: !archived && (role === 'ADMIN' || role === 'OPERATIONS_MANAGER'),
   };
 }
 
@@ -163,6 +164,7 @@ export class ChatAuthorizationService {
     const capabilities = chatCapabilities(
       role,
       ['READY', 'LIVE'].includes(event.status),
+      event.status === 'ARCHIVED',
     );
     if (!capabilities[capability])
       throw new ForbiddenException(`Chat ${capability} is not allowed.`);

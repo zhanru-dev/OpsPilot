@@ -22,6 +22,7 @@ RUN npm run db:generate && npm run build --workspace=@opspilot/api
 
 FROM dependencies AS production-dependencies
 RUN npm prune --omit=dev --workspace=@opspilot/api --include-workspace-root \
+  && mkdir -p apps/api/node_modules \
   && npm cache clean --force
 
 FROM node:22-bookworm-slim AS runtime
@@ -33,6 +34,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=production-dependencies --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=node:node /app/package.json /app/package-lock.json ./
 COPY --from=builder --chown=node:node /app/prisma.config.ts ./

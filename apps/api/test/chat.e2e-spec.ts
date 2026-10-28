@@ -519,6 +519,17 @@ describe('StreamOps Chat with real PostgreSQL, Redis and WebSockets', () => {
       .expect(403);
     await db.streamEvent.update({
       where: { id: eventId },
+      data: { status: 'ARCHIVED' },
+    });
+    const archivedMessage = await db.eventChatMessage.findFirstOrThrow({
+      where: { eventId, deletedAt: null },
+    });
+    await manager
+      .delete(`${path()}/messages/${archivedMessage.id}`)
+      .expect(403);
+    await manager.get(`${path()}/messages`).expect(200);
+    await db.streamEvent.update({
+      where: { id: eventId },
       data: { status: 'READY' },
     });
     await db.attendeeSession.updateMany({

@@ -16,6 +16,11 @@ describe('Chat boundary contracts', () => {
       send: false,
       moderate: true,
     });
+    expect(chatCapabilities('OPERATIONS_MANAGER', false, true)).toEqual({
+      read: true,
+      send: false,
+      moderate: false,
+    });
   });
   it('normalizes text and rejects role/sender claims, invalid IDs and unbounded input', () => {
     const valid = { clientMessageId: randomUUID(), text: ' hello ' };
