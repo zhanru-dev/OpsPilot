@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { EventChatMessage, Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
@@ -66,23 +68,32 @@ export class ChatService {
       watermark: number,
     ) => Promise<T>,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      if (write)
-        await tx.$queryRaw`SELECT "id" FROM "StreamEvent" WHERE "id" = ${eventId} FOR UPDATE`;
-      else
-        await tx.$queryRaw`SELECT "id" FROM "StreamEvent" WHERE "id" = ${eventId} FOR SHARE`;
-      const context = await this.auth.authorize(
-        tx,
-        eventId,
-        principal,
-        capability,
-      );
-      const event = await tx.streamEvent.findUniqueOrThrow({
-        where: { id: eventId },
-        select: { chatSequence: true },
+    return this.prisma
+      .$transaction(async (tx) => {
+        if (write)
+          await tx.$queryRaw`SELECT "id" FROM "StreamEvent" WHERE "id" = ${eventId} FOR UPDATE`;
+        else
+          await tx.$queryRaw`SELECT "id" FROM "StreamEvent" WHERE "id" = ${eventId} FOR SHARE`;
+        const context = await this.auth.authorize(
+          tx,
+          eventId,
+          principal,
+          capability,
+        );
+        const event = await tx.streamEvent.findUniqueOrThrow({
+          where: { id: eventId },
+          select: { chatSequence: true },
+        });
+        return operation(tx, context, event.chatSequence);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof HttpException) throw error;
+        // Prisma diagnostics can include mutation input. Do not forward message
+        // text or database details to OpsPilot's persistent error-report capture.
+        throw new ServiceUnavailableException(
+          'Chat is temporarily unavailable. Retry shortly.',
+        );
       });
-      return operation(tx, context, event.chatSequence);
-    });
   }
 
   context(eventId: string, principal: ChatPrincipal) {
@@ -235,10 +246,8 @@ export class ChatService {
             version: next,
           },
         });
-        await tx.streamEvent.update({
-          where: { id: eventId },
-          data: { chatSequence: next },
-        });
+        // Chat traffic must not change the business event's edited-at timestamp.
+        await tx.$executeRaw`UPDATE "StreamEvent" SET "chatSequence" = ${next} WHERE "id" = ${eventId}`;
         await tx.eventChatEvent.create({
           data: { eventId, sequence: next, messageId: row.id, kind: 'CREATED' },
         });
@@ -278,10 +287,7 @@ export class ChatService {
             version: next,
           },
         });
-        await tx.streamEvent.update({
-          where: { id: eventId },
-          data: { chatSequence: next },
-        });
+        await tx.$executeRaw`UPDATE "StreamEvent" SET "chatSequence" = ${next} WHERE "id" = ${eventId}`;
         await tx.eventChatEvent.create({
           data: { eventId, sequence: next, messageId, kind: 'DELETED' },
         });

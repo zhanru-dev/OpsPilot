@@ -225,6 +225,9 @@ describe('StreamOps Chat with real PostgreSQL, Redis and WebSockets', () => {
   });
 
   it('serializes retried sends, rejects changed payloads, and never resurrects a tombstone', async () => {
+    const beforeEvent = await db.streamEvent.findUniqueOrThrow({
+      where: { id: eventId },
+    });
     const dto = { clientMessageId: randomUUID(), text: 'idempotent' };
     const results = await Promise.all(
       Array.from({ length: 8 }, () => chat.send(eventId, staff, dto)),
@@ -244,6 +247,10 @@ describe('StreamOps Chat with real PostgreSQL, Redis and WebSockets', () => {
     const retry = await chat.send(eventId, staff, dto);
     expect(retry.message.text).toBeNull();
     expect(retry.message.deletedAt).not.toBeNull();
+    expect(
+      (await db.streamEvent.findUniqueOrThrow({ where: { id: eventId } }))
+        .updatedAt,
+    ).toEqual(beforeEvent.updatedAt);
     expect(
       await db.eventChatEvent.count({
         where: { messageId: id, kind: 'DELETED' },
@@ -353,6 +360,66 @@ describe('StreamOps Chat with real PostgreSQL, Redis and WebSockets', () => {
     await delay(150);
     expect(received.every((event) => event.eventId === eventId)).toBe(true);
     foreignSocket.disconnect();
+  });
+
+  it('repairs a committed message when its notification hint is lost', async () => {
+    const socket = await joined();
+    const delivered = once<ChatEvent>(socket, 'chat.event');
+    const hint = jest
+      .spyOn(chat.changes, 'next')
+      .mockImplementationOnce(() => undefined);
+    try {
+      const result = await chat.send(eventId, staff, {
+        clientMessageId: randomUUID(),
+        text: 'Committed without notification',
+      });
+      expect((await delivered).message.id).toBe(result.message.id);
+    } finally {
+      hint.mockRestore();
+      socket.disconnect();
+    }
+  });
+
+  it('rolls back message and sequence together when the durable journal write fails', async () => {
+    const existing = await db.eventChatMessage.findFirstOrThrow({
+      where: { eventId },
+    });
+    const before = await db.streamEvent.findUniqueOrThrow({
+      where: { id: eventId },
+    });
+    const dto = {
+      clientMessageId: randomUUID(),
+      text: 'Retry after transaction failure',
+    };
+    // Isolated fault: an occupied journal sequence forces a real PostgreSQL unique violation.
+    await db.eventChatEvent.create({
+      data: {
+        eventId,
+        sequence: before.chatSequence + 1,
+        messageId: existing.id,
+        kind: 'CREATED',
+      },
+    });
+    try {
+      await expect(chat.send(eventId, staff, dto)).rejects.toThrow();
+      expect(
+        await db.eventChatMessage.count({
+          where: { eventId, clientMessageId: dto.clientMessageId },
+        }),
+      ).toBe(0);
+      expect(
+        (await db.streamEvent.findUniqueOrThrow({ where: { id: eventId } }))
+          .chatSequence,
+      ).toBe(before.chatSequence);
+    } finally {
+      await db.eventChatEvent.delete({
+        where: {
+          eventId_sequence: { eventId, sequence: before.chatSequence + 1 },
+        },
+      });
+    }
+    const retry = await chat.send(eventId, staff, dto);
+    expect(retry.message.createdSequence).toBe(before.chatSequence + 1);
   });
 
   it('consumes tickets once, rejects wrong origins and expired Redis tickets', async () => {

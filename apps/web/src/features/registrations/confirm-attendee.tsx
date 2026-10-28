@@ -11,9 +11,11 @@ import { RequestVerification } from "./request-verification";
 import type { PublicEvent, RegistrationEvent } from "./types";
 import { EventEntryHeading } from "./event-entry-heading";
 import { AttendeeLivePolls } from "./attendee-live-polls";
+import { ChatPanel } from "@/features/chat/chat-panel";
 
 type AttendeeSession = {
   eventId: string;
+  registrationId: string;
   email: string;
   expiresAt: string;
   event: PublicEvent;
@@ -185,6 +187,11 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
                 <AttendeeLivePolls
                   eventId={eventId}
                   onAccessLost={session.refetch}
+                />
+                <ChatPanel
+                  eventId={eventId}
+                  mode="attendee"
+                  actorId={`attendee:${session.data.registrationId}`}
                 />
                 {logout.error ? (
                   <p role="alert" className="text-sm text-[var(--danger)]">

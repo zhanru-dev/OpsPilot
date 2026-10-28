@@ -27,6 +27,7 @@ import type {
 } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 import { LivePollsPanel } from "./live-polls-panel";
+import { ChatPanel } from "@/features/chat/chat-panel";
 
 type ConnectionState = "connecting" | "live" | "reconnecting";
 
@@ -188,6 +189,15 @@ export function LiveSessionRoom({ eventId }: { eventId: string }) {
         </div>
       </div>
 
+      {user && (
+        <div className="mb-5">
+          <ChatPanel
+            eventId={eventId}
+            mode="staff"
+            actorId={`staff:${user.id}`}
+          />
+        </div>
+      )}
       {!session ? (
         <section className="border border-[var(--border)] bg-white p-8 text-center">
           <RadioTower className="mx-auto size-7 text-[var(--muted)]" />
