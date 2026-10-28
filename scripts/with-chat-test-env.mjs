@@ -15,7 +15,7 @@ if (!existsSync(secretFile)) {
 }
 const env = {
   ...process.env,
-  NODE_ENV: 'development', DEMO_SEED_ALLOWED: 'false',
+  DEMO_SEED_ALLOWED: 'false',
   DATABASE_URL: 'postgresql://opspilot:local-test-only@localhost:5546/opspilot_chat_test?schema=public',
   API_HOST: '127.0.0.1', API_PORT: '4100', WEB_ORIGIN: 'http://localhost:3000',
   NEXT_PUBLIC_API_URL: 'http://localhost:4100/api/v1',

@@ -196,6 +196,8 @@ model User {
   liveSessionUpdates          LiveSessionUpdate[]   @relation("LiveSessionUpdateActor")
   createdLivePolls            LivePoll[]            @relation("LivePollCreator")
   livePollResponses           LivePollResponse[]
+  sentChatMessages            EventChatMessage[]    @relation("ChatStaffSender")
+  moderatedChatMessages       EventChatMessage[]    @relation("ChatModerator")
 }
 
 model Session {
@@ -272,6 +274,9 @@ model StreamEvent {
   liveSession          LiveSession?
   registrations        EventRegistration[]
   invitations          EventInvitation[]
+  chatSequence         Int                   @default(0)
+  chatMessages         EventChatMessage[]
+  chatEvents           EventChatEvent[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status, scheduledStart])
@@ -293,9 +298,64 @@ model EventRegistration {
   event            StreamEvent            @relation(fields: [eventId], references: [id], onDelete: Cascade)
   verifications    AttendeeVerification[]
   attendeeSessions AttendeeSession[]
+  chatMessages     EventChatMessage[]
 
+  @@unique([id, eventId])
   @@unique([eventId, email])
   @@index([eventId, createdAt, id])
+}
+
+enum ChatActorKind {
+  STAFF
+  ATTENDEE
+}
+
+enum ChatEventKind {
+  CREATED
+  DELETED
+}
+
+model EventChatMessage {
+  id                     String             @id @default(uuid())
+  eventId                String
+  authorKind             ChatActorKind
+  authorKey              String
+  staffUserId            String?
+  attendeeRegistrationId String?
+  authorName             String
+  clientMessageId        String
+  requestHash            String
+  text                   String?
+  createdSequence        Int
+  version                Int
+  createdAt              DateTime           @default(now())
+  deletedAt              DateTime?
+  deletedByUserId        String?
+  event                  StreamEvent        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  staff                  User?              @relation("ChatStaffSender", fields: [staffUserId], references: [id], onDelete: Restrict)
+  attendee               EventRegistration? @relation(fields: [attendeeRegistrationId, eventId], references: [id, eventId], onDelete: Cascade)
+  moderator              User?              @relation("ChatModerator", fields: [deletedByUserId], references: [id], onDelete: SetNull)
+  events                 EventChatEvent[]
+
+  @@unique([id, eventId])
+  @@unique([eventId, authorKey, clientMessageId])
+  @@unique([eventId, createdSequence])
+  @@index([staffUserId])
+  @@index([attendeeRegistrationId, eventId])
+  @@index([deletedByUserId])
+}
+
+model EventChatEvent {
+  eventId   String
+  sequence  Int
+  messageId String
+  kind      ChatEventKind
+  createdAt DateTime         @default(now())
+  event     StreamEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  message   EventChatMessage @relation(fields: [messageId, eventId], references: [id, eventId], onDelete: Cascade)
+
+  @@id([eventId, sequence])
+  @@index([messageId, eventId])
 }
 
 model EventInvitation {
