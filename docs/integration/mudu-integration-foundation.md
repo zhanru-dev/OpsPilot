@@ -42,7 +42,8 @@ Invalid attendee authentication never falls back to a staff cookie.
 All current workspace roles can read event Chat. ADMIN, OPERATIONS_MANAGER and
 CONTENT_OPERATOR can send during READY/LIVE; ADMIN and OPERATIONS_MANAGER can
 moderate. ANALYST and VIEWER are read-only. Admitted attendees can read/send in
-READY/LIVE and cannot moderate. Staff retain history and moderation access after closure.
+READY/LIVE and cannot moderate. Staff retain history and moderation access after closure,
+except ARCHIVED events, which remain immutable and read-only.
 No new general RBAC administration is introduced. Future topics.* / broadcast.manage
 capabilities remain extension points, not implemented permissions.
 
@@ -51,7 +52,9 @@ Current principal/session/membership/registration/invitation rows are locked for
 operations so a committed revocation precedes subsequent authorization. An operation
 already authorized while holding its locks may complete before revocation commits.
 Delivery is authorized individually immediately before emit; bytes already sent cannot
-be recalled. Idle sockets are revalidated within a documented short periodic interval.
+be recalled. Idle sockets are revalidated every 3 seconds under healthy conditions.
+Transactions use PostgreSQL READ COMMITTED plus explicit event and authority row locks.
+An event SHARE lock keeps history and its watermark consistent; mutations use UPDATE.
 
 ## REST and WebSocket contracts
 
@@ -87,6 +90,9 @@ event+sender+client ID is unique. Event+creation sequence supports keyset histor
 The journal references the canonical message and has unique event+sequence.
 Every mutation atomically increments the event sequence, updates the message and appends
 one journal entry. Deletion redacts text while retaining the request hash for retry checks.
+Updating the Chat sequence deliberately preserves the business event's `updatedAt`.
+Unexpected database failures return a generic 503 so message text in Prisma diagnostics
+does not enter the existing persistent application error-report stream.
 
 Identical retries return the original canonical result, even after deletion; changed text
 with the same operation ID conflicts. ACKs never advance the stream cursor. Entity versions
@@ -95,7 +101,8 @@ Snapshot and journal watermark use a consistent PostgreSQL transaction. Replays 
 current canonical message state, including tombstones, rather than old deleted content.
 
 Direct notifications provide low latency; durable journal replay and periodic recovery
-repair dropped notifications, including a crash after commit/before emit. This does not
+repair dropped notifications, including a crash after commit/before emit. Gateway repair
+runs every 3 seconds; the browser also repairs through REST every 5 seconds. This does not
 repurpose the business webhook outbox or replace operational SSE. Single API process
 is the initial deployment target; multi-process delivery needs a shared socket adapter or
 per-process journal notification strategy, while REST replay remains authoritative.

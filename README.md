@@ -20,6 +20,7 @@ The centrepiece is **Launch Control**. A versioned rules engine converts operati
 - Workspace-scoped RBAC for operations managers and read-only analysts.
 - Guarded `DRAFT -> CONFIGURING -> READY -> LIVE -> COMPLETED -> ARCHIVED` lifecycle.
 - Event-scoped live operations room with durable updates and realtime refresh.
+- Persistent event Chat for workspace staff and admitted attendees, with current-permission moderation, WebSocket delivery and missed-message recovery.
 - Draft, open and closed live polls with serialised lifecycle controls.
 - Public registration with single-use email verification and scoped HttpOnly attendee sessions.
 - Invitation-only and exact email-domain access with immediate session revocation.
@@ -105,6 +106,42 @@ npm run dev
 | MinIO console | `http://localhost:9001`                   |
 
 The API uses `4100` by default and remains configurable through the environment.
+
+## Chat integration: isolated local environment
+
+The first Mudu integration slice adds Chat to existing StreamOps Live Operations and
+the admitted attendee page. See the [foundation contract](docs/integration/mudu-integration-foundation.md)
+and [migration report, verification and limitations](docs/integration/chat-migration-report.md).
+Topics, Mudu Media Library and Live Streaming migration are outside this phase.
+
+From the repository root, use the separate services below to avoid the ordinary development database:
+
+```sh
+npm ci
+docker compose -f docker-compose.chat-test.yml up -d --wait
+node scripts/with-chat-test-env.mjs npm run db:generate
+node scripts/with-chat-test-env.mjs npm run db:deploy
+# First use of this disposable database ONLY. The existing seed replaces demo data.
+node scripts/with-chat-test-env.mjs npm run db:seed
+node scripts/with-chat-test-env.mjs npm run dev
+```
+
+On subsequent starts, run the Compose and `dev` commands; do not reseed. Secrets are
+generated locally in ignored `.runtime/chat-test-secrets.json` with mode 0600. The wrapper
+always targets `opspilot_chat_test` on port 5546, Redis 6381 and isolated object storage 9002.
+Use `localhost` consistently for browser cookies. Web/API ports remain 3000/4100.
+
+1. Sign in at `http://localhost:3000/login` with the seeded Alex account below.
+2. Open **Product Operations Forum → Live Operations**, or
+   `http://localhost:3000/streamops/events/33333333-3333-4333-8333-333333333335/live`.
+3. In a separate browser profile/private window, open
+   `http://localhost:3000/events/33333333-3333-4333-8333-333333333335/register`.
+4. Register a local test email, open its message in Mailpit at `http://localhost:8025`,
+   and open/confirm the verification link in that attendee window. Chat appears after admission.
+5. Send in either window, remove a message as Alex, and reload to verify persistence.
+
+For an existing populated OpsPilot database, use its normal configuration and apply only
+`npm run db:generate` and `npm run db:deploy`. Do not reset or seed it for this migration.
 
 ## Production Images
 

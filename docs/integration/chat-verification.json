@@ -1,0 +1,142 @@
+{
+  "date": "2026-10-28",
+  "testedCodeRevision": "ba1908016b29c3959572248502108f265d6a9cdc",
+  "destinationBaseline": "0e005c193769d67a945e98229a1f2707163d8f52",
+  "sourceRevision": "7bd9a2f36df8d0992260e1ba356754d6fce05f63",
+  "environment": {
+    "os": "macOS 26.6.2",
+    "architecture": "x86_64",
+    "node": "v22.20.0",
+    "npm": "10.9.3",
+    "postgres": "17",
+    "redis": "7.4.10",
+    "browser": "Playwright Chrome channel",
+    "database": "opspilot_chat_test",
+    "composeProject": "opspilot-chat-test",
+    "sharedDataReset": false
+  },
+  "commands": [
+    {
+      "command": "npm ci",
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/with-chat-test-env.mjs npm run db:generate",
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/with-chat-test-env.mjs npm run db:deploy",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run lint",
+      "result": "PASS"
+    },
+    {
+      "command": "npm test --workspace=@opspilot/api -- --runInBand",
+      "result": "PASS",
+      "tests": 91
+    },
+    {
+      "command": "npm run test:chat:state",
+      "result": "PASS",
+      "tests": 5
+    },
+    {
+      "command": "node scripts/with-chat-test-env.mjs npm run test:e2e --workspace=@opspilot/api -- --runInBand",
+      "result": "PASS",
+      "tests": 40
+    },
+    {
+      "command": "node scripts/with-chat-test-env.mjs npm run test:ui",
+      "result": "PASS",
+      "tests": 11
+    },
+    {
+      "command": "node scripts/with-chat-test-env.mjs npm run test:ui:isolated",
+      "result": "PASS",
+      "tests": 12
+    },
+    {
+      "command": "node scripts/with-chat-test-env.mjs npx playwright test e2e/chat.spec.ts --output=.runtime/chat-browser-evidence",
+      "result": "PASS",
+      "tests": 2
+    },
+    {
+      "command": "node scripts/with-chat-test-env.mjs npm run build",
+      "result": "PASS"
+    },
+    {
+      "command": "docker build --target api -f apps/api/Dockerfile -t opspilot-api:chat-integration .",
+      "result": "PASS"
+    },
+    {
+      "command": "docker build --target worker -f apps/api/Dockerfile -t opspilot-worker:chat-integration .",
+      "result": "PASS"
+    },
+    {
+      "command": "docker build -f apps/web/Dockerfile -t opspilot-web:chat-integration .",
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/with-chat-test-env.mjs node scripts/check-chat-containers.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "npm audit --omit=dev --registry=https://registry.npmjs.org",
+      "result": "PASS"
+    },
+    {
+      "command": "npm audit --registry=https://registry.npmjs.org",
+      "result": "9 low development findings"
+    }
+  ],
+  "productionDependencyAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "allDependencyAudit": {
+    "info": 0,
+    "low": 9,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 9
+  },
+  "browserObservations": {
+    "replayMessages": 430,
+    "replayMs": 1474,
+    "liveMessages": 450,
+    "liveDeliveryMs": 3736,
+    "renderedRows": 300,
+    "fixture": "direct committed journal; actual REST and WebSocket recovery"
+  },
+  "containerSmoke": {
+    "apiReady": true,
+    "workerReady": true,
+    "webLogin": 200,
+    "authenticatedPersistenceAfterApiRestart": true,
+    "websocketAfterRestart": true,
+    "configuration": "production images with isolated local test configuration; TLS deployment not exercised"
+  },
+  "corrections": [
+    "Initial API image startup failed with missing workspace-nested nodemailer; Dockerfile repaired and API/worker images rebuilt, then startup/restart smoke passed.",
+    "Initial browser test assumptions about prepended rows and admission-triggered unmount corrected without weakening anchor/privacy assertions.",
+    "Existing mocked poll fixture now handles Chat ticket separately, preserving poll mutation assertions."
+  ],
+  "notVerified": [
+    "Hosted TLS/reverse-proxy deployment",
+    "Horizontal scaling and production load",
+    "Long-duration browser/backend memory profiling",
+    "Fresh full upload/transcode benchmark"
+  ],
+  "scope": "Chat and essential integration only; no Topics, Mudu media or broadcast migration"
+}
