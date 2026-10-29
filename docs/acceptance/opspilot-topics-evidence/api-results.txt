@@ -1,0 +1,15 @@
+
+> @opspilot/api@2.0.0 test:e2e
+> jest --config ./test/jest-e2e.json --runInBand
+
+PASS test/chat.e2e-spec.ts (20.093 s)
+PASS test/topics.e2e-spec.ts (12.706 s)
+PASS test/app.e2e-spec.ts
+PASS test/restricted-access.e2e-spec.ts
+PASS test/attendee-access.e2e-spec.ts
+
+Test Suites: 5 passed, 5 total
+Tests:       60 passed, 60 total
+Snapshots:   0 total
+Time:        39.542 s
+Ran all test suites.

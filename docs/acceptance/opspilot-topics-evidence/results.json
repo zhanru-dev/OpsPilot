@@ -1,0 +1,1393 @@
+{
+  "reviewedCommit": "a5bb2caf8041f9404cbdb6946ae42033f0417fb9",
+  "branch": "feat/streamops-chat-integration",
+  "date": "2026-10-29",
+  "decision": "FAIL",
+  "findings": [
+    {
+      "id": "P1-01",
+      "summary": "Lost creation response followed by real 429 clears original operation ID; next retry persists a duplicate topic.",
+      "observedTopicCount": 2
+    },
+    {
+      "id": "P2-01",
+      "summary": "Remote reply invalidation discards unsaved root edit draft."
+    }
+  ],
+  "environment": {
+    "database": {
+      "database": "opspilot_topics_acceptance_20261029_test",
+      "version": "PostgreSQL 17.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit"
+    },
+    "redis": {
+      "endpoint": "127.0.0.1:6392",
+      "ping": "PONG",
+      "version": "7.4.10"
+    },
+    "storage": {
+      "bucket": "opspilot-topics-acceptance-20261029",
+      "headStatus": 200
+    },
+    "browser": "156.0.8078.48",
+    "node": "v22.20.0",
+    "npm": "10.9.3",
+    "arch": "x64",
+    "platform": "darwin",
+    "baseline": "a5bb2caf8041f9404cbdb6946ae42033f0417fb9"
+  },
+  "commandPrefix": "node scripts/with-chat-test-env.mjs node .runtime/topics-acceptance/env.mjs",
+  "commands": [
+    {
+      "label": "migrations",
+      "command": "npm run db:deploy",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2945,
+      "log": ".runtime/topics-acceptance/migrations.log"
+    },
+    {
+      "label": "state",
+      "command": "node --import tsx --test tests/chat-state.test.ts tests/topics-state.test.ts",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 871,
+      "log": ".runtime/topics-acceptance/state.log"
+    },
+    {
+      "label": "seed",
+      "command": "npm run db:seed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2627,
+      "log": ".runtime/topics-acceptance/seed.log"
+    },
+    {
+      "label": "unit",
+      "command": "npm test -- --runInBand",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4546,
+      "log": ".runtime/topics-acceptance/unit.log"
+    },
+    {
+      "label": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 12099,
+      "log": ".runtime/topics-acceptance/typecheck.log"
+    },
+    {
+      "label": "lint",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 23810,
+      "log": ".runtime/topics-acceptance/lint.log"
+    },
+    {
+      "label": "build",
+      "command": "npm run build",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 18489,
+      "log": ".runtime/topics-acceptance/build.log"
+    },
+    {
+      "label": "api",
+      "command": "npm run test:e2e --workspace=@opspilot/api -- --runInBand",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 40533,
+      "log": ".runtime/topics-acceptance/api.log"
+    },
+    {
+      "label": "upgrade-baseline",
+      "command": "node .runtime/topics-acceptance/upgrade-env.mjs npx prisma migrate deploy --config .runtime/topics-acceptance/upgrade/prisma.config.ts",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3356,
+      "log": ".runtime/topics-acceptance/upgrade-baseline.log"
+    },
+    {
+      "label": "upgrade-client",
+      "command": "node .runtime/topics-acceptance/upgrade-env.mjs npx prisma generate --config .runtime/topics-acceptance/upgrade/prisma.config.ts",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3806,
+      "log": ".runtime/topics-acceptance/upgrade-client.log"
+    },
+    {
+      "label": "upgrade-seed",
+      "command": "node .runtime/topics-acceptance/upgrade-env.mjs npx tsx .runtime/topics-acceptance/upgrade/seed.ts",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3449,
+      "log": ".runtime/topics-acceptance/upgrade-seed.log"
+    },
+    {
+      "label": "browser",
+      "command": "env E2E_PRODUCTION_WEB=1 npm run test:ui -- --output=.runtime/topics-acceptance/regression-browser-results",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 158063,
+      "log": ".runtime/topics-acceptance/browser.log"
+    },
+    {
+      "label": "probes",
+      "command": "env NODE_ENV=test node .runtime/topics-acceptance/probes.cjs",
+      "exitCode": 1,
+      "signal": null,
+      "elapsedMs": 4221,
+      "log": ".runtime/topics-acceptance/probes.log"
+    },
+    {
+      "label": "topics-fault-browser",
+      "command": "npx playwright test --config=.runtime/topics-acceptance/playwright.config.ts",
+      "exitCode": 1,
+      "signal": null,
+      "elapsedMs": 7855,
+      "log": ".runtime/topics-acceptance/topics-fault-browser.log"
+    },
+    {
+      "label": "probes-corrected",
+      "command": "env NODE_ENV=test node .runtime/topics-acceptance/probes.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 8642,
+      "log": ".runtime/topics-acceptance/probes-corrected.log"
+    },
+    {
+      "label": "upgrade-chat-fixture",
+      "command": "node .runtime/topics-acceptance/upgrade-env.mjs node .runtime/topics-acceptance/upgrade/add-chat.cjs",
+      "exitCode": 1,
+      "signal": null,
+      "elapsedMs": 415,
+      "log": ".runtime/topics-acceptance/upgrade-chat-fixture.log"
+    },
+    {
+      "label": "upgrade-chat-fixture-corrected",
+      "command": "node .runtime/topics-acceptance/upgrade-env.mjs node .runtime/topics-acceptance/upgrade/add-chat.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 369,
+      "log": ".runtime/topics-acceptance/upgrade-chat-fixture-corrected.log"
+    },
+    {
+      "label": "upgrade-before",
+      "command": "node .runtime/topics-acceptance/upgrade-env.mjs node .runtime/topics-acceptance/preserve.mjs .runtime/topics-acceptance/upgrade-before.json",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 477,
+      "log": ".runtime/topics-acceptance/upgrade-before.log"
+    },
+    {
+      "label": "upgrade-topics",
+      "command": "node .runtime/topics-acceptance/upgrade-env.mjs npm run db:deploy",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2493,
+      "log": ".runtime/topics-acceptance/upgrade-topics.log"
+    },
+    {
+      "label": "upgrade-after",
+      "command": "node .runtime/topics-acceptance/upgrade-env.mjs node .runtime/topics-acceptance/preserve.mjs .runtime/topics-acceptance/upgrade-after.json",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 493,
+      "log": ".runtime/topics-acceptance/upgrade-after.log"
+    },
+    {
+      "label": "topics-fault-browser-configured",
+      "command": "npx playwright test --config=.runtime/topics-acceptance/playwright.config.ts",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 111838,
+      "log": ".runtime/topics-acceptance/topics-fault-browser-configured.log"
+    },
+    {
+      "label": "chat-recovery",
+      "command": "env CHAT_RECOVERY_PRODUCTION_WEB=1 npm run test:chat:recovery -- --output=.runtime/topics-acceptance/chat-recovery-results",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 91897,
+      "log": ".runtime/topics-acceptance/chat-recovery.log"
+    },
+    {
+      "label": "topics-extra-browser",
+      "command": "npx playwright test --config=.runtime/topics-acceptance/playwright.config.ts --grep expired ticket|bounded history",
+      "exitCode": 1,
+      "signal": null,
+      "elapsedMs": 69777,
+      "log": ".runtime/topics-acceptance/topics-extra-browser.log"
+    },
+    {
+      "label": "restart",
+      "command": "env NODE_ENV=test node .runtime/topics-acceptance/restart.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3448,
+      "log": ".runtime/topics-acceptance/restart.log"
+    },
+    {
+      "label": "topics-resource-browser",
+      "command": "npx playwright test --config=.runtime/topics-acceptance/playwright.config.ts --grep bounded history",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 28538,
+      "log": ".runtime/topics-acceptance/topics-resource-browser.log"
+    },
+    {
+      "label": "topics-initial-http-browser",
+      "command": "npx playwright test --config=.runtime/topics-acceptance/playwright.config.ts --grep initial HTTP",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 53147,
+      "log": ".runtime/topics-acceptance/topics-initial-http-browser.log"
+    },
+    {
+      "label": "ui-isolated",
+      "command": "npm run test:ui:isolated -- --output=.runtime/topics-acceptance/ui-isolated-results",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 31598,
+      "log": ".runtime/topics-acceptance/ui-isolated.log"
+    },
+    {
+      "label": "environment",
+      "command": "node .runtime/topics-acceptance/environment.mjs",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 1878,
+      "log": ".runtime/topics-acceptance/environment.log"
+    },
+    {
+      "label": "topics-stale-authority-browser",
+      "command": "npx playwright test --config=.runtime/topics-acceptance/playwright.config.ts --grep delayed private snapshot",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 21020,
+      "log": ".runtime/topics-acceptance/topics-stale-authority-browser.log"
+    },
+    {
+      "label": "topics-rate-limit-browser",
+      "command": "npx playwright test --config=.runtime/topics-acceptance/playwright.config.ts --grep lost completion followed",
+      "exitCode": 1,
+      "signal": null,
+      "elapsedMs": 77636,
+      "log": ".runtime/topics-acceptance/topics-rate-limit-browser.log"
+    }
+  ],
+  "independentProbes": [
+    {
+      "name": "current-role-direct-REST-matrix",
+      "status": "PASS",
+      "elapsedMs": 227,
+      "evidence": [
+        {
+          "role": "ADMIN",
+          "create": 201,
+          "capabilities": {
+            "read": true,
+            "viewPending": true,
+            "create": true,
+            "reply": true,
+            "moderate": true,
+            "configure": true,
+            "publish": true
+          }
+        },
+        {
+          "role": "OPERATIONS_MANAGER",
+          "create": 201,
+          "capabilities": {
+            "read": true,
+            "viewPending": true,
+            "create": true,
+            "reply": true,
+            "moderate": true,
+            "configure": true,
+            "publish": true
+          }
+        },
+        {
+          "role": "CONTENT_OPERATOR",
+          "create": 201,
+          "capabilities": {
+            "read": true,
+            "viewPending": false,
+            "create": true,
+            "reply": true,
+            "moderate": false,
+            "configure": false,
+            "publish": false
+          }
+        },
+        {
+          "role": "ANALYST",
+          "create": 403,
+          "capabilities": {
+            "read": true,
+            "viewPending": false,
+            "create": false,
+            "reply": false,
+            "moderate": false,
+            "configure": false,
+            "publish": false
+          }
+        },
+        {
+          "role": "VIEWER",
+          "create": 403,
+          "capabilities": {
+            "read": true,
+            "viewPending": false,
+            "create": false,
+            "reply": false,
+            "moderate": false,
+            "configure": false,
+            "publish": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "lifecycle-staff-attendee-REST",
+      "status": "PASS",
+      "elapsedMs": 344,
+      "evidence": [
+        {
+          "status": "DRAFT",
+          "staffCreate": 403,
+          "attendeeRead": 401,
+          "capabilities": {
+            "read": true,
+            "viewPending": true,
+            "create": false,
+            "reply": false,
+            "moderate": true,
+            "configure": true,
+            "publish": true
+          }
+        },
+        {
+          "status": "CONFIGURING",
+          "staffCreate": 403,
+          "attendeeRead": 401,
+          "capabilities": {
+            "read": true,
+            "viewPending": true,
+            "create": false,
+            "reply": false,
+            "moderate": true,
+            "configure": true,
+            "publish": true
+          }
+        },
+        {
+          "status": "READY",
+          "staffCreate": 201,
+          "attendeeRead": 200,
+          "capabilities": {
+            "read": true,
+            "viewPending": true,
+            "create": true,
+            "reply": true,
+            "moderate": true,
+            "configure": true,
+            "publish": true
+          }
+        },
+        {
+          "status": "LIVE",
+          "staffCreate": 201,
+          "attendeeRead": 200,
+          "capabilities": {
+            "read": true,
+            "viewPending": true,
+            "create": true,
+            "reply": true,
+            "moderate": true,
+            "configure": true,
+            "publish": true
+          }
+        },
+        {
+          "status": "COMPLETED",
+          "staffCreate": 403,
+          "attendeeRead": 401,
+          "capabilities": {
+            "read": true,
+            "viewPending": true,
+            "create": false,
+            "reply": false,
+            "moderate": true,
+            "configure": false,
+            "publish": true
+          }
+        },
+        {
+          "status": "ARCHIVED",
+          "staffCreate": 403,
+          "attendeeRead": 401,
+          "capabilities": {
+            "read": true,
+            "viewPending": true,
+            "create": false,
+            "reply": false,
+            "moderate": false,
+            "configure": false,
+            "publish": true
+          }
+        },
+        {
+          "status": "CANCELLED",
+          "staffCreate": 403,
+          "attendeeRead": 401,
+          "capabilities": {
+            "read": true,
+            "viewPending": true,
+            "create": false,
+            "reply": false,
+            "moderate": true,
+            "configure": true,
+            "publish": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "private-counts-cookies-scope-and-origin",
+      "status": "PASS",
+      "elapsedMs": 160,
+      "evidence": {
+        "pendingHidden": true,
+        "privateCount": 0,
+        "crossWorkspace": 403,
+        "crossEvent": 401,
+        "staffCookieNotAttendee": 401,
+        "csrf": 403
+      }
+    },
+    {
+      "name": "two-distinct-moderators-eight-way-pin-barrier",
+      "status": "PASS",
+      "elapsedMs": 796,
+      "evidence": {
+        "distinctModerators": 2,
+        "contenders": 8,
+        "success": 7,
+        "conflict": 1
+      }
+    },
+    {
+      "name": "moderator-lost-receipt-and-edit-approval-retry",
+      "status": "PASS",
+      "elapsedMs": 237,
+      "evidence": {
+        "approveRetry": true,
+        "editAfterApproval": true,
+        "pinRetry": true,
+        "deleteRetry": true
+      }
+    },
+    {
+      "name": "reply-total-limit-and-parent-redaction",
+      "status": "PASS",
+      "elapsedMs": 3398,
+      "evidence": {
+        "created": 100,
+        "overLimit": 409,
+        "deletedDoesNotFreeQuota": true,
+        "visibleAfterParentDelete": 0
+      }
+    },
+    {
+      "name": "in-flight-request-observes-committed-role-revocation",
+      "status": "PASS",
+      "elapsedMs": 268,
+      "evidence": {
+        "requestStatus": 403,
+        "persisted": 0
+      }
+    },
+    {
+      "name": "topics-tickets-one-use-origin-and-no-chat-command",
+      "status": "PASS",
+      "elapsedMs": 232,
+      "evidence": {
+        "replay": 401,
+        "wrongOrigin": 403,
+        "chatWrites": 0
+      }
+    },
+    {
+      "name": "real-lock-contention-topics-and-chat-workload",
+      "status": "PASS",
+      "elapsedMs": 993,
+      "evidence": {
+        "elapsedMs": 990,
+        "topics": {
+          "count": 20,
+          "p50": 659,
+          "p95": 987,
+          "max": 987
+        },
+        "chat": {
+          "count": 20,
+          "p50": 614,
+          "p95": 968,
+          "max": 968
+        },
+        "updatedAtPreserved": true
+      }
+    }
+  ],
+  "browserObservations": [
+    {
+      "mode": "staff",
+      "scenario": "initial-subscription",
+      "fault": {
+        "id": "4cc0b779-8466-4182-a4ac-81cfd1d79b21",
+        "eventId": "97a7ab8d-a669-4785-9cff-099aa266c301",
+        "actor": "staff",
+        "stage": "subscription",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6522
+      },
+      "elapsedIncludingLoginMs": 8909,
+      "readyCount": 1
+    },
+    {
+      "mode": "staff",
+      "scenario": "reconnect-subscription",
+      "fault": {
+        "id": "4842d404-f712-4aed-bdfb-0847b7ea5b21",
+        "eventId": "97a7ab8d-a669-4785-9cff-099aa266c301",
+        "actor": "staff",
+        "stage": "subscription",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6512
+      },
+      "recoveryMs": 9538,
+      "readyCount": 2,
+      "before": 1,
+      "unavailable": 2
+    },
+    {
+      "mode": "staff",
+      "scenario": "snapshot",
+      "fault": {
+        "id": "e046563f-92a7-41d9-aa5b-b7bb2bc8e51e",
+        "eventId": "97a7ab8d-a669-4785-9cff-099aa266c301",
+        "actor": "staff",
+        "stage": "snapshot",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6516
+      },
+      "recoveryMs": 7256,
+      "readyCount": 2,
+      "before": 2,
+      "unavailable": 2
+    },
+    {
+      "mode": "staff",
+      "scenario": "idle",
+      "fault": {
+        "id": "9e8a997e-5a44-4c62-a3a3-7ea9cb319d9c",
+        "eventId": "97a7ab8d-a669-4785-9cff-099aa266c301",
+        "actor": "staff",
+        "stage": "idle",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6528
+      },
+      "recoveryMs": 9500,
+      "readyCount": 3,
+      "before": 2,
+      "unavailable": 3
+    },
+    {
+      "mode": "staff",
+      "scenario": "final-persistence",
+      "rows": 1,
+      "peakTopicSockets": 1,
+      "currentSocketCount": 1
+    },
+    {
+      "mode": "staff",
+      "scenario": "invalid-ticket-and-lost-notice",
+      "rejected": 1,
+      "dropped": 1,
+      "repairMs": 2880
+    },
+    {
+      "mode": "staff",
+      "scenario": "revocation",
+      "latencyMs": 820
+    },
+    {
+      "mode": "attendee",
+      "scenario": "initial-subscription",
+      "fault": {
+        "id": "4a83ff75-94d1-4bb9-a9b4-5d429879fb8c",
+        "eventId": "d0c80174-25e2-4ded-8e07-af1ecd11acfa",
+        "actor": "attendee",
+        "stage": "subscription",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6519
+      },
+      "elapsedIncludingLoginMs": 13077,
+      "readyCount": 1
+    },
+    {
+      "mode": "attendee",
+      "scenario": "reconnect-subscription",
+      "fault": {
+        "id": "af3db203-9133-4bda-a2df-2cce14612e2f",
+        "eventId": "d0c80174-25e2-4ded-8e07-af1ecd11acfa",
+        "actor": "attendee",
+        "stage": "subscription",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6511
+      },
+      "recoveryMs": 9511,
+      "readyCount": 2,
+      "before": 1,
+      "unavailable": 2
+    },
+    {
+      "mode": "attendee",
+      "scenario": "snapshot",
+      "fault": {
+        "id": "6c5e7740-06aa-4c7d-86dc-61b929d3689a",
+        "eventId": "d0c80174-25e2-4ded-8e07-af1ecd11acfa",
+        "actor": "attendee",
+        "stage": "snapshot",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6509
+      },
+      "recoveryMs": 8538,
+      "readyCount": 3,
+      "before": 2,
+      "unavailable": 3
+    },
+    {
+      "mode": "attendee",
+      "scenario": "idle",
+      "fault": {
+        "id": "7a3109c5-9126-474f-92d7-5073a3181804",
+        "eventId": "d0c80174-25e2-4ded-8e07-af1ecd11acfa",
+        "actor": "attendee",
+        "stage": "idle",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6529
+      },
+      "recoveryMs": 9007,
+      "readyCount": 4,
+      "before": 3,
+      "unavailable": 4
+    },
+    {
+      "mode": "attendee",
+      "scenario": "final-persistence",
+      "rows": 1,
+      "peakTopicSockets": 1,
+      "currentSocketCount": 1
+    },
+    {
+      "mode": "attendee",
+      "scenario": "invalid-ticket-and-lost-notice",
+      "rejected": 1,
+      "dropped": 1,
+      "repairMs": 2875
+    },
+    {
+      "mode": "attendee",
+      "scenario": "revocation",
+      "latencyMs": 802
+    },
+    {
+      "mode": "staff",
+      "scenario": "redis-expired-ticket-and-lost-notice",
+      "rejected": 1,
+      "dropped": 1,
+      "repairMs": 1376
+    },
+    {
+      "mode": "staff",
+      "scenario": "revocation",
+      "latencyMs": 2834
+    },
+    {
+      "mode": "attendee",
+      "scenario": "redis-expired-ticket-and-lost-notice",
+      "rejected": 1,
+      "dropped": 1,
+      "repairMs": 1861
+    },
+    {
+      "mode": "attendee",
+      "scenario": "revocation",
+      "latencyMs": 1304
+    },
+    {
+      "scenario": "history-and-replies-limit",
+      "fixtureRoots": 105,
+      "loadedRoots": 100,
+      "expandedReplies": 100,
+      "loadMs": 1187,
+      "typingMs": 76,
+      "snapshotBytes": 252917
+    },
+    {
+      "scenario": "remote-reply-discards-edit-draft",
+      "result": "ISSUE",
+      "severity": "P2",
+      "editorRemoved": true,
+      "draftStillInPage": 0
+    },
+    {
+      "scenario": "history-and-replies-limit",
+      "fixtureRoots": 105,
+      "loadedRoots": 100,
+      "expandedReplies": 100,
+      "loadMs": 1332,
+      "typingMs": 85,
+      "snapshotBytes": 252917
+    },
+    {
+      "scenario": "remote-reply-discards-edit-draft",
+      "result": "ISSUE",
+      "severity": "P2",
+      "editorRemoved": true,
+      "draftStillInPage": 0
+    },
+    {
+      "scenario": "unmount-cleanup",
+      "noTopicRequestsForMs": 6000,
+      "topicsSocketsForActor": 0,
+      "chatSocketsForActor": 0,
+      "apiRssBytes": 193314816
+    },
+    {
+      "scenario": "resource-observation",
+      "samples": [
+        {
+          "phase": "100-roots-loaded",
+          "topics": 1,
+          "chat": 1,
+          "dom": 1462,
+          "heap": 10404160
+        },
+        {
+          "phase": "filter-cycle-0",
+          "topics": 1,
+          "chat": 1,
+          "dom": 508,
+          "heap": 10020368
+        },
+        {
+          "phase": "filter-cycle-1",
+          "topics": 1,
+          "chat": 1,
+          "dom": 508,
+          "heap": 10034656
+        },
+        {
+          "phase": "filter-cycle-2",
+          "topics": 1,
+          "chat": 1,
+          "dom": 508,
+          "heap": 10046828
+        },
+        {
+          "phase": "filter-cycle-3",
+          "topics": 1,
+          "chat": 1,
+          "dom": 508,
+          "heap": 10120856
+        },
+        {
+          "phase": "filter-cycle-4",
+          "topics": 1,
+          "chat": 1,
+          "dom": 508,
+          "heap": 10226256
+        },
+        {
+          "phase": "unmounted",
+          "topics": 0,
+          "chat": 0,
+          "dom": 133,
+          "heap": 3119888
+        }
+      ]
+    },
+    {
+      "mode": "staff",
+      "scenario": "initial-http-identity",
+      "fault": {
+        "id": "2c5411d7-2ac7-4d92-8d9a-e4250010a025",
+        "eventId": "3fdac51c-0c92-423f-bdae-004f8b1062b4",
+        "actor": "staff",
+        "stage": "identity",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6521
+      },
+      "elapsedIncludingLoginMs": 9211,
+      "persisted": 1
+    },
+    {
+      "mode": "staff",
+      "scenario": "initial-http-snapshot",
+      "fault": {
+        "id": "0fe017f3-5ed9-4bed-b39f-a4c5fd8e4322",
+        "eventId": "e8cf21ba-caa1-4f1c-a0e1-bc0a22d1c32a",
+        "actor": "staff",
+        "stage": "snapshot",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6527
+      },
+      "elapsedIncludingLoginMs": 8856,
+      "persisted": 1
+    },
+    {
+      "mode": "attendee",
+      "scenario": "initial-http-identity",
+      "fault": {
+        "id": "773e2597-26f4-42ca-8bc8-328934d860eb",
+        "eventId": "848e4572-9f30-45ba-9ab6-e2cfd5d6d653",
+        "actor": "attendee",
+        "stage": "identity",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6510
+      },
+      "elapsedIncludingLoginMs": 11333,
+      "persisted": 1
+    },
+    {
+      "mode": "attendee",
+      "scenario": "initial-http-snapshot",
+      "fault": {
+        "id": "331a7738-4f06-4005-a369-3330bc3312b1",
+        "eventId": "128ea3c0-7a57-4b6c-837a-c85f33b95d35",
+        "actor": "attendee",
+        "stage": "snapshot",
+        "mode": "database-lock",
+        "status": 503,
+        "elapsedMs": 6514
+      },
+      "elapsedIncludingLoginMs": 9448,
+      "persisted": 1
+    },
+    {
+      "scenario": "delayed-private-snapshot-after-downgrade",
+      "privateCards": 0,
+      "publicCards": 30,
+      "roleNotificationObserved": true
+    },
+    {
+      "scenario": "multi-page-invalidation",
+      "interleavedCommits": 3,
+      "canonicalRoots": 40,
+      "totalVisible": 48,
+      "recoveryMs": 681
+    },
+    {
+      "scenario": "lost-receipt-rate-limit-before-reset",
+      "retryRetained": 0,
+      "confirmedRows": 1,
+      "retryAfter": 60
+    },
+    {
+      "scenario": "lost-receipt-rate-limit-after-reset",
+      "retryRetained": 0,
+      "operationIdPreserved": false,
+      "confirmedRows": 2,
+      "requests": 3
+    }
+  ],
+  "realPostgresFaults": [
+    {
+      "id": "4cc0b779-8466-4182-a4ac-81cfd1d79b21",
+      "eventId": "97a7ab8d-a669-4785-9cff-099aa266c301",
+      "actor": "staff",
+      "stage": "subscription",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6522
+    },
+    {
+      "id": "4842d404-f712-4aed-bdfb-0847b7ea5b21",
+      "eventId": "97a7ab8d-a669-4785-9cff-099aa266c301",
+      "actor": "staff",
+      "stage": "subscription",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6512
+    },
+    {
+      "id": "e046563f-92a7-41d9-aa5b-b7bb2bc8e51e",
+      "eventId": "97a7ab8d-a669-4785-9cff-099aa266c301",
+      "actor": "staff",
+      "stage": "snapshot",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6516
+    },
+    {
+      "id": "9e8a997e-5a44-4c62-a3a3-7ea9cb319d9c",
+      "eventId": "97a7ab8d-a669-4785-9cff-099aa266c301",
+      "actor": "staff",
+      "stage": "idle",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6528
+    },
+    {
+      "id": "4a83ff75-94d1-4bb9-a9b4-5d429879fb8c",
+      "eventId": "d0c80174-25e2-4ded-8e07-af1ecd11acfa",
+      "actor": "attendee",
+      "stage": "subscription",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6519
+    },
+    {
+      "id": "af3db203-9133-4bda-a2df-2cce14612e2f",
+      "eventId": "d0c80174-25e2-4ded-8e07-af1ecd11acfa",
+      "actor": "attendee",
+      "stage": "subscription",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6511
+    },
+    {
+      "id": "6c5e7740-06aa-4c7d-86dc-61b929d3689a",
+      "eventId": "d0c80174-25e2-4ded-8e07-af1ecd11acfa",
+      "actor": "attendee",
+      "stage": "snapshot",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6509
+    },
+    {
+      "id": "7a3109c5-9126-474f-92d7-5073a3181804",
+      "eventId": "d0c80174-25e2-4ded-8e07-af1ecd11acfa",
+      "actor": "attendee",
+      "stage": "idle",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6529
+    },
+    {
+      "id": "2c5411d7-2ac7-4d92-8d9a-e4250010a025",
+      "eventId": "3fdac51c-0c92-423f-bdae-004f8b1062b4",
+      "actor": "staff",
+      "stage": "identity",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6521
+    },
+    {
+      "id": "0fe017f3-5ed9-4bed-b39f-a4c5fd8e4322",
+      "eventId": "e8cf21ba-caa1-4f1c-a0e1-bc0a22d1c32a",
+      "actor": "staff",
+      "stage": "snapshot",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6527
+    },
+    {
+      "id": "773e2597-26f4-42ca-8bc8-328934d860eb",
+      "eventId": "848e4572-9f30-45ba-9ab6-e2cfd5d6d653",
+      "actor": "attendee",
+      "stage": "identity",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6510
+    },
+    {
+      "id": "331a7738-4f06-4005-a369-3330bc3312b1",
+      "eventId": "128ea3c0-7a57-4b6c-837a-c85f33b95d35",
+      "actor": "attendee",
+      "stage": "snapshot",
+      "mode": "database-lock",
+      "status": 503,
+      "elapsedMs": 6514
+    }
+  ],
+  "upgrade": {
+    "tablesPreserved": 38,
+    "changed": {},
+    "before": {
+      "User": {
+        "count": 3,
+        "digest": "170703d77ba4134f4698684e5aaa8ca8"
+      },
+      "Session": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "Workspace": {
+        "count": 1,
+        "digest": "940ce7552a2c479cd8ad184d05c8eed1"
+      },
+      "WorkspaceMembership": {
+        "count": 3,
+        "digest": "2aebc4b585815f3ea5e3f1a6e6c7a6d0"
+      },
+      "StreamEvent": {
+        "count": 5,
+        "digest": "60cd2bfc992452904832c14f32850093"
+      },
+      "EventRegistration": {
+        "count": 1,
+        "digest": "94229d75054dc65fc48c61f40ff80eb2"
+      },
+      "EventChatMessage": {
+        "count": 1,
+        "digest": "e365360dd2f76a4edf149833fd1c989b"
+      },
+      "EventChatEvent": {
+        "count": 1,
+        "digest": "f8a156de22854b0ad7617284db7c1a14"
+      },
+      "EventInvitation": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "AttendeeVerification": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "AttendeeSession": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "LiveSession": {
+        "count": 1,
+        "digest": "62f585a81a6e1d069dddff100e208685"
+      },
+      "LiveSessionUpdate": {
+        "count": 3,
+        "digest": "2917053147203a5808d994fc197d7c5c"
+      },
+      "LivePoll": {
+        "count": 2,
+        "digest": "11179310a597d89fb28cc33ea426c7aa"
+      },
+      "LivePollOption": {
+        "count": 6,
+        "digest": "a545a1dcfd99ba11d3ee9b74416eaad9"
+      },
+      "LivePollResponse": {
+        "count": 2,
+        "digest": "d28949e904dab5d0d090d581d25d8bc2"
+      },
+      "RunbookItem": {
+        "count": 7,
+        "digest": "6131456c7c44c60a5c73be8a766e0f9b"
+      },
+      "ReadinessAssessment": {
+        "count": 4,
+        "digest": "057782bf3e641604425747719bcb81ac"
+      },
+      "AccessPolicy": {
+        "count": 3,
+        "digest": "a4fba3ffe3eab3811b05b9a6d823ea8c"
+      },
+      "ContentBlock": {
+        "count": 5,
+        "digest": "039f25472691da14b41d20f307f43739"
+      },
+      "MediaAsset": {
+        "count": 3,
+        "digest": "4e9748ea83f5da0578db2a8e497fe8bb"
+      },
+      "MediaUpload": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "MediaProcessingJob": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "MediaProcessingAttempt": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "MediaVariant": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "EventMediaAsset": {
+        "count": 2,
+        "digest": "314a3c082f9c867be4123726a629da09"
+      },
+      "Recommendation": {
+        "count": 3,
+        "digest": "8cf7ffb917613cc9483fa52339fdfd89"
+      },
+      "RecommendationRun": {
+        "count": 1,
+        "digest": "8c97045ad0d4e6da5ed2d59aa3b5bfc7"
+      },
+      "AnalyticsSnapshot": {
+        "count": 14,
+        "digest": "3f73195e317f706f1d97cbfebf313376"
+      },
+      "FeatureFlag": {
+        "count": 1,
+        "digest": "5fc6744015d14b1ee762f90d37a406a0"
+      },
+      "ErrorReport": {
+        "count": 1,
+        "digest": "3207ac83fb489a226352bd8c88dd8c07"
+      },
+      "AuditLog": {
+        "count": 4,
+        "digest": "87e4e0a0ae5208d67a379eaf3233ea7a"
+      },
+      "DomainEvent": {
+        "count": 1,
+        "digest": "e76fd5fb30b3deaf809096edd465a0e9"
+      },
+      "OutboxEvent": {
+        "count": 1,
+        "digest": "83686ea6101a9fc17714f418a4b1218a"
+      },
+      "WebhookEndpoint": {
+        "count": 1,
+        "digest": "480cb6433cd345fbaa08700a99f009a9"
+      },
+      "WebhookSubscription": {
+        "count": 7,
+        "digest": "50268f2fd87ea05099b067d02bca9577"
+      },
+      "WebhookDelivery": {
+        "count": 1,
+        "digest": "710388c37949d85fa80b0e546038deaa"
+      },
+      "WebhookDeliveryAttempt": {
+        "count": 2,
+        "digest": "478be0a09121a5a66dc3d8100494aea5"
+      }
+    },
+    "after": {
+      "User": {
+        "count": 3,
+        "digest": "170703d77ba4134f4698684e5aaa8ca8"
+      },
+      "Session": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "Workspace": {
+        "count": 1,
+        "digest": "940ce7552a2c479cd8ad184d05c8eed1"
+      },
+      "WorkspaceMembership": {
+        "count": 3,
+        "digest": "2aebc4b585815f3ea5e3f1a6e6c7a6d0"
+      },
+      "StreamEvent": {
+        "count": 5,
+        "digest": "60cd2bfc992452904832c14f32850093"
+      },
+      "EventRegistration": {
+        "count": 1,
+        "digest": "94229d75054dc65fc48c61f40ff80eb2"
+      },
+      "EventChatMessage": {
+        "count": 1,
+        "digest": "e365360dd2f76a4edf149833fd1c989b"
+      },
+      "EventChatEvent": {
+        "count": 1,
+        "digest": "f8a156de22854b0ad7617284db7c1a14"
+      },
+      "EventInvitation": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "AttendeeVerification": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "AttendeeSession": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "LiveSession": {
+        "count": 1,
+        "digest": "62f585a81a6e1d069dddff100e208685"
+      },
+      "LiveSessionUpdate": {
+        "count": 3,
+        "digest": "2917053147203a5808d994fc197d7c5c"
+      },
+      "LivePoll": {
+        "count": 2,
+        "digest": "11179310a597d89fb28cc33ea426c7aa"
+      },
+      "LivePollOption": {
+        "count": 6,
+        "digest": "a545a1dcfd99ba11d3ee9b74416eaad9"
+      },
+      "LivePollResponse": {
+        "count": 2,
+        "digest": "d28949e904dab5d0d090d581d25d8bc2"
+      },
+      "RunbookItem": {
+        "count": 7,
+        "digest": "6131456c7c44c60a5c73be8a766e0f9b"
+      },
+      "ReadinessAssessment": {
+        "count": 4,
+        "digest": "057782bf3e641604425747719bcb81ac"
+      },
+      "AccessPolicy": {
+        "count": 3,
+        "digest": "a4fba3ffe3eab3811b05b9a6d823ea8c"
+      },
+      "ContentBlock": {
+        "count": 5,
+        "digest": "039f25472691da14b41d20f307f43739"
+      },
+      "MediaAsset": {
+        "count": 3,
+        "digest": "4e9748ea83f5da0578db2a8e497fe8bb"
+      },
+      "MediaUpload": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "MediaProcessingJob": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "MediaProcessingAttempt": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "MediaVariant": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "EventMediaAsset": {
+        "count": 2,
+        "digest": "314a3c082f9c867be4123726a629da09"
+      },
+      "Recommendation": {
+        "count": 3,
+        "digest": "8cf7ffb917613cc9483fa52339fdfd89"
+      },
+      "RecommendationRun": {
+        "count": 1,
+        "digest": "8c97045ad0d4e6da5ed2d59aa3b5bfc7"
+      },
+      "AnalyticsSnapshot": {
+        "count": 14,
+        "digest": "3f73195e317f706f1d97cbfebf313376"
+      },
+      "FeatureFlag": {
+        "count": 1,
+        "digest": "5fc6744015d14b1ee762f90d37a406a0"
+      },
+      "ErrorReport": {
+        "count": 1,
+        "digest": "3207ac83fb489a226352bd8c88dd8c07"
+      },
+      "AuditLog": {
+        "count": 4,
+        "digest": "87e4e0a0ae5208d67a379eaf3233ea7a"
+      },
+      "DomainEvent": {
+        "count": 1,
+        "digest": "e76fd5fb30b3deaf809096edd465a0e9"
+      },
+      "OutboxEvent": {
+        "count": 1,
+        "digest": "83686ea6101a9fc17714f418a4b1218a"
+      },
+      "WebhookEndpoint": {
+        "count": 1,
+        "digest": "480cb6433cd345fbaa08700a99f009a9"
+      },
+      "WebhookSubscription": {
+        "count": 7,
+        "digest": "50268f2fd87ea05099b067d02bca9577"
+      },
+      "WebhookDelivery": {
+        "count": 1,
+        "digest": "710388c37949d85fa80b0e546038deaa"
+      },
+      "WebhookDeliveryAttempt": {
+        "count": 2,
+        "digest": "478be0a09121a5a66dc3d8100494aea5"
+      }
+    }
+  },
+  "processRestart": {
+    "status": "PASS",
+    "processReplaced": true,
+    "existingSessionAccepted": true,
+    "persistedTopics": 1,
+    "persistedReplies": 1
+  },
+  "existingBrowserMetrics": [
+    {
+      "file": "topics-pagination-observation.json",
+      "measurements": {
+        "rows": 45,
+        "loadTwoPagesMs": 330
+      }
+    },
+    {
+      "file": "chat-local-observations.json",
+      "measurements": {
+        "replayMessages": 430,
+        "replayMs": 1478,
+        "liveMessages": 450,
+        "liveDeliveryMs": 3835,
+        "renderedRows": 300,
+        "fixture": "direct committed journal; actual REST and WebSocket recovery"
+      }
+    }
+  ],
+  "notes": [
+    "Original application sources, schema, migrations and existing tests were not modified.",
+    "Initial audit harness errors are retained in command history and explained in the report.",
+    "Resource/editor observation completed successfully while confirming P2; it is not a PASS for draft preservation.",
+    "Malformed-ticket and actual Redis TTL expiry scenarios were run separately.",
+    "Shared legacy workflow regression coverage is limited to the executed existing suites."
+  ],
+  "developmentRestored": {
+    "developmentSupervisorPid": 64513,
+    "databaseConfiguration": "opspilot_chat_test",
+    "checks": [
+      {
+        "url": "http://localhost:4100/api/v1/health/ready",
+        "status": 200
+      },
+      {
+        "url": "http://localhost:3000/login",
+        "status": 200
+      }
+    ]
+  },
+  "auditRedisStopped": true,
+  "trackedSourceDiff": []
+}
