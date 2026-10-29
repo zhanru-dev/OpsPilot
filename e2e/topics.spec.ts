@@ -38,9 +38,13 @@ async function fixture() {
   eventIds.push(event.id);
   return event;
 }
-async function login(page: Page, eventId: string) {
+async function login(
+  page: Page,
+  eventId: string,
+  email = "alex.morgan@opspilot.demo",
+) {
   await page.goto("/login");
-  await page.getByLabel("Email address").fill("alex.morgan@opspilot.demo");
+  await page.getByLabel("Email address").fill(email);
   await page.getByLabel("Password", { exact: true }).fill("DemoPass123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).not.toHaveURL(/\/login/);
@@ -132,7 +136,15 @@ test("admitted attendees and moderators submit, approve, reply, pin, edit, delet
     await login(page, event.id);
     await admit(author, request, event.id);
     await admit(reader, request, event.id);
-    await login(moderator2, event.id);
+    await login(moderator2, event.id, "jordan.lee@opspilot.demo");
+    const managerContext = (await (
+      await page.request.get(`${staffPath(event.id)}/context`)
+    ).json()) as { actor: { id: string } };
+    const adminContext = (await (
+      await moderator2.request.get(`${staffPath(event.id)}/context`)
+    ).json()) as { actor: { id: string }; capabilities: { moderate: boolean } };
+    expect(adminContext.actor.id).not.toBe(managerContext.actor.id);
+    expect(adminContext.capabilities.moderate).toBe(true);
     const question =
       "How does OpsPilot protect event questions? <script>alert(1)</script>";
     await ask(author, question);

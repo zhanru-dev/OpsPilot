@@ -21,6 +21,7 @@ The centrepiece is **Launch Control**. A versioned rules engine converts operati
 - Guarded `DRAFT -> CONFIGURING -> READY -> LIVE -> COMPLETED -> ARCHIVED` lifecycle.
 - Event-scoped live operations room with durable updates and realtime refresh.
 - Persistent event Chat for workspace staff and admitted attendees, with current-permission moderation, WebSocket delivery and missed-message recovery.
+- Event Q&A with private review queues, replies, versioned edits, seven-pin moderation, audience settings and authenticated snapshot recovery.
 - Draft, open and closed live polls with serialised lifecycle controls.
 - Public registration with single-use email verification and scoped HttpOnly attendee sessions.
 - Invitation-only and exact email-domain access with immediate session revocation.
@@ -107,12 +108,13 @@ npm run dev
 
 The API uses `4100` by default and remains configurable through the environment.
 
-## Chat integration: isolated local environment
+## Chat and Topics integration: isolated local environment
 
 The first Mudu integration slice adds Chat to existing StreamOps Live Operations and
 the admitted attendee page. See the [foundation contract](docs/integration/mudu-integration-foundation.md)
 and [migration report, verification and limitations](docs/integration/chat-migration-report.md).
-Topics, Mudu Media Library and Live Streaming migration are outside this phase.
+Topics/Q&A is now integrated on the same surfaces. See its [migration report](docs/integration/topics-migration-report.md).
+Mudu Media Library and Live Streaming migration remain outside this phase.
 
 From the repository root, use the separate services below to avoid the ordinary development database:
 
@@ -126,7 +128,7 @@ node scripts/with-chat-test-env.mjs npm run db:seed
 node scripts/with-chat-test-env.mjs npm run dev
 ```
 
-On subsequent starts, run the Compose and `dev` commands; do not reseed. Secrets are
+On subsequent starts, run Compose, `db:generate`, `db:deploy` and `dev`; do not reseed. Secrets are
 generated locally in ignored `.runtime/chat-test-secrets.json` with mode 0600. The wrapper
 always targets `opspilot_chat_test` on port 5546, Redis 6381 and isolated object storage 9002.
 Use `localhost` consistently for browser cookies. Web/API ports remain 3000/4100.
@@ -137,8 +139,19 @@ Use `localhost` consistently for browser cookies. Web/API ports remain 3000/4100
 3. In a separate browser profile/private window, open
    `http://localhost:3000/events/33333333-3333-4333-8333-333333333335/register`.
 4. Register a local test email, open its message in Mailpit at `http://localhost:8025`,
-   and open/confirm the verification link in that attendee window. Chat appears after admission.
+   and open/confirm the verification link in that attendee window. Chat and Questions & answers appear after admission.
 5. Send in either window, remove a message as Alex, and reload to verify persistence.
+6. Submit an attendee question. Alex can open **Pending**, approve it, reply, pin/unpin,
+   edit or delete it. **Question settings** controls audience publishing/replies/review.
+   Other attendees see the question only after approval. Topics and Polls remain separate.
+
+Topics tests are available as `test:topics:state`, `test:topics:api` and
+`test:topics:browser`. Backend/browser tests require an isolated database ending `_test`,
+with migrations and demo fixtures installed once. Stop local Web/API/worker processes before
+browser suites. For production-web verification, run `npm run build` under the test environment,
+then `E2E_PRODUCTION_WEB=1 npm run test:topics:browser` (or `test:ui` for all integration flows).
+The [Topics report](docs/integration/topics-migration-report.md) records the exact isolated
+environment and commands used during this integration.
 
 Run Chat fault recovery tests with
 `node scripts/with-chat-test-env.mjs npm run test:chat:recovery` after stopping the local

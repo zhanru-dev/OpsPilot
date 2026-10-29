@@ -44,8 +44,8 @@ CONTENT_OPERATOR can send during READY/LIVE; ADMIN and OPERATIONS_MANAGER can
 moderate. ANALYST and VIEWER are read-only. Admitted attendees can read/send in
 READY/LIVE and cannot moderate. Staff retain history and moderation access after closure,
 except ARCHIVED events, which remain immutable and read-only.
-No new general RBAC administration is introduced. Future topics.* / broadcast.manage
-capabilities remain extension points, not implemented permissions.
+No new general RBAC administration is introduced. Topics capabilities are documented in the
+Topics extension below; broadcast.manage remains a future extension point.
 
 The event lock serializes Chat writes and existing event/access-policy transitions.
 Current principal/session/membership/registration/invitation rows are locked for protected
@@ -136,6 +136,38 @@ databases or deletion of existing uploads. Run baseline checks before source cha
 Then test real cookies/admission, PostgreSQL constraints, independent sockets, ticket
 expiry/reuse, dynamic permissions, room/workspace isolation, lost ACKs, replay and browsers.
 
-Future Topics uses StreamEvent and the same principal boundary but separate entities;
+Topics now uses StreamEvent and the same principal boundary with separate entities;
 future BroadcastSession must not be confused with existing operational LiveSession;
 future Media adapts OpsPilot storage rather than importing Mudu storage/accounts.
+
+## Topics extension (2026-10-29)
+
+Topics/Q&A is the second integrated slice. The former future Topics boundary is now
+implemented; BroadcastSession/Media migration remain deferred. See the
+[approved scope](topics-integration-task.md), [API/data plan](topics-integration-plan.md)
+and [migration and verification report](topics-migration-report.md).
+
+`EventIdentityService` now owns the original Chat current-session, workspace membership,
+attendee admission and event access checks. `ChatAuthorizationService` delegates to it and
+retains its previous Chat capability contract and authority fingerprint. Topics derives its
+own capabilities and settings from the same verified principal; no new account/room/RBAC
+store was introduced. Topics controllers live in the existing Chat module so they can use
+the ticket issuer without a circular module dependency.
+
+Both modules use the existing `/chat` Socket.IO Gateway. Redis tickets additionally bind a
+server-selected channel (`chat` default or `topics`); a Topics socket cannot invoke Chat
+commands. The browser uses independently owned sockets on the same server and namespace,
+so unmounting/filtering Topics cannot remove Chat listeners. SSE, Live Operations and Polls
+remain separate. Topics mutations use REST; authorized WebSocket notices contain IDs and
+revisions, not question bodies. Snapshots, not a second durable event journal, recover
+missing notices. The recovery bound is a healthy 5-second snapshot poll plus request time;
+idle authority checks remain 3 seconds. No instantaneous revocation or exactly-once transport
+claim is made.
+
+The additive `20261029010000_event_topics` migration adds event settings/revisions,
+`EventTopic` and `EventTopicReply`, using existing staff/attendee relations. Seven nullable pin
+slots, a unique event/slot index, CHECK constraints and event-first write transactions enforce
+pin limits. Shared event locks serialize Topics with Chat/event transitions; independently
+numbered topic revisions never advance Chat's replay cursor. Snapshots and counts apply
+pending-content visibility before filtering or pagination. A formerly public question going
+back to review invalidates previous readers without authorizing them to see the new text.

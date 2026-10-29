@@ -1,0 +1,17 @@
+{
+  "environment": "macOS x86_64; Node 22.20.0; local PostgreSQL 17; Chrome; production Next standalone web",
+  "date": "2026-10-29",
+  "topics": {
+    "rows": 45,
+    "loadTwoPagesMs": 475
+  },
+  "chat": {
+    "replayMessages": 430,
+    "replayMs": 1510,
+    "liveMessages": 450,
+    "liveDeliveryMs": 3508,
+    "renderedRows": 300,
+    "fixture": "direct committed journal; actual REST and WebSocket recovery"
+  },
+  "limitations": "Single local workload; not production throughput or multi-replica/soak evidence."
+}
