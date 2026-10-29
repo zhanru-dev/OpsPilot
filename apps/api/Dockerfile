@@ -10,6 +10,7 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/chat-contracts/package.json packages/chat-contracts/package.json
+COPY packages/topics-contracts/package.json packages/topics-contracts/package.json
 RUN npm ci
 
 FROM dependencies AS builder
@@ -18,6 +19,7 @@ COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY apps/api ./apps/api
 COPY packages/chat-contracts ./packages/chat-contracts
+COPY packages/topics-contracts ./packages/topics-contracts
 RUN npm run db:generate && npm run build --workspace=@opspilot/api
 
 FROM dependencies AS production-dependencies

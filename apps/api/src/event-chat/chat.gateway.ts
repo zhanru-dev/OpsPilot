@@ -9,12 +9,23 @@ import {
 import { Namespace, Socket } from 'socket.io';
 import type { Subscription } from 'rxjs';
 import type { ChatAck } from '@opspilot/chat-contracts';
+import type { TopicChange, TopicContext } from '@opspilot/topics-contracts';
+import { TopicsService } from '../event-topics/topics.service';
 import { ChatService } from './chat.service';
 import { ChatTicketService } from './chat-ticket.service';
 import type { ChatPrincipal } from './chat-authorization.service';
 import { DeleteChatDto, parseChatDto, SendChatDto } from './chat.dto';
 
-type Binding = { eventId: string; principal: ChatPrincipal };
+type Binding = {
+  eventId: string;
+  principal: ChatPrincipal;
+  channel?: 'chat' | 'topics';
+};
+type TopicsClient = Binding & {
+  socket: Socket;
+  pumping: boolean;
+  authority: string;
+};
 type Client = Binding & {
   socket: Socket;
   cursor: number;
@@ -51,6 +62,8 @@ export class ChatGateway
     OnModuleDestroy
 {
   private readonly clients = new Map<string, Client>();
+  private readonly topicsClients = new Map<string, TopicsClient>();
+  private topicsSubscription?: Subscription;
   private readonly bindings = new WeakMap<Socket, Binding>();
   private subscription?: Subscription;
   private timer?: ReturnType<typeof setInterval>;
@@ -58,6 +71,7 @@ export class ChatGateway
     private readonly chat: ChatService,
     private readonly tickets: ChatTicketService,
     private readonly config: ConfigService,
+    private readonly topics: TopicsService,
   ) {}
 
   afterInit(server: Namespace) {
@@ -68,12 +82,14 @@ export class ChatGateway
           this.config.getOrThrow<string>('WEB_ORIGIN')
         )
           throw new HttpException('Chat origin is not allowed.', 403);
-        if (this.clients.size >= 500)
+        if (this.clients.size + this.topicsClients.size >= 500)
           throw new HttpException('Chat capacity reached. Retry shortly.', 503);
         const binding = await this.tickets.consume(
           socket.handshake.auth?.ticket,
         );
-        await this.chat.context(binding.eventId, binding.principal);
+        if (binding.channel === 'topics')
+          await this.topics.context(binding.eventId, binding.principal);
+        else await this.chat.context(binding.eventId, binding.principal);
         this.bindings.set(socket, binding);
       })().then(
         () => next(),
@@ -90,8 +106,15 @@ export class ChatGateway
       for (const client of this.clients.values())
         if (client.eventId === eventId) void this.pump(client);
     });
+    this.topicsSubscription = this.topics.changes.subscribe((change) => {
+      for (const client of this.topicsClients.values())
+        if (client.eventId === change.eventId)
+          void this.checkTopics(client, change);
+    });
     this.timer = setInterval(() => {
       for (const client of this.clients.values()) void this.pump(client);
+      for (const client of this.topicsClients.values())
+        void this.checkTopics(client);
     }, 3000);
     this.timer.unref();
   }
@@ -102,6 +125,8 @@ export class ChatGateway
       socket.disconnect(true);
       return;
     }
+    if (binding.channel === 'topics')
+      return this.connectTopics(socket, binding);
     try {
       const snapshot = await this.chat.history(
         binding.eventId,
@@ -140,6 +165,65 @@ export class ChatGateway
         detail,
       );
       socket.disconnect(true);
+    }
+  }
+
+  private async connectTopics(socket: Socket, binding: Binding) {
+    try {
+      await this.topics.context(
+        binding.eventId,
+        binding.principal,
+        (context) => {
+          if (!socket.connected) return;
+          this.topicsClients.set(socket.id, {
+            ...binding,
+            socket,
+            pumping: false,
+            authority: context.authority,
+          });
+          socket.emit('topics.ready', { context });
+        },
+      );
+    } catch (error) {
+      const detail = failure(error).error;
+      socket.emit(
+        [401, 403, 404].includes(detail.status)
+          ? 'topics.denied'
+          : 'topics.unavailable',
+        detail,
+      );
+      socket.disconnect(true);
+    }
+  }
+
+  private async checkTopics(client: TopicsClient, change?: TopicChange) {
+    if (client.pumping || !client.socket.connected) return;
+    client.pumping = true;
+    try {
+      const deliver = (context: TopicContext, notice?: TopicChange) => {
+        if (!client.socket.connected) return;
+        if (client.authority !== context.authority) {
+          client.authority = context.authority;
+          client.socket.emit('topics.context', context);
+        }
+        if (notice) client.socket.emit('topics.changed', notice);
+      };
+      if (change)
+        await this.topics.notify(
+          client.eventId,
+          client.principal,
+          change,
+          deliver,
+        );
+      else await this.topics.context(client.eventId, client.principal, deliver);
+    } catch (error) {
+      const detail = failure(error).error;
+      if ([401, 403, 404].includes(detail.status)) {
+        client.socket.emit('topics.denied', detail);
+        client.socket.disconnect(true);
+      } else client.socket.emit('topics.unavailable', detail);
+    } finally {
+      client.pumping = false;
     }
   }
 
@@ -216,10 +300,15 @@ export class ChatGateway
 
   handleDisconnect(socket: Socket) {
     this.clients.delete(socket.id);
+    this.topicsClients.delete(socket.id);
   }
   onModuleDestroy() {
     clearInterval(this.timer);
     this.subscription?.unsubscribe();
+    this.topicsSubscription?.unsubscribe();
+    for (const client of this.topicsClients.values())
+      client.socket.disconnect(true);
+    this.topicsClients.clear();
     for (const client of this.clients.values()) client.socket.disconnect(true);
     this.clients.clear();
   }

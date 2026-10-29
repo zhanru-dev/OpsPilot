@@ -198,6 +198,10 @@ model User {
   livePollResponses           LivePollResponse[]
   sentChatMessages            EventChatMessage[]    @relation("ChatStaffSender")
   moderatedChatMessages       EventChatMessage[]    @relation("ChatModerator")
+  authoredTopics              EventTopic[]          @relation("TopicStaffAuthor")
+  moderatedTopics             EventTopic[]          @relation("TopicModerator")
+  authoredTopicReplies        EventTopicReply[]     @relation("ReplyStaffAuthor")
+  deletedTopicReplies         EventTopicReply[]     @relation("ReplyModerator")
 }
 
 model Session {
@@ -248,35 +252,42 @@ model WorkspaceMembership {
 }
 
 model StreamEvent {
-  id                   String                @id @default(uuid())
-  workspaceId          String
-  ownerId              String?
-  title                String
-  slug                 String
-  description          String
-  status               EventStatus           @default(DRAFT)
-  scheduledStart       DateTime
-  scheduledEnd         DateTime
-  timezone             String                @default("Europe/London")
-  expectedAttendees    Int                   @default(0)
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  owner                User?                 @relation("EventOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  accessPolicy         AccessPolicy?
-  runbookItems         RunbookItem[]
-  readinessAssessments ReadinessAssessment[]
-  contentBlocks        ContentBlock[]
-  mediaAssets          EventMediaAsset[]
-  recommendations      Recommendation[]
-  recommendationRuns   RecommendationRun[]
-  auditLogs            AuditLog[]
-  liveSession          LiveSession?
-  registrations        EventRegistration[]
-  invitations          EventInvitation[]
-  chatSequence         Int                   @default(0)
-  chatMessages         EventChatMessage[]
-  chatEvents           EventChatEvent[]
+  id                      String                @id @default(uuid())
+  workspaceId             String
+  ownerId                 String?
+  title                   String
+  slug                    String
+  description             String
+  status                  EventStatus           @default(DRAFT)
+  scheduledStart          DateTime
+  scheduledEnd            DateTime
+  timezone                String                @default("Europe/London")
+  expectedAttendees       Int                   @default(0)
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  workspace               Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner                   User?                 @relation("EventOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  accessPolicy            AccessPolicy?
+  runbookItems            RunbookItem[]
+  readinessAssessments    ReadinessAssessment[]
+  contentBlocks           ContentBlock[]
+  mediaAssets             EventMediaAsset[]
+  recommendations         Recommendation[]
+  recommendationRuns      RecommendationRun[]
+  auditLogs               AuditLog[]
+  liveSession             LiveSession?
+  registrations           EventRegistration[]
+  invitations             EventInvitation[]
+  chatSequence            Int                   @default(0)
+  chatMessages            EventChatMessage[]
+  chatEvents              EventChatEvent[]
+  topicSequence           Int                   @default(0)
+  topicSettingsRevision   Int                   @default(0)
+  topicAudiencePublishing Boolean               @default(true)
+  topicAudienceReplies    Boolean               @default(true)
+  topicModerationRequired Boolean               @default(true)
+  topics                  EventTopic[]
+  topicReplies            EventTopicReply[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status, scheduledStart])
@@ -299,6 +310,8 @@ model EventRegistration {
   verifications    AttendeeVerification[]
   attendeeSessions AttendeeSession[]
   chatMessages     EventChatMessage[]
+  topics           EventTopic[]
+  topicReplies     EventTopicReply[]
 
   @@unique([id, eventId])
   @@unique([eventId, email])
@@ -906,4 +919,77 @@ model WebhookDeliveryAttempt {
 
   @@unique([deliveryId, attemptNumber])
   @@index([status, createdAt])
+}
+
+enum TopicStatus {
+  PENDING
+  APPROVED
+}
+
+model EventTopic {
+  id                     String             @id @default(uuid())
+  eventId                String
+  authorKind             ChatActorKind
+  authorKey              String
+  staffUserId            String?
+  attendeeRegistrationId String?
+  authorName             String
+  clientOperationId      String
+  requestHash            String
+  text                   String?
+  status                 TopicStatus        @default(PENDING)
+  wasPublic              Boolean            @default(false)
+  pinSlot                Int?
+  createdSequence        Int
+  version                Int
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  deletedAt              DateTime?
+  moderatedByUserId      String?
+  moderatedAt            DateTime?
+  event                  StreamEvent        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  staff                  User?              @relation("TopicStaffAuthor", fields: [staffUserId], references: [id], onDelete: Restrict)
+  attendee               EventRegistration? @relation(fields: [attendeeRegistrationId, eventId], references: [id, eventId], onDelete: Cascade)
+  moderator              User?              @relation("TopicModerator", fields: [moderatedByUserId], references: [id], onDelete: SetNull)
+  replies                EventTopicReply[]
+
+  @@unique([id, eventId])
+  @@unique([eventId, authorKey, clientOperationId])
+  @@unique([eventId, pinSlot])
+  @@unique([eventId, createdSequence])
+  @@index([eventId, status, createdSequence])
+  @@index([attendeeRegistrationId, eventId])
+  @@index([staffUserId])
+  @@index([moderatedByUserId])
+}
+
+model EventTopicReply {
+  id                     String             @id @default(uuid())
+  eventId                String
+  topicId                String
+  authorKind             ChatActorKind
+  authorKey              String
+  staffUserId            String?
+  attendeeRegistrationId String?
+  authorName             String
+  clientOperationId      String
+  requestHash            String
+  text                   String?
+  createdSequence        Int
+  version                Int
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  deletedAt              DateTime?
+  deletedByUserId        String?
+  event                  StreamEvent        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  topic                  EventTopic         @relation(fields: [topicId, eventId], references: [id, eventId], onDelete: Cascade)
+  staff                  User?              @relation("ReplyStaffAuthor", fields: [staffUserId], references: [id], onDelete: Restrict)
+  attendee               EventRegistration? @relation(fields: [attendeeRegistrationId, eventId], references: [id, eventId], onDelete: Cascade)
+  moderator              User?              @relation("ReplyModerator", fields: [deletedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, authorKey, clientOperationId])
+  @@index([topicId, eventId, createdSequence])
+  @@index([attendeeRegistrationId, eventId])
+  @@index([staffUserId])
+  @@index([deletedByUserId])
 }
