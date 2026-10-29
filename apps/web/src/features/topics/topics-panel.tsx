@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { MessageCircleQuestion, Pin, RefreshCw, Settings2 } from "lucide-react";
 import type {
   Topic,
@@ -8,7 +8,12 @@ import type {
   TopicSettings,
 } from "@opspilot/topics-contracts";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api";
+import {
+  canEditTopic,
+  reconcileEditDrafts,
+  submissionFailure,
+  type EditDraft,
+} from "./drafts";
 import { projectTopics } from "./state";
 import { useTopics } from "./use-topics";
 
@@ -18,6 +23,7 @@ type Draft = {
   operation: { clientOperationId: string; text: string } | null;
   error: string | null;
   sending: boolean;
+  retryAt: number;
 };
 const emptyDraft = (): Draft => ({
   open: false,
@@ -25,6 +31,7 @@ const emptyDraft = (): Draft => ({
   operation: null,
   error: null,
   sending: false,
+  retryAt: 0,
 });
 type UpdateDraft = (patch: Partial<Draft>) => void;
 type Mutation = (path: string, method: string, data: object) => Promise<void>;
@@ -50,7 +57,18 @@ function Composer({
   busy: boolean;
   mutate: Mutation;
 }) {
-  const { text, operation, error, sending } = draft;
+  const { text, operation, error, sending, retryAt } = draft;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!retryAt) return;
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= retryAt) clearInterval(timer);
+    }, 250);
+    return () => clearInterval(timer);
+  }, [retryAt]);
+  const coolingDown = retryAt > now;
   const setText = (text: string) => updateDraft({ text });
   const setOperation = (operation: Draft["operation"]) =>
     updateDraft({ operation });
@@ -58,7 +76,7 @@ function Composer({
   const setSending = (sending: boolean) => updateDraft({ sending });
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!enabled || busy || sending) return;
+    if (!enabled || busy || sending || retryAt > Date.now()) return;
     const data = operation ?? {
       clientOperationId: crypto.randomUUID(),
       text: text.trim(),
@@ -71,14 +89,9 @@ function Composer({
       await mutate(topicId ? `/${topicId}/replies` : "", "POST", data);
       setOperation(null);
       setText("");
+      updateDraft({ retryAt: 0 });
     } catch (cause) {
-      const uncertain = !(cause instanceof ApiError) || cause.status >= 500;
-      if (!uncertain) setOperation(null);
-      setError(
-        uncertain
-          ? "Delivery is unconfirmed. Retry keeps the same request ID."
-          : message(cause),
-      );
+      updateDraft(submissionFailure(data, operation, cause));
     } finally {
       setSending(false);
     }
@@ -107,12 +120,17 @@ function Composer({
           {error}
         </p>
       )}
+      {coolingDown && (
+        <p role="status" className="text-xs text-[var(--muted)]">
+          Retry available in {Math.ceil((retryAt - now) / 1000)} seconds.
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="submit"
           size="sm"
           loading={sending}
-          disabled={!enabled || busy || !text.trim()}
+          disabled={!enabled || busy || !text.trim() || coolingDown}
         >
           {operation
             ? topicId
@@ -220,6 +238,8 @@ function TopicCard({
   mutate,
   draft,
   updateDraft,
+  editing,
+  setEditing,
 }: {
   draft: Draft;
   updateDraft: UpdateDraft;
@@ -227,19 +247,16 @@ function TopicCard({
   context: TopicContext;
   busy: boolean;
   mutate: Mutation;
+  editing: EditDraft | null;
+  setEditing: (draft: EditDraft | null) => void;
 }) {
-  const [editing, setEditing] = useState<{
-    text: string;
-    version: number;
-  } | null>(null);
   const replying = draft.open;
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const moderator = context.capabilities.moderate;
-  const canEdit =
-    moderator ||
-    (context.capabilities.create && topic.author.id === context.actor.id);
+  const canEdit = canEditTopic(topic, context);
+  const staleEdit = editing !== null && editing.version !== topic.version;
   const replies = expanded ? topic.replies : topic.replies.slice(-3);
   async function action(path: string, method: string, data: object) {
     setError(null);
@@ -280,11 +297,12 @@ function TopicCard({
           </time>
         </div>
       </header>
-      {editing ? (
+      {editing && canEdit && editing.authority === context.authority ? (
         <form
           className="space-y-2"
           onSubmit={async (event) => {
             event.preventDefault();
+            if (busy || staleEdit || topic.pinSlot !== null) return;
             if (
               await action(`/${topic.id}`, "PATCH", {
                 text: editing.text,
@@ -302,7 +320,7 @@ function TopicCard({
               rows={3}
               value={editing.text}
               maxLength={2000}
-              disabled={busy}
+              disabled={busy || topic.pinSlot !== null}
               onChange={(event) =>
                 setEditing({ ...editing, text: event.target.value })
               }
@@ -312,7 +330,12 @@ function TopicCard({
             <Button
               type="submit"
               size="sm"
-              disabled={busy || !editing.text.trim()}
+              disabled={
+                busy ||
+                staleEdit ||
+                topic.pinSlot !== null ||
+                !editing.text.trim()
+              }
             >
               Save question
             </Button>
@@ -325,6 +348,28 @@ function TopicCard({
               Cancel edit
             </Button>
           </div>
+          {staleEdit && (
+            <div className="space-y-2 rounded-md bg-[var(--surface-muted)] p-3 text-sm">
+              <p role="status">
+                This question changed. Your draft is retained. Review the
+                current question and replies before saving.
+              </p>
+              <p className="whitespace-pre-wrap break-words">
+                Current question: {topic.text}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={busy || topic.pinSlot !== null}
+                onClick={() =>
+                  setEditing({ ...editing, version: topic.version })
+                }
+              >
+                Keep draft against current version
+              </Button>
+            </div>
+          )}
           {!moderator && context.settings.moderationRequired && (
             <p className="text-xs text-[var(--muted)]">
               Editing sends this question and its replies back to review.
@@ -374,7 +419,11 @@ function TopicCard({
             variant="ghost"
             disabled={busy || topic.pinSlot !== null}
             onClick={() =>
-              setEditing({ text: topic.text ?? "", version: topic.version })
+              setEditing({
+                text: topic.text ?? "",
+                version: topic.version,
+                authority: context.authority,
+              })
             }
           >
             Edit question
@@ -519,6 +568,21 @@ function TopicsScope({
       [key]: { ...(previous[key] ?? emptyDraft()), ...patch },
     }));
   const topics = useTopics(eventId, mode, actorId, filter);
+  const [editDrafts, setEditDrafts] = useState<Record<string, EditDraft>>({});
+  const [checkedWindow, setCheckedWindow] = useState(topics.editWindow);
+  let visibleEdits = editDrafts;
+  if (checkedWindow !== topics.editWindow) {
+    visibleEdits = reconcileEditDrafts(editDrafts, topics.editWindow);
+    setCheckedWindow(topics.editWindow);
+    setEditDrafts(visibleEdits);
+  }
+  const updateEdit = (id: string, draft: EditDraft | null) =>
+    setEditDrafts((previous) => {
+      const next = { ...previous };
+      if (draft) next[id] = draft;
+      else delete next[id];
+      return next;
+    });
   const rows = projectTopics(topics.state, filter);
   return (
     <section
@@ -626,6 +690,8 @@ function TopicsScope({
                 topic={topic}
                 draft={drafts[topic.id] ?? emptyDraft()}
                 updateDraft={(patch) => updateDraft(topic.id, patch)}
+                editing={visibleEdits[topic.id] ?? null}
+                setEditing={(draft) => updateEdit(topic.id, draft)}
                 context={topics.context!}
                 busy={topics.busy}
                 mutate={topics.mutate}

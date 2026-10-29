@@ -23,9 +23,25 @@ export class ApiError extends Error {
     message: string,
     public status: number,
     public details?: unknown,
+    public retryAt: number | null = null,
   ) {
     super(message);
   }
+}
+
+// Retry-After is either delta seconds or an HTTP date. Preserve the deadline
+// rather than restarting the wait when a component remounts.
+export function retryAfterDeadline(value: string | null, now = Date.now()) {
+  if (!value?.trim()) return null;
+  const text = value.trim();
+  const deadline = /^\d+$/.test(text)
+    ? now + Number(text) * 1000
+    : /^[a-z]{3},/i.test(text)
+      ? Date.parse(text)
+      : NaN;
+  return Number.isFinite(deadline) && deadline <= 8.64e15
+    ? Math.max(now, deadline)
+    : null;
 }
 
 export async function apiFetch<T>(
@@ -52,7 +68,12 @@ export async function apiFetch<T>(
         : Array.isArray(details?.message)
           ? details.message.join(" ")
           : `Request failed with status ${response.status}.`;
-    throw new ApiError(message, response.status, details);
+    throw new ApiError(
+      message,
+      response.status,
+      details,
+      retryAfterDeadline(response.headers.get("Retry-After")),
+    );
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;

@@ -60,6 +60,7 @@ export function configureApp(app: INestApplication) {
   app.enableCors({
     origin: webOrigin,
     credentials: true,
+    exposedHeaders: ['Retry-After'],
   });
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(

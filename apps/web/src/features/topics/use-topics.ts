@@ -8,6 +8,7 @@ import type {
 } from "@opspilot/topics-contracts";
 import { API_URL, ApiError, apiFetch } from "@/lib/api";
 import { applySnapshot, emptyTopics, invalidateTopic } from "./state";
+import type { EditWindow } from "./drafts";
 import {
   topicChangeSchema,
   topicContextSchema,
@@ -26,6 +27,9 @@ export function useTopics(
   const base = `/${mode === "staff" ? "stream-events" : "public/events"}/${eventId}/topics`;
   const [state, setState] = useState(emptyTopics);
   const [context, setContext] = useState<TopicContext | null>(null);
+  // Separate from transient row invalidation: only a verified replacement or
+  // authority loss can decide whether a locally authored edit is still eligible.
+  const [editWindow, setEditWindow] = useState<EditWindow>(null);
   const [connection, setConnection] = useState<Connection>("connecting");
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,6 +49,7 @@ export function useTopics(
     setSelectedFilter(filter);
     setState(emptyTopics());
     setContext(null);
+    setEditWindow(null);
     setReady(false);
     setConnection("connecting");
     setError(null);
@@ -85,6 +90,7 @@ export function useTopics(
       current = null;
       canonical = emptyTopics();
       setContext(null);
+      setEditWindow(null);
       setState(canonical);
       setReady(false);
       setLoading(false);
@@ -103,6 +109,7 @@ export function useTopics(
       }
       if (current && current.authority !== ctx.authority) {
         reset();
+        setEditWindow(null);
         canonical = emptyTopics();
         setState(canonical);
         setReady(false);
@@ -176,6 +183,10 @@ export function useTopics(
             nextBefore,
           });
           setState(canonical);
+          setEditWindow({
+            context: page!.context,
+            topics: Object.values(canonical.entities),
+          });
           setReady(true);
           setConnection("connected");
           setError(null);
@@ -389,6 +400,7 @@ export function useTopics(
     };
   }, [base, eventId, mode, actorId, filter]);
   return {
+    editWindow,
     state: ready ? state : emptyTopics(),
     context: ready ? context : null,
     connection,

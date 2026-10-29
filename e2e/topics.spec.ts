@@ -598,3 +598,340 @@ test("keyset pagination and event switching discard stale responses and old priv
     "",
   );
 });
+
+for (const mode of ["staff", "attendee"] as const) {
+  for (const kind of ["question", "reply"] as const) {
+    test(`${mode} ${kind} retains its operation through a lost receipt and real HTTP 429`, async ({
+      page,
+      browser,
+      request,
+    }, testInfo) => {
+      test.setTimeout(200000);
+      const event = await fixture();
+      const operatorContext = await browser.newContext();
+      const operator = await operatorContext.newPage();
+      try {
+        await login(operator, event.id);
+        const rootResponse = await operator.request.post(staffPath(event.id), {
+          data: {
+            text: "Rate-limit recovery parent",
+            clientOperationId: randomUUID(),
+          },
+        });
+        expect(rootResponse.status()).toBe(201);
+        const parent = (await rootResponse.json()).topic;
+        if (mode === "staff") await login(page, event.id);
+        else await admit(page, request, event.id);
+        const base =
+          mode === "staff" ? staffPath(event.id) : attendeePath(event.id);
+        const endpoint =
+          kind === "question" ? base : `${base}/${parent.id}/replies`;
+        const warmup = {
+          text: "Idempotent throttle warmup",
+          clientOperationId: randomUUID(),
+        };
+        // Consume the real controller's IP/handler budget. Reusing the warmup ID
+        // avoids creating dozens of irrelevant rows. No guard or clock is mocked.
+        for (let attempts = 0; ; attempts++) {
+          expect(attempts).toBeLessThan(65);
+          const response = await page.request.post(endpoint, { data: warmup });
+          if (response.status() === 429) {
+            await page.waitForTimeout(
+              (Number(response.headers()["retry-after"]) + 1) * 1000,
+            );
+            continue;
+          }
+          expect(response.status()).toBe(201);
+          if (Number(response.headers()["x-ratelimit-remaining"]) === 1) break;
+        }
+        const ids: string[] = [];
+        const statuses: number[] = [];
+        let retryAfter = 0;
+        await page.route(endpoint, async (route) => {
+          if (route.request().method() !== "POST") return route.continue();
+          ids.push(route.request().postDataJSON().clientOperationId);
+          const response = await route.fetch();
+          statuses.push(response.status());
+          if (ids.length === 1) {
+            expect(response.status()).toBe(201);
+            await route.abort("failed"); // The real DB commit has already happened.
+          } else {
+            if (response.status() === 429)
+              retryAfter = Number(response.headers()["retry-after"]);
+            await route.fulfill({ response });
+          }
+        });
+        const root = page.locator(`[data-topic-id="${parent.id}"]`);
+        if (kind === "reply")
+          await root
+            .getByRole("button", { name: "Reply to question", exact: true })
+            .click();
+        const input =
+          kind === "question"
+            ? page.getByLabel("Question text", { exact: true })
+            : root.getByLabel("Reply text", { exact: true });
+        const text = `One ${mode} ${kind} intent ${randomUUID()}`;
+        await input.fill(text);
+        await page
+          .getByRole("button", {
+            name: kind === "question" ? "Submit question" : "Post reply",
+            exact: true,
+          })
+          .click();
+        const retry = page.getByRole("button", {
+          name: `Retry ${kind}`,
+          exact: true,
+        });
+        await expect(retry).toBeEnabled();
+        await retry.click();
+        await expect.poll(() => statuses).toEqual([201, 429]);
+        expect(retryAfter).toBeGreaterThan(0);
+        await expect(
+          page.getByText(/Retry available in \d+ seconds/),
+        ).toBeVisible();
+        await expect(retry).toBeDisabled();
+        await expect(input).toHaveValue(text);
+        await expect(input).toBeDisabled();
+        expect(ids[1]).toBe(ids[0]);
+        await expect(retry).toBeEnabled({ timeout: (retryAfter + 5) * 1000 });
+        await retry.click();
+        await expect(input).toHaveValue("");
+        expect(statuses).toEqual([201, 429, 201]);
+        expect(new Set(ids).size).toBe(1);
+        const rows =
+          kind === "question"
+            ? await db.eventTopic.count({ where: { eventId: event.id, text } })
+            : await db.eventTopicReply.count({
+                where: { topicId: parent.id, text },
+              });
+        expect(rows).toBe(1);
+        await testInfo.attach("real-rate-limit-recovery", {
+          body: JSON.stringify({
+            mode,
+            kind,
+            statuses,
+            retryAfter,
+            uniqueOperationIds: new Set(ids).size,
+            rows,
+          }),
+          contentType: "application/json",
+        });
+      } finally {
+        await operatorContext.close();
+      }
+    });
+  }
+}
+
+test("incoming replies and remote edits retain drafts and require explicit version review", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(90000);
+  const event = await fixture();
+  const second = await browser.newContext();
+  const operator = await second.newPage();
+  try {
+    await login(page, event.id);
+    await login(operator, event.id, "jordan.lee@opspilot.demo");
+    await ask(page, "Original question for retained edit");
+    const topic = await db.eventTopic.findFirstOrThrow({
+      where: { eventId: event.id, text: "Original question for retained edit" },
+    });
+    const root = page.locator(`[data-topic-id="${topic.id}"]`);
+    await root
+      .getByRole("button", { name: "Edit question", exact: true })
+      .click();
+    const editor = root.getByLabel("Edit question text", { exact: true });
+    await editor.fill("My unsaved draft survives a reply");
+    expect(
+      (
+        await operator.request.post(
+          `${staffPath(event.id)}/${topic.id}/replies`,
+          {
+            data: {
+              text: "Independent participant reply",
+              clientOperationId: randomUUID(),
+            },
+          },
+        )
+      ).status(),
+    ).toBe(201);
+    await expect(root.getByTestId("topic-reply")).toContainText(
+      "Independent participant reply",
+    );
+    await expect(editor).toHaveValue("My unsaved draft survives a reply");
+    await expect(
+      root.getByRole("button", { name: "Save question", exact: true }),
+    ).toBeDisabled();
+    // The original version is not silently rebased; direct stale writes also fail.
+    expect(
+      (
+        await page.request.patch(`${staffPath(event.id)}/${topic.id}`, {
+          data: { text: "Stale overwrite", expectedVersion: topic.version },
+        })
+      ).status(),
+    ).toBe(409);
+    expect(
+      (await db.eventTopic.findUniqueOrThrow({ where: { id: topic.id } })).text,
+    ).toBe(topic.text);
+    await root
+      .getByRole("button", {
+        name: "Keep draft against current version",
+        exact: true,
+      })
+      .click();
+    await root
+      .getByRole("button", { name: "Save question", exact: true })
+      .click();
+    await expect(root.getByTestId("topic-text")).toHaveText(
+      "My unsaved draft survives a reply",
+    );
+    await root
+      .getByRole("button", { name: "Edit question", exact: true })
+      .click();
+    await editor.fill("Second local draft");
+    const current = await db.eventTopic.findUniqueOrThrow({
+      where: { id: topic.id },
+    });
+    expect(
+      (
+        await operator.request.patch(`${staffPath(event.id)}/${topic.id}`, {
+          data: {
+            text: "Another moderator's saved edit",
+            expectedVersion: current.version,
+          },
+        })
+      ).status(),
+    ).toBe(200);
+    await expect(editor).toHaveValue("Second local draft");
+    await expect(
+      root.getByText("Current question: Another moderator's saved edit", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      root.getByRole("button", { name: "Save question", exact: true }),
+    ).toBeDisabled();
+    // Deletion removes both the verified parent and its retained local editor.
+    const latest = await db.eventTopic.findUniqueOrThrow({
+      where: { id: topic.id },
+    });
+    expect(
+      (
+        await operator.request.delete(`${staffPath(event.id)}/${topic.id}`, {
+          data: { expectedVersion: latest.version },
+        })
+      ).status(),
+    ).toBe(200);
+    await expect(root).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Refresh questions", exact: true })
+      .click();
+    await expect(page.getByLabel("Edit question text")).toHaveCount(0);
+    expect(
+      await db.eventTopicReply.count({
+        where: { topicId: topic.id, deletedAt: null },
+      }),
+    ).toBe(0);
+  } finally {
+    await second.close();
+  }
+});
+
+test("approval preserves an author's edit; permission changes and identity switching discard it", async ({
+  page,
+  browser,
+  request,
+}) => {
+  test.setTimeout(90000);
+  const event = await fixture();
+  const attendeeContext = await browser.newContext();
+  const attendee = await attendeeContext.newPage();
+  try {
+    await login(page, event.id);
+    await admit(attendee, request, event.id);
+    await ask(attendee, "Pending author edit under review");
+    const topic = await db.eventTopic.findFirstOrThrow({
+      where: { eventId: event.id, text: "Pending author edit under review" },
+    });
+    const root = attendee.locator(`[data-topic-id="${topic.id}"]`);
+    await root
+      .getByRole("button", { name: "Edit question", exact: true })
+      .click();
+    await root.getByLabel("Edit question text").fill("Private local draft");
+    expect(
+      (
+        await page.request.post(`${staffPath(event.id)}/${topic.id}/approve`, {
+          data: { expectedVersion: topic.version },
+        })
+      ).status(),
+    ).toBe(201);
+    await expect(root).toContainText("Approved");
+    await expect(root.getByLabel("Edit question text")).toHaveValue(
+      "Private local draft",
+    );
+    await expect(
+      root.getByRole("button", { name: "Save question", exact: true }),
+    ).toBeDisabled();
+    const ctx = await (
+      await page.request.get(`${staffPath(event.id)}/context`)
+    ).json();
+    expect(
+      (
+        await page.request.patch(`${staffPath(event.id)}/settings`, {
+          data: {
+            ...ctx.settings,
+            audiencePublishing: false,
+            expectedRevision: ctx.settingsRevision,
+          },
+        })
+      ).status(),
+    ).toBe(200);
+    await expect(root.getByLabel("Edit question text")).toHaveCount(0);
+    const disabled = await (
+      await page.request.get(`${staffPath(event.id)}/context`)
+    ).json();
+    expect(
+      (
+        await page.request.patch(`${staffPath(event.id)}/settings`, {
+          data: {
+            ...disabled.settings,
+            audiencePublishing: true,
+            expectedRevision: disabled.settingsRevision,
+          },
+        })
+      ).status(),
+    ).toBe(200);
+    await expect(
+      root.getByRole("button", { name: "Edit question", exact: true }),
+    ).toBeEnabled();
+    await root
+      .getByRole("button", { name: "Edit question", exact: true })
+      .click();
+    await expect(root.getByLabel("Edit question text")).toHaveValue(
+      topic.text!,
+    );
+    await root.getByLabel("Edit question text").fill("Identity private draft");
+    await db.attendeeSession.deleteMany({
+      where: { registrationId: topic.attendeeRegistrationId! },
+    });
+    await expect(attendee.getByTestId("topic-card")).toHaveCount(0, {
+      timeout: 10000,
+    });
+    await admit(attendee, request, event.id);
+    await expect(attendee.getByLabel("Edit question text")).toHaveCount(0);
+    await expect(
+      attendee.getByText("Identity private draft", { exact: true }),
+    ).toHaveCount(0);
+    expect(
+      (
+        await attendee.request.patch(`${attendeePath(event.id)}/${topic.id}`, {
+          data: { text: "Impersonation", expectedVersion: topic.version },
+        })
+      ).status(),
+    ).toBe(403);
+  } finally {
+    await attendeeContext.close();
+  }
+});

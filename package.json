@@ -35,7 +35,7 @@
     "services:down": "docker compose down",
     "services:status": "docker compose ps",
     "containers:build": "docker build --target api -f apps/api/Dockerfile -t opspilot-api:local . && docker build --target worker -f apps/api/Dockerfile -t opspilot-worker:local . && docker build -f apps/web/Dockerfile -t opspilot-web:local .",
-    "test:topics:state": "node --import tsx --test tests/topics-state.test.ts",
+    "test:topics:state": "node --import tsx --test tests/topics-state.test.ts tests/topics-drafts.test.ts",
     "test:topics:api": "npm run test:e2e --workspace=@opspilot/api -- --runInBand topics.e2e-spec",
     "test:topics:browser": "playwright test e2e/topics.spec.ts"
   },
