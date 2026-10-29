@@ -1,0 +1,9 @@
+PASS test/chat.e2e-spec.ts (20.259 s)
+PASS test/topics.e2e-spec.ts (13.05 s)
+PASS test/app.e2e-spec.ts
+PASS test/restricted-access.e2e-spec.ts
+PASS test/attendee-access.e2e-spec.ts
+Test Suites: 5 passed, 5 total
+Tests:       60 passed, 60 total
+Time:        39.92 s, estimated 40 s
+Ran all test suites.

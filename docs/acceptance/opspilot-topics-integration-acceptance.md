@@ -2,6 +2,8 @@
 
 日期：2026-10-29（Europe/London）。审查基线：`a5bb2caf8041f9404cbdb6946ae42033f0417fb9`，分支 `feat/streamops-chat-integration`。
 
+后续记录：用户授权修复后，P1-01 与 P2-01 的实现和复验见[修复报告](opspilot-topics-remediation.md)。本文件保留原审查基线的 FAIL 结论与原始证据。
+
 ## A. 执行摘要与决定
 
 **FAIL — 当前不满足 Topics 融合验收门槛。**

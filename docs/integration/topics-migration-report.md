@@ -7,6 +7,11 @@ independent acceptance audit; limitations below remain explicit.
 Scope: text Q&A integrated into the existing OpsPilot product. Media, attachments,
 BroadcastSession and Mudu Live Streaming migration were not started.
 
+Subsequent acceptance found P1-01 (lost receipt followed by 429) and P2-01
+(unsaved edit lost on row invalidation). The historical implementation results
+below do not supersede that audit. See the [acceptance remediation report](../acceptance/opspilot-topics-remediation.md)
+for the fixes, additional real-browser regressions and current limitations.
+
 ## Baseline and checkpoints
 
 Destination `/Users/ruzhan/computer_science/projects/OpsPilot`, branch
@@ -318,7 +323,10 @@ horizontal page overflow. Metrics are saved in [local observations](topics-local
   permissions UI or video playback. Existing OpsPilot Polls are the polling feature.
 - Unconfirmed create/reply IDs survive same-scope rerenders/retries, not full browser
   reload. Reload shows committed server data; users should check it before resubmitting.
-  Remote changes can close an in-progress root edit; stale intent never overwrites data.
+  The original baseline lost root edit drafts on remote invalidation; `349ea30`
+  fixes this and preserves the original version until explicit user review.
+  Drafts are still discarded outside their verified editable window or after
+  authority/event/identity changes; see the remediation report for tested boundaries.
 - Revocation is not retroactive recall of already delivered content. The frontend hides
   state during disconnected/unverified access; healthy periodic checks bound detection.
 - Production application builds and standalone browser tests ran. Container image
