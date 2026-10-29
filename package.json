@@ -21,6 +21,7 @@
     "test:chat:state": "node --import tsx --test tests/chat-state.test.ts",
     "test:chat:api": "npm run test:e2e --workspace=@opspilot/api -- --runInBand chat.e2e-spec",
     "test:chat:browser": "playwright test e2e/chat.spec.ts",
+    "test:chat:recovery": "playwright test --config=playwright.chat-recovery.config.ts",
     "test:ui:isolated": "playwright test --config=playwright.ui.config.ts",
     "test:ui:headed": "playwright test --headed",
     "test:deployment": "playwright test --config=playwright.deployment.config.ts",

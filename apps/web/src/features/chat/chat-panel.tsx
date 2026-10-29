@@ -212,9 +212,13 @@ function ChatScope({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Refresh chat history"
-            onClick={() => void chat.refresh()}
-            disabled={!chat.ready}
+            aria-label={
+              chat.ready ? "Refresh chat history" : "Retry chat connection"
+            }
+            onClick={() =>
+              chat.ready ? void chat.refresh() : chat.reconnect()
+            }
+            disabled={chat.connection === "denied"}
           >
             <RefreshCw className="size-4" />
           </Button>

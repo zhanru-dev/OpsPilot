@@ -1,4 +1,8 @@
-import { INestApplication } from '@nestjs/common';
+import {
+  ForbiddenException,
+  INestApplication,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
@@ -198,6 +202,88 @@ describe('StreamOps Chat with real PostgreSQL, Redis and WebSockets', () => {
         );
     });
   }
+
+  it.each([false, true])(
+    'classifies a temporary subscription failure as recoverable (attendee=%s) and requires a fresh ticket',
+    async (attendee) => {
+      const ticket = (
+        (
+          await (attendee ? guest : manager)
+            .post(`${path(eventId, attendee)}/ticket`)
+            .expect(201)
+        ).body as { ticket: string }
+      ).ticket;
+      const socket = await connect(attendee, ticket);
+      const failures: { name: string; status: number }[] = [];
+      for (const name of ['chat.denied', 'chat.unavailable'])
+        socket.on(name, (detail: { status: number }) =>
+          failures.push({ name, status: detail.status }),
+        );
+      const disconnected = once(socket, 'disconnect');
+      const fault = jest
+        .spyOn(chat, 'history')
+        .mockRejectedValueOnce(
+          new ServiceUnavailableException('Isolated subscription outage'),
+        );
+      try {
+        socket.connect();
+        await disconnected;
+        expect(failures).toEqual([{ name: 'chat.unavailable', status: 503 }]);
+      } finally {
+        fault.mockRestore();
+        socket.disconnect();
+      }
+      const reused = await connect(attendee, ticket);
+      const rejected = once<Error & { data: { status: number } }>(
+        reused,
+        'connect_error',
+      );
+      reused.connect();
+      expect((await rejected).data.status).toBe(401);
+      const fresh = await joined(attendee);
+      const dto = {
+        clientMessageId: randomUUID(),
+        text: 'Send after fresh authenticated recovery',
+      };
+      try {
+        expect((await send(fresh, dto)).ok).toBe(true);
+        expect(
+          await db.eventChatMessage.count({
+            where: { eventId, clientMessageId: dto.clientMessageId },
+          }),
+        ).toBe(1);
+      } finally {
+        fresh.disconnect();
+        reused.disconnect();
+      }
+    },
+  );
+
+  it.each([false, true])(
+    'keeps an actual subscription permission rejection terminal (attendee=%s)',
+    async (attendee) => {
+      const socket = await connect(attendee);
+      const failures: { name: string; status: number }[] = [];
+      for (const name of ['chat.denied', 'chat.unavailable'])
+        socket.on(name, (detail: { status: number }) =>
+          failures.push({ name, status: detail.status }),
+        );
+      const disconnected = once(socket, 'disconnect');
+      const fault = jest
+        .spyOn(chat, 'history')
+        .mockRejectedValueOnce(
+          new ForbiddenException('Access revoked during subscription'),
+        );
+      try {
+        socket.connect();
+        await disconnected;
+        expect(failures).toEqual([{ name: 'chat.denied', status: 403 }]);
+      } finally {
+        fault.mockRestore();
+        socket.disconnect();
+      }
+    },
+  );
 
   it('delivers attendee messages to independent staff and attendee clients and persists canonical bytes', async () => {
     const staffSocket = await joined();

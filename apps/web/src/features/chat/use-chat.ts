@@ -51,6 +51,7 @@ export function useChat(eventId: string, mode: ChatMode, actorId: string) {
       anchor?: () => void,
     ) => Promise<boolean>;
     sync: (snapshot?: boolean) => Promise<boolean>;
+    reconnect: () => void;
   } | null>(null);
   const dispatch = useCallback((action: ChatAction) => {
     const next = chatReducer(stateRef.current, action);
@@ -275,6 +276,16 @@ export function useChat(eventId: string, mode: ChatMode, actorId: string) {
       setConnection("offline");
       scheduleConnect();
     };
+    const recover = (
+      reason = "Chat connection interrupted. Retrying authentication…",
+    ) => {
+      if (!active || denied) return;
+      // Discard the consumed ticket and all listeners before creating a new socket.
+      socket?.removeAllListeners();
+      socket?.disconnect();
+      disconnect();
+      setNotice(reason);
+    };
     const connect = async () => {
       if (!active || denied || connecting || joined) return;
       connecting = true;
@@ -299,6 +310,7 @@ export function useChat(eventId: string, mode: ChatMode, actorId: string) {
           const parsed = contextSchema.safeParse(payload?.context);
           if (!parsed.success || !accept(parsed.data)) return;
           joined = true;
+          setNotice(null);
           setConnection("recovering");
           void sync();
         });
@@ -327,27 +339,25 @@ export function useChat(eventId: string, mode: ChatMode, actorId: string) {
             else flushTimer ??= setTimeout(flush, 50);
           }
         });
-        socket.on("chat.denied", (error: { message?: string }) =>
-          deny(error?.message ?? "Chat access ended."),
+        socket.on(
+          "chat.denied",
+          (error: { status?: number; message?: string }) => {
+            // Also tolerate a rolling deployment with an older gateway that labels 503 as denied.
+            if ([401, 403, 404].includes(error?.status ?? 0))
+              deny(error?.message ?? "Chat access ended.");
+            else recover();
+          },
         );
-        socket.on("chat.unavailable", () => {
-          if (active) {
-            setReady(false);
-            setConnection("recovering");
-          }
-        });
+        socket.on("chat.unavailable", () => recover());
         socket.on("disconnect", disconnect);
         socket.on(
           "connect_error",
           (error: Error & { data?: { status?: number } }) => {
             if (!active || denied) return;
+            // Handshake 401 can mean an expired/consumed ticket, not a revoked session.
+            // A fresh REST ticket request rechecks the parent identity and ends access if revoked.
             if (error.data?.status === 403) deny(error.message);
-            else {
-              disconnect();
-              setNotice(
-                "Chat connection interrupted. Retrying authentication…",
-              );
-            }
+            else recover();
           },
         );
         socket.connect();
@@ -440,6 +450,13 @@ export function useChat(eventId: string, mode: ChatMode, actorId: string) {
     commands.current = {
       send: transmit,
       sync,
+      reconnect: () => {
+        if (!active || denied) return;
+        recover();
+        clearTimeout(retryTimer);
+        retryTimer = undefined;
+        void connect();
+      },
       remove: async (id) => {
         if (!joined || !contextRef.current?.capabilities.moderate || denied)
           return;
@@ -597,6 +614,7 @@ export function useChat(eventId: string, mode: ChatMode, actorId: string) {
     history: (direction: "older" | "newer", anchor?: () => void) =>
       commands.current?.history(direction, anchor),
     refresh: () => commands.current?.sync(true),
+    reconnect: () => commands.current?.reconnect(),
     pause: () => dispatch({ type: "pause" }),
     markRead: () => dispatch({ type: "read" }),
     isLatest: () => stateRef.current.window === "latest",

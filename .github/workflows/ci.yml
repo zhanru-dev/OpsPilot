@@ -75,6 +75,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:ui
       - run: npm run test:ui:isolated
+      - run: CHAT_RECOVERY_PRODUCTION_WEB=1 npm run test:chat:recovery
 
   containers:
     needs: quality

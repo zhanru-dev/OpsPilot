@@ -130,7 +130,15 @@ export class ChatGateway
         watermark: snapshot.watermark,
       });
     } catch (error) {
-      socket.emit('chat.denied', failure(error).error);
+      const detail = failure(error).error;
+      // A failed subscription has consumed its one-use ticket. Transient failures
+      // require fresh authentication, not a permanent permission denial.
+      socket.emit(
+        [401, 403, 404].includes(detail.status)
+          ? 'chat.denied'
+          : 'chat.unavailable',
+        detail,
+      );
       socket.disconnect(true);
     }
   }
