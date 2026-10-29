@@ -366,8 +366,12 @@ test("disconnect replay retains an older reading anchor across multiple pages an
   await appendFixtureMessages(event.id, 120);
   let liveRoute: WebSocketRoute | undefined;
   await page.routeWebSocket("**/socket.io/**", (ws) => {
-    liveRoute = ws;
-    ws.connectToServer();
+    const server = ws.connectToServer();
+    server.onMessage((frame) => {
+      if (typeof frame === "string" && frame.includes('"chat.ready"'))
+        liveRoute = ws;
+      ws.send(frame);
+    });
   });
   const registration = await admit(page, request, event.id);
   await page.getByTestId("chat-scroll").evaluate((node) => {

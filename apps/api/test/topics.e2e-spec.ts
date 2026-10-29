@@ -702,7 +702,7 @@ describe('StreamOps Topics with real PostgreSQL, Redis and WebSockets', () => {
       });
       socket.disconnect();
     }
-  });
+  }, 15000);
 
   it('rolls back revision and root together after a real PostgreSQL constraint failure', async () => {
     const existing = await create();

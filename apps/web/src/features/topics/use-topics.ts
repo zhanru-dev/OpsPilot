@@ -31,6 +31,7 @@ export function useTopics(
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null);
   const commands = useRef<{
     refresh: () => Promise<boolean>;
     more: () => void;
@@ -47,6 +48,7 @@ export function useTopics(
     setReady(false);
     setConnection("connecting");
     setError(null);
+    setOperationError(null);
     setLoading(false);
     setBusy(false);
   }
@@ -326,6 +328,7 @@ export function useTopics(
         if (!active || denied || !joined || writing)
           throw new Error("Wait for the Topics connection before submitting.");
         writing = true;
+        setOperationError(null);
         setBusy(true);
         const run = epoch;
         try {
@@ -349,6 +352,11 @@ export function useTopics(
             if (cause instanceof ApiError && cause.status === 401)
               deny(cause.message);
             else {
+              setOperationError(
+                cause instanceof Error
+                  ? cause.message
+                  : "Question update could not be confirmed.",
+              );
               dirty = true;
               scheduleRefresh();
             }
@@ -387,7 +395,7 @@ export function useTopics(
     ready,
     loading,
     busy,
-    error,
+    error: error ?? operationError,
     refresh: () => commands.current?.refresh(),
     more: () => commands.current?.more(),
     reconnect: () => commands.current?.reconnect(),

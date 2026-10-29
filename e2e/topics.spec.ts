@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222221";
@@ -267,6 +268,18 @@ test("admitted attendees and moderators submit, approve, reply, pin, edit, delet
       path: testInfo.outputPath("topics-staff.png"),
       fullPage: true,
     });
+    await author.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(() =>
+        author.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      )
+      .toBe(true);
+    await author.screenshot({
+      path: testInfo.outputPath("topics-attendee-mobile.png"),
+      fullPage: true,
+    });
     await card(page, winner)
       .getByRole("button", { name: "Delete question", exact: true })
       .click();
@@ -298,12 +311,20 @@ for (const mode of ["staff", "attendee"] as const)
     const operatorContext = await browser.newContext();
     const operator = await operatorContext.newPage();
     let disconnect: (() => void) | undefined;
+    let previousNotice: string | undefined;
+    let duplicatedNotices = 0;
     await page.routeWebSocket("**/socket.io/**", (ws) => {
       const server = ws.connectToServer();
       server.onMessage((frame) => {
         if (typeof frame === "string" && frame.includes("topics.ready"))
           disconnect = () => server.close();
         ws.send(frame);
+        if (typeof frame === "string" && frame.includes("topics.changed")) {
+          ws.send(frame); // Deterministic duplicate of an actual backend event.
+          if (previousNotice) ws.send(previousNotice); // Delayed older event.
+          previousNotice = frame;
+          ++duplicatedNotices;
+        }
       });
     });
     try {
@@ -358,6 +379,7 @@ for (const mode of ["staff", "attendee"] as const)
       await expect(
         card(page, "A committed question while another client reconnects"),
       ).toBeVisible();
+      expect(duplicatedNotices).toBeGreaterThan(0);
       // A delayed old invalidation is harmless. Filter switches must clean only Topics.
       await page.getByRole("button", { name: /^Approved \(/ }).click();
       await expect(page.getByTestId("topics-connection")).toHaveText(
@@ -529,8 +551,11 @@ test("keyset pagination and event switching discard stale responses and old priv
       nodes.map((node) => node.getAttribute("data-topic-id")),
     );
   expect(new Set(ids).size).toBe(45);
+  const observation = { rows: 45, loadTwoPagesMs: Date.now() - started };
+  const metricsPath = testInfo.outputPath("topics-pagination-observation.json");
+  await writeFile(metricsPath, JSON.stringify(observation, null, 2));
   await testInfo.attach("topics-pagination-observation", {
-    body: JSON.stringify({ rows: 45, loadTwoPagesMs: Date.now() - started }),
+    path: metricsPath,
     contentType: "application/json",
   });
   let release!: () => void;

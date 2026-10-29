@@ -143,10 +143,19 @@ async function transport(page: Page) {
   const failures: string[] = [];
   let connections = 0;
   await page.routeWebSocket("**/socket.io/**", (socket) => {
-    route = socket;
-    connections++;
+    let identified = false;
     const server = socket.connectToServer();
     server.onMessage((message) => {
+      // Topics now shares this transport path. Target the connection identified
+      // by an actual Chat frame, never whichever module connected last.
+      if (
+        typeof message === "string" &&
+        /chat\.(ready|denied|unavailable)/.test(message)
+      ) {
+        if (!identified) ++connections;
+        identified = true;
+        route = socket;
+      }
       if (
         typeof message === "string" &&
         /chat\.(denied|unavailable)/.test(message)
@@ -295,21 +304,37 @@ for (const actor of ["staff", "attendee"] as const) {
       let rejected = false;
       let connections = 0;
       const errors: string[] = [];
+      const chatTickets = new Set<string>();
+      await page.route("**/chat/ticket", async (route) => {
+        const response = await route.fetch();
+        if (response.ok()) {
+          const body = (await response.json()) as { ticket: string };
+          chatTickets.add(body.ticket);
+        }
+        await route.fulfill({ response });
+      });
       await page.routeWebSocket("**/socket.io/**", (socket) => {
-        connections++;
         const server = socket.connectToServer();
+        let isChat = false;
         socket.onMessage((frame) => {
-          if (
-            !rejected &&
-            typeof frame === "string" &&
-            frame.startsWith("40/chat,")
-          ) {
+          if (typeof frame === "string" && frame.startsWith("40/chat,")) {
+            const auth = JSON.parse(frame.slice("40/chat,".length)) as {
+              ticket: string;
+            };
+            isChat = chatTickets.has(auth.ticket);
+            if (isChat) ++connections;
+          }
+          if (!rejected && isChat) {
             rejected = true;
             server.send('40/chat,{"ticket":"expired-test-ticket"}');
           } else server.send(frame);
         });
         server.onMessage((frame) => {
-          if (typeof frame === "string" && frame.startsWith("44/chat,"))
+          if (
+            isChat &&
+            typeof frame === "string" &&
+            frame.startsWith("44/chat,")
+          )
             errors.push(frame);
           socket.send(frame);
         });
