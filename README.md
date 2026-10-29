@@ -140,6 +140,13 @@ Use `localhost` consistently for browser cookies. Web/API ports remain 3000/4100
    and open/confirm the verification link in that attendee window. Chat appears after admission.
 5. Send in either window, remove a message as Alex, and reload to verify persistence.
 
+Run Chat fault recovery tests with
+`node scripts/with-chat-test-env.mjs npm run test:chat:recovery` after stopping the local
+Web/API/worker processes. The suite starts its own isolated test API and browsers; it verifies
+real database timeouts for both staff and attendees. See the
+[reconnection repair report](docs/acceptance/opspilot-chat-reconnection-remediation.md)
+for production-build mode, regression results and environment requirements.
+
 For an existing populated OpsPilot database, use its normal configuration and apply only
 `npm run db:generate` and `npm run db:deploy`. Do not reset or seed it for this migration.
 

@@ -77,7 +77,14 @@ parent authority is rechecked. Reconnection obtains a fresh ticket through its o
 REST identity route. No bearer credentials in URLs or logs; tickets live in browser memory.
 `chat.send` and `chat.delete` use the same service contracts as REST, returning structured
 ACKs. `chat.event` carries eventId, contiguous sequence, kind and canonical message.
-`chat.context` updates effective permissions; `chat.denied` clears private UI state.
+`chat.context` updates effective permissions. `chat.denied` carries status 401/403/404 and
+clears private UI state without retrying access. Transient initialization/replay failures
+use `chat.unavailable`; the client discards the socket, requests a fresh one-use ticket,
+and revalidates authority plus missed history before exposing messages again. Initialization
+failure closes the incomplete subscription. A handshake 401 can mean an expired ticket;
+the fresh REST ticket request determines whether the parent session remains valid.
+Offline clients can also request an immediate retry; denied clients cannot bypass rejection.
+See the [reconnection remediation evidence](../acceptance/opspilot-chat-reconnection-remediation.md).
 The socket is bound to one event; changing identity/event creates a fresh scope.
 
 ## Persistence and recovery
