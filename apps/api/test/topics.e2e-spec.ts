@@ -704,6 +704,96 @@ describe('StreamOps Topics with real PostgreSQL, Redis and WebSockets', () => {
     }
   });
 
+  it('rolls back revision and root together after a real PostgreSQL constraint failure', async () => {
+    const existing = await create();
+    const before = await db.streamEvent.findUniqueOrThrow({
+      where: { id: eventId },
+    });
+    // Occupy the next creation sequence only in this suite-owned event.
+    await db.eventTopic.update({
+      where: { id: existing.id },
+      data: {
+        createdSequence: before.topicSequence + 1,
+        version: before.topicSequence + 1,
+      },
+    });
+    const dto = input('retry after rollback');
+    try {
+      await expect(topics.create(eventId, staff, dto)).rejects.toThrow(
+        'temporarily unavailable',
+      );
+      expect(
+        await db.eventTopic.count({
+          where: { eventId, clientOperationId: dto.clientOperationId },
+        }),
+      ).toBe(0);
+      expect(
+        (await db.streamEvent.findUniqueOrThrow({ where: { id: eventId } }))
+          .topicSequence,
+      ).toBe(before.topicSequence);
+    } finally {
+      await db.eventTopic.update({
+        where: { id: existing.id },
+        data: {
+          createdSequence: existing.createdSequence,
+          version: existing.version,
+        },
+      });
+    }
+    expect(
+      (await topics.create(eventId, staff, dto)).topic.createdSequence,
+    ).toBe(before.topicSequence + 1);
+  });
+
+  it('serializes conflicting settings and applies revocation to a concurrent submit', async () => {
+    const ctx = await topics.context(eventId, staff);
+    const results = await Promise.allSettled([
+      topics.configure(eventId, staff, {
+        ...ctx.settings,
+        audiencePublishing: false,
+        expectedRevision: ctx.settingsRevision,
+      }),
+      topics.configure(eventId, staff, {
+        ...ctx.settings,
+        audienceReplies: false,
+        expectedRevision: ctx.settingsRevision,
+      }),
+    ]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((r) => r.status === 'rejected')).toHaveLength(1);
+    let current = await topics.context(eventId, staff);
+    await topics.configure(eventId, staff, {
+      audiencePublishing: true,
+      audienceReplies: true,
+      moderationRequired: true,
+      expectedRevision: current.settingsRevision,
+    });
+    current = await topics.context(eventId, staff);
+    const dto = input('submit racing disable');
+    const concurrent = await Promise.allSettled([
+      topics.configure(eventId, staff, {
+        ...current.settings,
+        audiencePublishing: false,
+        expectedRevision: current.settingsRevision,
+      }),
+      topics.create(eventId, attendee, dto),
+    ]);
+    expect(concurrent[0].status).toBe('fulfilled');
+    const stored = await db.eventTopic.findFirst({
+      where: { eventId, clientOperationId: dto.clientOperationId },
+    });
+    const final = await topics.context(eventId, staff);
+    if (stored)
+      expect(stored.createdSequence).toBeLessThan(final.settingsRevision);
+    await expect(topics.create(eventId, attendee, input())).rejects.toThrow(
+      'not permitted',
+    );
+    await topics.configure(eventId, staff, {
+      ...current.settings,
+      expectedRevision: final.settingsRevision,
+    });
+  });
+
   it('expires attendee access, keeps archived staff reads and blocks archived mutations', async () => {
     const socket = await joined(true);
     const disconnected = once(socket, 'disconnect');

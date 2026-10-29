@@ -12,6 +12,7 @@ import type { PublicEvent, RegistrationEvent } from "./types";
 import { EventEntryHeading } from "./event-entry-heading";
 import { AttendeeLivePolls } from "./attendee-live-polls";
 import { ChatPanel } from "@/features/chat/chat-panel";
+import { TopicsPanel } from "@/features/topics/topics-panel";
 
 type AttendeeSession = {
   eventId: string;
@@ -187,6 +188,11 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
                 <AttendeeLivePolls
                   eventId={eventId}
                   onAccessLost={session.refetch}
+                />
+                <TopicsPanel
+                  eventId={eventId}
+                  mode="attendee"
+                  actorId={`attendee:${session.data.registrationId}`}
                 />
                 <ChatPanel
                   eventId={eventId}

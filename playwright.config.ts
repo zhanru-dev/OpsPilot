@@ -31,13 +31,18 @@ export default defineConfig({
     {
       command: "npm run dev:api",
       url: "http://localhost:4100/api/v1/health/ready",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer:
+        !process.env.CI && process.env.E2E_PRODUCTION_WEB !== "1",
       timeout: 120_000,
     },
     {
-      command: "npm run dev:web",
+      command:
+        process.env.E2E_PRODUCTION_WEB === "1"
+          ? "node scripts/start-chat-recovery-web.mjs"
+          : "npm run dev:web",
       url: "http://localhost:3000/login",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer:
+        !process.env.CI && process.env.E2E_PRODUCTION_WEB !== "1",
       timeout: 120_000,
     },
   ],

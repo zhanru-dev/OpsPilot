@@ -69,6 +69,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run test:chat:state
+      - run: npm run test:topics:state
       - run: npm run test:e2e --workspace=@opspilot/api -- --runInBand
       - run: npm run build
       - run: npm audit --omit=dev
