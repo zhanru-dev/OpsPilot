@@ -171,3 +171,23 @@ pin limits. Shared event locks serialize Topics with Chat/event transitions; ind
 numbered topic revisions never advance Chat's replay cursor. Snapshots and counts apply
 pending-content visibility before filtering or pagination. A formerly public question going
 back to review invalidates previous readers without authorizing them to see the new text.
+
+## Live video integration — October 2026
+
+The current phase adds `BroadcastSession` under the existing `StreamEvent`;
+`LiveSession` continues to mean operations and Polls. Existing event principals
+are reused without a second login or room hierarchy. The existing `/chat`
+gateway now accepts a separate authenticated `broadcast` ticket channel, while
+operations continue using SSE. REST snapshot revisions are authoritative; video
+credentials never appear in socket payloads.
+
+`broadcast.manage` and `broadcast.publish` have different effective role policies.
+Playback grants require both an unexpired scoped ticket and the original current
+staff/attendee browser session for every HLS resource. All public event pages
+still use the existing admission boundary for interaction and watching.
+
+The [updated task](live-streaming-integration-task.md), [contract and plan](live-streaming-integration-plan.md)
+and [migration report](live-streaming-migration-report.md) define the additive
+schema, protected RTMP/HLS transport, runtime and evidence. Media Library
+migration remains a future phase. The single-host relay is intentionally not a
+CDN, transcoder, WebRTC service or recording system.

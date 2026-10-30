@@ -252,3 +252,52 @@ docs/
 e2e/                   Playwright golden flow
 prisma/                Schema, migration and deterministic seed
 ```
+
+## Integrated live broadcasting (local opt-in)
+
+Live video uses the existing StreamEvent and admission flow. It has its own
+BroadcastSession; ending video does not complete the event or close Chat, Topics
+or Polls. Ordinary startup remains streaming-disabled.
+
+For this existing integration workspace (preserves the current local database):
+
+```sh
+npm run broadcast:setup
+npm run broadcast:dev
+```
+
+Stop the existing development process before starting another one on ports
+3000/4100. Setup only deploys additive migrations; it never resets or reseeds the
+existing database. For a fresh, disposable demonstration environment instead:
+
+```sh
+npm run broadcast:test:setup
+node scripts/with-broadcast-env.mjs npm run dev
+```
+
+Open `http://localhost:3000`, sign in with a local demo account, open an event's
+Live Operations, and prepare a broadcast. Expand **Publisher connection** and
+generate a key. Use OBS with H.264/AAC, server `rtmp://127.0.0.1:1937/live`, and
+the generated stream key. An attendee registers and verifies the existing email
+link, then follows **Enter Watch Room** (`/events/<event-id>/watch`). Separate
+browser profiles are independent participants. PUBLIC registration still requires
+admission before protected video access.
+
+Docker Desktop and FFmpeg (for automated stream fixtures) are required. Local
+MediaMTX ports 1937/8890/9999 avoid the Mudu source environment. Development and
+isolated broadcast tests share those ports and must run sequentially. Re-run the
+appropriate setup when switching between their generated secrets.
+
+```sh
+npm run broadcast:test:setup
+npm run build
+npm run test:broadcast:migration
+npm run test:broadcast:api
+npm run test:broadcast:browser
+```
+
+These tests use `opspilot_broadcast_test`, separate Redis6394 and an isolated media
+namespace. See the [migration report](docs/integration/live-streaming-migration-report.md)
+for the contracts, measured recovery, fault tests, production limitations and
+credential-safe FFmpeg example. No Live Streaming or Media Library assets are
+copied from captured historical Mudu material.
