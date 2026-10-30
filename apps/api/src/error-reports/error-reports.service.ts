@@ -1,3 +1,4 @@
+import { diagnosticPath, redactDiagnostic } from './redact';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ErrorReportSeverity, ErrorReportSource, Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
@@ -27,9 +28,11 @@ export class ErrorReportsService {
   ) {}
 
   capture(input: CaptureInput) {
-    const message = input.message.slice(0, 500);
-    const stack = input.stack?.slice(0, 8_000);
-    const path = input.path?.slice(0, 300);
+    const message = redactDiagnostic(input.message).slice(0, 500);
+    const stack = input.stack
+      ? redactDiagnostic(input.stack).slice(0, 8_000)
+      : undefined;
+    const path = diagnosticPath(input.path);
     return this.prisma.errorReport.create({
       data: {
         workspaceId: input.workspaceId,

@@ -10,6 +10,7 @@ import { Namespace, Socket } from 'socket.io';
 import type { Subscription } from 'rxjs';
 import type { ChatAck } from '@opspilot/chat-contracts';
 import type { TopicChange, TopicContext } from '@opspilot/topics-contracts';
+import { BroadcastService } from '../broadcast/broadcast.service';
 import { TopicsService } from '../event-topics/topics.service';
 import { ChatService } from './chat.service';
 import { ChatTicketService } from './chat-ticket.service';
@@ -19,7 +20,7 @@ import { DeleteChatDto, parseChatDto, SendChatDto } from './chat.dto';
 type Binding = {
   eventId: string;
   principal: ChatPrincipal;
-  channel?: 'chat' | 'topics';
+  channel?: 'chat' | 'topics' | 'broadcast';
 };
 type TopicsClient = Binding & {
   socket: Socket;
@@ -63,6 +64,11 @@ export class ChatGateway
 {
   private readonly clients = new Map<string, Client>();
   private readonly topicsClients = new Map<string, TopicsClient>();
+  private readonly broadcastClients = new Map<
+    string,
+    TopicsClient & { revision: number }
+  >();
+  private broadcastSubscription?: Subscription;
   private topicsSubscription?: Subscription;
   private readonly bindings = new WeakMap<Socket, Binding>();
   private subscription?: Subscription;
@@ -72,6 +78,7 @@ export class ChatGateway
     private readonly tickets: ChatTicketService,
     private readonly config: ConfigService,
     private readonly topics: TopicsService,
+    private readonly broadcasts: BroadcastService,
   ) {}
 
   afterInit(server: Namespace) {
@@ -82,12 +89,19 @@ export class ChatGateway
           this.config.getOrThrow<string>('WEB_ORIGIN')
         )
           throw new HttpException('Chat origin is not allowed.', 403);
-        if (this.clients.size + this.topicsClients.size >= 500)
+        if (
+          this.clients.size +
+            this.topicsClients.size +
+            this.broadcastClients.size >=
+          500
+        )
           throw new HttpException('Chat capacity reached. Retry shortly.', 503);
         const binding = await this.tickets.consume(
           socket.handshake.auth?.ticket,
         );
-        if (binding.channel === 'topics')
+        if (binding.channel === 'broadcast')
+          await this.broadcasts.snapshot(binding.eventId, binding.principal);
+        else if (binding.channel === 'topics')
           await this.topics.context(binding.eventId, binding.principal);
         else await this.chat.context(binding.eventId, binding.principal);
         this.bindings.set(socket, binding);
@@ -111,7 +125,15 @@ export class ChatGateway
         if (client.eventId === change.eventId)
           void this.checkTopics(client, change);
     });
+    this.broadcastSubscription = this.broadcasts.changes.subscribe(
+      (eventId) => {
+        for (const client of this.broadcastClients.values())
+          if (client.eventId === eventId) void this.checkBroadcast(client);
+      },
+    );
     this.timer = setInterval(() => {
+      for (const client of this.broadcastClients.values())
+        void this.checkBroadcast(client);
       for (const client of this.clients.values()) void this.pump(client);
       for (const client of this.topicsClients.values())
         void this.checkTopics(client);
@@ -124,6 +146,17 @@ export class ChatGateway
     if (!binding) {
       socket.disconnect(true);
       return;
+    }
+    if (binding.channel === 'broadcast') {
+      const client = {
+        ...binding,
+        socket,
+        pumping: false,
+        authority: '',
+        revision: -1,
+      };
+      this.broadcastClients.set(socket.id, client);
+      return this.checkBroadcast(client, true);
     }
     if (binding.channel === 'topics')
       return this.connectTopics(socket, binding);
@@ -168,6 +201,44 @@ export class ChatGateway
     }
   }
 
+  private async checkBroadcast(
+    client: TopicsClient & { revision: number },
+    initial = false,
+  ) {
+    if (client.pumping || !client.socket.connected) return;
+    client.pumping = true;
+    try {
+      await this.broadcasts.snapshot(
+        client.eventId,
+        client.principal,
+        (snapshot) => {
+          if (!client.socket.connected) return;
+          if (
+            initial ||
+            client.authority !== snapshot.context.authority ||
+            client.revision !== snapshot.revision
+          ) {
+            client.authority = snapshot.context.authority;
+            client.revision = snapshot.revision;
+            client.socket.emit(
+              initial ? 'broadcast.ready' : 'broadcast.snapshot',
+              snapshot,
+            );
+          }
+        },
+      );
+    } catch (error) {
+      const detail = failure(error).error;
+      const denied = [401, 403, 404].includes(detail.status);
+      client.socket.emit(
+        denied ? 'broadcast.denied' : 'broadcast.unavailable',
+        detail,
+      );
+      if (denied || initial) client.socket.disconnect(true);
+    } finally {
+      client.pumping = false;
+    }
+  }
   private async connectTopics(socket: Socket, binding: Binding) {
     try {
       await this.topics.context(
@@ -301,11 +372,16 @@ export class ChatGateway
   handleDisconnect(socket: Socket) {
     this.clients.delete(socket.id);
     this.topicsClients.delete(socket.id);
+    this.broadcastClients.delete(socket.id);
   }
   onModuleDestroy() {
     clearInterval(this.timer);
     this.subscription?.unsubscribe();
     this.topicsSubscription?.unsubscribe();
+    this.broadcastSubscription?.unsubscribe();
+    for (const client of this.broadcastClients.values())
+      client.socket.disconnect(true);
+    this.broadcastClients.clear();
     for (const client of this.topicsClients.values())
       client.socket.disconnect(true);
     this.topicsClients.clear();

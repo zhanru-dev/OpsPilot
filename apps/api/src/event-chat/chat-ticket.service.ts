@@ -7,13 +7,14 @@ import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { createHash, randomBytes } from 'node:crypto';
 import { ChatService } from './chat.service';
+import { BroadcastService } from '../broadcast/broadcast.service';
 import { TopicsService } from '../event-topics/topics.service';
 import type { ChatPrincipal } from './chat-authorization.service';
 
 type Ticket = {
   eventId: string;
   principal: ChatPrincipal;
-  channel?: 'chat' | 'topics';
+  channel?: 'chat' | 'topics' | 'broadcast';
 };
 @Injectable()
 export class ChatTicketService implements OnModuleDestroy {
@@ -22,6 +23,7 @@ export class ChatTicketService implements OnModuleDestroy {
     config: ConfigService,
     private readonly chat: ChatService,
     private readonly topics: TopicsService,
+    private readonly broadcasts: BroadcastService,
   ) {
     this.redis = new Redis(config.getOrThrow<string>('REDIS_URL'), {
       maxRetriesPerRequest: 1,
@@ -40,11 +42,15 @@ export class ChatTicketService implements OnModuleDestroy {
     const context = await this.topics.context(eventId, principal);
     return this.issueBound(eventId, principal, context, 'topics');
   }
+  async issueBroadcast(eventId: string, principal: ChatPrincipal) {
+    const snapshot = await this.broadcasts.snapshot(eventId, principal);
+    return this.issueBound(eventId, principal, snapshot.context, 'broadcast');
+  }
   private async issueBound<T>(
     eventId: string,
     principal: ChatPrincipal,
     context: T,
-    channel: 'chat' | 'topics',
+    channel: 'chat' | 'topics' | 'broadcast',
   ) {
     const ticket = randomBytes(32).toString('base64url');
     await this.redis.set(

@@ -54,7 +54,8 @@
     "socket.io": "^4.8.1",
     "swagger-ui-express": "^5.0.1",
     "tsx": "^4.20.6",
-    "@opspilot/topics-contracts": "^1.0.0"
+    "@opspilot/topics-contracts": "^1.0.0",
+    "@opspilot/broadcast-contracts": "^1.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

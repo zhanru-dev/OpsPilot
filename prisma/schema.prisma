@@ -194,6 +194,7 @@ model User {
   startedLiveSessions         LiveSession[]         @relation("LiveSessionStarter")
   endedLiveSessions           LiveSession[]         @relation("LiveSessionEnder")
   liveSessionUpdates          LiveSessionUpdate[]   @relation("LiveSessionUpdateActor")
+  createdBroadcasts           BroadcastSession[]
   createdLivePolls            LivePoll[]            @relation("LivePollCreator")
   livePollResponses           LivePollResponse[]
   sentChatMessages            EventChatMessage[]    @relation("ChatStaffSender")
@@ -281,6 +282,8 @@ model StreamEvent {
   chatSequence            Int                   @default(0)
   chatMessages            EventChatMessage[]
   chatEvents              EventChatEvent[]
+  broadcastRevision       Int                   @default(0)
+  broadcasts              BroadcastSession[]
   topicSequence           Int                   @default(0)
   topicSettingsRevision   Int                   @default(0)
   topicAudiencePublishing Boolean               @default(true)
@@ -992,4 +995,69 @@ model EventTopicReply {
   @@index([attendeeRegistrationId, eventId])
   @@index([staffUserId])
   @@index([deletedByUserId])
+}
+
+
+enum BroadcastState {
+  ACTIVE
+  ENDED
+}
+
+enum BroadcastAvailability {
+  WAITING
+  LIVE
+  INTERRUPTED
+  UNKNOWN
+}
+
+enum BroadcastGrantKind {
+  PUBLISH
+  PLAYBACK
+}
+
+model BroadcastSession {
+  id                String                @id @default(uuid())
+  eventId           String
+  creatorId         String
+  clientOperationId String
+  state             BroadcastState        @default(ACTIVE)
+  availability      BroadcastAvailability @default(WAITING)
+  revision          Int
+  createdAt         DateTime              @default(now())
+  firstLiveAt       DateTime?
+  endedAt           DateTime?
+  checkedAt         DateTime?
+  sourceId          String?
+  cleanupPending    Boolean               @default(false)
+  event             StreamEvent           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  creator           User                  @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  grants            BroadcastGrant[]
+
+  @@unique([eventId, creatorId, clientOperationId])
+  @@index([eventId, createdAt, id])
+  @@index([state, cleanupPending, checkedAt])
+}
+
+model BroadcastGrant {
+  hash        String             @id
+  sessionId   String
+  kind        BroadcastGrantKind
+  principal   Json
+  principalKey String
+  createdAt   DateTime           @default(now())
+  expiresAt   DateTime
+  session     BroadcastSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  publishers  BroadcastPublisher[]
+
+  @@index([sessionId, kind, principalKey])
+  @@index([expiresAt])
+}
+
+model BroadcastPublisher {
+  id        String         @id
+  grantHash String
+  createdAt DateTime       @default(now())
+  grant     BroadcastGrant @relation(fields: [grantHash], references: [hash], onDelete: Cascade)
+
+  @@index([grantHash])
 }
