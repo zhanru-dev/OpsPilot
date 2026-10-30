@@ -20,13 +20,15 @@ export const LivePlayer = memo(function LivePlayer({
     [state, setState] = useState("loading"),
     [error, setError] = useState<string | null>(null);
   const consecutiveFailures = useRef(0);
+  const wantsPause = useRef(false);
   useEffect(() => {
     const node = video.current;
     if (!node) return;
     let active = true,
       hls: Hls | null = null,
       ticket: string | null = null,
-      refreshQueued = false;
+      refreshQueued = false,
+      played = false;
     const controller = new AbortController();
     const timers = new Set<ReturnType<typeof setTimeout>>();
     const listeners: [string, EventListener][] = [];
@@ -61,6 +63,10 @@ export const LivePlayer = memo(function LivePlayer({
       later(() => setAttempt((n) => n + 1), delay);
     }
     function play() {
+      if (wantsPause.current) {
+        setState("paused");
+        return;
+      }
       void node!.play().catch((reason: unknown) => {
         if (!active) return;
         if (
@@ -76,12 +82,17 @@ export const LivePlayer = memo(function LivePlayer({
       const listener = () => {
         if (!active) return;
         if (event === "playing") {
+          played = true;
+          wantsPause.current = false;
           setState("playing");
           setError(null);
           consecutiveFailures.current = 0;
         } else if (event === "error")
           retry("Video connection interrupted. Retrying…");
-        else setState(event === "pause" ? "paused" : "buffering");
+        else {
+          if (event === "pause" && played) wantsPause.current = true;
+          setState(event === "pause" ? "paused" : "buffering");
+        }
       };
       node.addEventListener(event, listener);
       listeners.push([event, listener]);

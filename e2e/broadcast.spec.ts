@@ -279,6 +279,37 @@ test("real publisher, two admitted viewers, renewal, transport/process recovery 
     await expect(b.getByTestId("chat-scroll")).toContainText(
       "Video and Chat share event admission",
     );
+    await expect(page.getByTestId("chat-scroll")).toContainText(
+      "Video and Chat share event admission",
+    );
+    await a
+      .getByRole("textbox", { name: "Chat message", exact: true })
+      .fill("Moderate this message while video is playing");
+    await a.getByRole("button", { name: "Send message", exact: true }).click();
+    await expect(page.getByTestId("chat-scroll")).toContainText(
+      "Moderate this message while video is playing",
+    );
+    const moderated = await db.eventChatMessage.findFirstOrThrow({
+      where: {
+        eventId: event.id,
+        text: "Moderate this message while video is playing",
+      },
+    });
+    await page
+      .getByTestId(`message-${moderated.id}`)
+      .getByRole("button", { name: "Remove message from Browser Attendee" })
+      .click();
+    for (const participant of [page, a, b])
+      await expect(
+        participant.getByTestId(`message-${moderated.id}`),
+      ).toContainText("Message removed by a moderator");
+    expect(
+      (
+        await db.eventChatMessage.findUniqueOrThrow({
+          where: { id: moderated.id },
+        })
+      ).text,
+    ).toBeNull();
     await a
       .getByRole("textbox", { name: "Question text", exact: true })
       .fill("Can the audience ask while watching?");
@@ -300,6 +331,21 @@ test("real publisher, two admitted viewers, renewal, transport/process recovery 
     await a
       .getByRole("textbox", { name: "Question text", exact: true })
       .fill("unsent question survives video renewal");
+    await a.screenshot({
+      path: info.outputPath("watch-desktop.png"),
+      fullPage: true,
+    });
+    await a.setViewportSize({ width: 390, height: 844 });
+    expect(
+      await a.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await a.screenshot({
+      path: info.outputPath("watch-mobile.png"),
+      fullPage: true,
+    });
+    await a.setViewportSize({ width: 1280, height: 720 });
     const cdp = await one.newCDPSession(a);
     await cdp.send("Performance.enable");
     const baseline = await cdp.send("Performance.getMetrics");
@@ -338,11 +384,22 @@ test("real publisher, two admitted viewers, renewal, transport/process recovery 
     });
     publisher = publish(grant);
     timings.push({ name: "media-restart", ms: await decoded(a, 25000) });
+    const prepared = await page.request.post(`${api(other.id)}/sessions`, {
+      data: { clientOperationId: randomUUID(), expectedRevision: 0 },
+    });
+    expect(prepared.status()).toBe(201);
+    const outageGrant = await key(page, other.id);
     await mkdir(".runtime/broadcast/faults", { recursive: true });
     await writeFile(".runtime/broadcast/faults/stop-api", "stop");
     await expect(a.getByTestId("live-player")).toHaveCount(0, {
       timeout: 15000,
     });
+    const rejected = publish(outageGrant);
+    await expect
+      .poll(() => rejected.exitCode !== null || rejected.signalCode !== null, {
+        timeout: 10000,
+      })
+      .toBe(true);
     await rm(".runtime/broadcast/faults/stop-api");
     timings.push({ name: "api-restart", ms: await decoded(a, 25000) });
     await decoded(b, 25000);
@@ -355,6 +412,17 @@ test("real publisher, two admitted viewers, renewal, transport/process recovery 
       "Can the audience ask while watching?",
     );
     expect((await a.request.get(api(other.id, true))).status()).toBe(401);
+    await a.goto(`/events/${other.id}/watch`);
+    await expect(
+      a.getByText("Your event access has ended or needs verification.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(a.getByTestId("live-player")).toHaveCount(0);
+    await expect(a.getByTestId("chat-scroll")).toHaveCount(0);
+    await watch(a, event.id);
+    await decoded(a);
+
     const current = (await (
       await page.request.get(api(event.id))
     ).json()) as BroadcastSnapshot;
@@ -454,6 +522,26 @@ test("autoplay refusal, media retry, teardown and attendee revocation", async ({
       .click();
     await decoded(attendee, 25000);
     await attendee.unroute("**/hls/**");
+    // Native media controls remain effective across a credential/player renewal.
+    await attendee.locator("video").evaluate((video) => {
+      video.pause();
+      video.muted = false;
+      video.volume = 0.4;
+    });
+    await attendee
+      .getByRole("button", { name: "Retry video", exact: true })
+      .click();
+    await expect(attendee.getByTestId("player-state")).toHaveText("paused");
+    expect(
+      await attendee
+        .locator("video")
+        .evaluate(
+          (video) => video.paused && video.volume === 0.4 && !video.muted,
+        ),
+    ).toBe(true);
+    await attendee.locator("video").evaluate((video) => video.play());
+    await decoded(attendee);
+
     let requests = 0;
     attendee.on("request", (r) => {
       if (r.url().includes("/hls/")) requests++;
@@ -552,10 +640,35 @@ test("lost start/end receipts, stale snapshots and replacement sessions keep can
   const old = (await (
     await page.request.get(api(event.id))
   ).json()) as BroadcastSnapshot;
-  let dropEnd = true;
+  await page.getByText("Publisher connection", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Generate publishing key", exact: true })
+    .click();
+  await expect(page.getByLabel("Stream key", { exact: true })).toHaveAttribute(
+    "type",
+    "password",
+  );
+  expect(
+    (
+      await page.getByLabel("Stream key", { exact: true }).inputValue()
+    ).startsWith(old.session!.id + "?user=publish&pass="),
+  ).toBe(true);
+
+  let dropEnd = true,
+    conflictEnd = true;
   await page.route(
     `${api(event.id)}/sessions/${old.session!.id}/end`,
     async (route) => {
+      if (conflictEnd) {
+        conflictEnd = false;
+        // A competing observation commits after the UI constructed its command.
+        await db.streamEvent.update({
+          where: { id: event.id },
+          data: { broadcastRevision: { increment: 1 } },
+        });
+        await route.continue();
+        return;
+      }
       if (dropEnd) {
         dropEnd = false;
         const response = await route.fetch();
@@ -566,6 +679,17 @@ test("lost start/end receipts, stale snapshots and replacement sessions keep can
   );
   await page
     .getByRole("button", { name: "End broadcast", exact: true })
+    .click();
+  await expect(
+    page.getByText("Broadcast changed. Refresh before ending.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Refresh broadcast", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Retry ending broadcast", exact: true })
     .click();
   await expect(page.getByTestId("broadcast-status")).toHaveText(
     "Broadcast ended",
@@ -621,6 +745,16 @@ test("lost start/end receipts, stale snapshots and replacement sessions keep can
         })
       ).state,
     ).toBe("ACTIVE");
+    await page.getByText("Publisher connection", { exact: true }).click();
+    await page
+      .getByRole("button", { name: "Generate publishing key", exact: true })
+      .click();
+    await expect(page.getByLabel("Stream key", { exact: true })).toBeVisible();
+    expect(
+      (
+        await page.getByLabel("Stream key", { exact: true }).inputValue()
+      ).startsWith(current.session!.id + "?user=publish&pass="),
+    ).toBe(true);
     await page.reload();
     await expect(page.getByTestId("broadcast-status")).toHaveText(
       "Waiting for the publisher",

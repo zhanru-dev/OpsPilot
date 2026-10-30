@@ -68,8 +68,10 @@ function BroadcastScope({ eventId, mode, actorId }: Props) {
   }
   async function end() {
     if (!snapshot || !session) return;
-    const intent = ending ?? {
-      id: session.id,
+    const intent = {
+      // Keep the original target after a lost receipt, but retry a version
+      // conflict against the latest verified event revision.
+      id: ending?.id ?? session.id,
       expectedRevision: snapshot.revision,
     };
     setEnding(intent);

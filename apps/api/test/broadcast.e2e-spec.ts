@@ -231,7 +231,10 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
         expectedRevision: before.revision,
       });
     }
-    async function until(check: () => Promise<boolean>, timeout = 12000) {
+    async function until(
+      check: () => boolean | Promise<boolean>,
+      timeout = 12000,
+    ) {
       const start = Date.now();
       while (Date.now() - start < timeout) {
         if (await check()) return Date.now() - start;
@@ -246,10 +249,22 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
         child.kill('SIGTERM');
       });
     }
-    async function publish(id: string) {
+    async function publish(
+      id: string,
+      receipt?: (grant: PublishGrant) => void,
+    ) {
       const key = (
         await manager.post(`${path()}/sessions/${id}/publish-key`).expect(201)
       ).body as PublishGrant;
+      receipt?.(key);
+      const child = launch(key);
+      await until(async () => {
+        await broadcasts.reconcile();
+        return (await snapshot()).session?.availability === 'LIVE';
+      }, 20000);
+      return child;
+    }
+    function launch(key: PublishGrant) {
       const child = spawn(
         process.env.FFMPEG_PATH ?? '/usr/local/bin/ffmpeg',
         [
@@ -284,10 +299,6 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
         { stdio: 'ignore' },
       );
       publishers.push(child);
-      await until(async () => {
-        await broadcasts.reconcile();
-        return (await snapshot()).session?.availability === 'LIVE';
-      }, 20000);
       return child;
     }
     it('serializes concurrent starts, persists one active session and retries lost receipts', async () => {
@@ -472,7 +483,10 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
     }, 30000);
     it('keeps a committed end during actual control refusal and selects replacement independently of cleanup revision', async () => {
       const old = (await active()).session!.id;
-      const child = await publish(old);
+      let retiredGrant!: PublishGrant;
+      const child = await publish(old, (key) => {
+        retiredGrant = key;
+      });
       const config = app.get(ConfigService);
       const original = config.get<string>('BROADCAST_CONTROL_URL');
       try {
@@ -505,6 +519,14 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
         expect((await snapshot()).revision).toBeGreaterThanOrEqual(
           replacement.revision,
         );
+        const stalePublisher = launch(retiredGrant);
+        await until(
+          () =>
+            stalePublisher.exitCode !== null ||
+            stalePublisher.signalCode !== null,
+          10000,
+        );
+        expect((await snapshot()).session!.id).toBe(replacement.session!.id);
         const end = await snapshot();
         await broadcasts.end(eventId, staff, replacement.session!.id, {
           expectedRevision: end.revision,
