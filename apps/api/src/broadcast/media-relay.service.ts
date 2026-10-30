@@ -98,7 +98,8 @@ export class MediaRelayService {
         });
       }
     } catch (error) {
-      if (!response.destroyed && !response.headersSent) throw error;
+      if (!response.destroyed && !response.headersSent)
+        throw error instanceof HttpException ? error : mediaUnavailable();
       if (!response.destroyed) response.destroy();
     } finally {
       clearTimeout(timeout);

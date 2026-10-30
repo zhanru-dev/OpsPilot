@@ -28,6 +28,7 @@ import type {
 import { cn, formatDate } from "@/lib/utils";
 import { LivePollsPanel } from "./live-polls-panel";
 import { ChatPanel } from "@/features/chat/chat-panel";
+import { BroadcastPanel } from "@/features/broadcast/broadcast-panel";
 import { TopicsPanel } from "@/features/topics/topics-panel";
 
 type ConnectionState = "connecting" | "live" | "reconnecting";
@@ -155,7 +156,8 @@ export function LiveSessionRoom({ eventId }: { eventId: string }) {
               href={`/streamops/events/${eventId}`}
               className="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[var(--border)] bg-white px-3 text-sm font-semibold"
             >
-              <ArrowLeft className="size-4" /> Launch Control
+              <ArrowLeft className="size-4" />
+              Launch Control
             </Link>
             {active && canManage ? (
               <Button variant="danger" onClick={() => setConfirmComplete(true)}>
@@ -192,6 +194,11 @@ export function LiveSessionRoom({ eventId }: { eventId: string }) {
 
       {user && (
         <div className="mb-5 space-y-5">
+          <BroadcastPanel
+            eventId={eventId}
+            mode="staff"
+            actorId={`staff:${user.id}`}
+          />
           <TopicsPanel
             eventId={eventId}
             mode="staff"

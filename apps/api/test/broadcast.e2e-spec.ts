@@ -5,6 +5,7 @@ import type { App } from 'supertest/types';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { spawn, type ChildProcess } from 'node:child_process';
+import { createServer } from 'node:http';
 import { ConfigService } from '@nestjs/config';
 import { BroadcastService } from '../src/broadcast/broadcast.service';
 import type {
@@ -515,6 +516,56 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
         await stop(child);
       }
     }, 40000);
+    it('bounds actual upstream 503/refusal/timeout failures and keeps credentials out of persisted diagnostics', async () => {
+      const id = (await active()).session!.id;
+      const result = (
+        await manager.post(`${path()}/sessions/${id}/playback`).expect(201)
+      ).body as PlaybackGrant;
+      const config = app.get(ConfigService),
+        original = config.get<string>('BROADCAST_HLS_URL');
+      let hang = false;
+      const server = createServer((_req, res) => {
+        if (!hang) res.writeHead(503).end('upstream outage');
+      });
+      await new Promise<void>((resolve) =>
+        server.listen(0, '127.0.0.1', resolve),
+      );
+      const address = server.address();
+      if (!address || typeof address === 'string')
+        throw new Error('Test listener unavailable');
+      const url = `${path()}/sessions/${id}/hls/index.m3u8?ticket=${result.ticket}`;
+      try {
+        config.set('BROADCAST_HLS_URL', `http://127.0.0.1:${address.port}`);
+        await manager.get(url).expect(503);
+        hang = true;
+        const start = Date.now();
+        await manager.get(url).expect(503);
+        expect(Date.now() - start).toBeLessThan(17000);
+        config.set('BROADCAST_HLS_URL', 'http://127.0.0.1:1');
+        await manager.get(url).expect(503);
+        await until(
+          async () =>
+            (await db.errorReport.count({
+              where: { workspaceId, path: { contains: '/hls/' } },
+            })) >= 3,
+        );
+        const records = JSON.stringify(
+          await db.errorReport.findMany({
+            where: { workspaceId, path: { contains: '/hls/' } },
+          }),
+        );
+        expect(records.includes(result.ticket)).toBe(false);
+        expect(
+          records.includes(config.get<string>('BROADCAST_INTERNAL_SECRET')!),
+        ).toBe(false);
+        expect(records.includes('?ticket=')).toBe(false);
+      } finally {
+        config.set('BROADCAST_HLS_URL', original);
+        server.closeAllConnections();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    }, 25000);
+
     it('denies newly expired attendee playback and subscriptions; terminal business state retires active media', async () => {
       const id = (await active()).session!.id;
       const socket = await joined(true);

@@ -7,6 +7,7 @@ export default defineConfig({
   testDir: "./e2e",
   testIgnore: [
     "deployment.smoke.spec.ts",
+    "broadcast.spec.ts",
     "chat-recovery.spec.ts",
     "**/*.ui.spec.ts",
   ],

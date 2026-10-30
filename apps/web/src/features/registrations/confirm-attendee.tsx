@@ -185,6 +185,12 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
                 <p className="text-sm">
                   Your attendee session is active for this event.
                 </p>
+                <a
+                  href={`/events/${eventId}/watch`}
+                  className="inline-flex rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Enter Watch Room
+                </a>
                 <AttendeeLivePolls
                   eventId={eventId}
                   onAccessLost={session.refetch}

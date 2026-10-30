@@ -4,7 +4,9 @@ import { AppModule } from './app.module';
 import { configureApp } from './configure-app';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    forceCloseConnections: true,
+  });
   const config = app.get(ConfigService);
   configureApp(app);
   app.enableShutdownHooks();
