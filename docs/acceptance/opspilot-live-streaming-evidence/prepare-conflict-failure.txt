@@ -1,0 +1,15 @@
+Retained failed assertion from independent diagnostic; second request expected201, actually409. No production code or failing assertion was changed.
+
+Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 409
+
+      16 |  await page.getByRole('button',{name:'Discard preparation retry',exact:true}).click();response=post();await page.getByRole('button',{name:'Prepare broadcast',exact:true}).click();observed.workaroundStatus=(await response).status();observed.activeAfterWorkaround=await db.broadcastSession.count({where:{eventId:e.id,state:'ACTIVE'}});await writeFile('.runtime/live-acceptance-20261030/start-conflict-confirmation.json',JSON.stringify(observed,null,2));expect(observed.workaroundStatus).toBe(201);
+      17 |  // The documented Refresh/Retry recovery should create the session; deliberately retain this acceptance assertion.
+    > 18 |  expect(statuses[1]).toBe(201);
+         |                      ^
+      19 |  }finally{await db.streamEvent.delete({where:{id:e.id}});await db.$disconnect();}
+      20 | });
+      21 |
+        at /Users/ruzhan/computer_science/projects/OpsPilot/.runtime/live-acceptance-20261030/start-conflict.spec.ts:18:22
