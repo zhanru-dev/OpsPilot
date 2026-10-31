@@ -620,7 +620,7 @@ model MediaProcessingJob {
   status         MediaProcessingJobStatus @default(QUEUED)
   profileVersion String                   @default("1.0")
   bullJobId      String?                  @unique
-  traceId        String                   @unique @default(uuid())
+  traceId        String                   @default(uuid())
   attemptCount   Int                      @default(0)
   maxAttempts    Int                      @default(3)
   progress       Int                      @default(0)
@@ -636,6 +636,7 @@ model MediaProcessingJob {
 
   @@index([mediaId, createdAt])
   @@index([status, queuedAt])
+  @@index([traceId])
 }
 
 model MediaProcessingAttempt {
@@ -825,20 +826,22 @@ model AuditLog {
 }
 
 model DomainEvent {
-  id            String            @id @default(uuid())
-  workspaceId   String
-  type          String
-  aggregateType String
-  aggregateId   String
-  payload       Json
-  traceId       String            @unique
-  occurredAt    DateTime          @default(now())
-  workspace     Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  outbox        OutboxEvent?
-  deliveries    WebhookDelivery[]
+  id             String            @id @default(uuid())
+  workspaceId    String
+  type           String
+  aggregateType  String
+  aggregateId    String
+  payload        Json
+  traceId        String
+  idempotencyKey String?           @unique
+  occurredAt     DateTime          @default(now())
+  workspace      Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  outbox         OutboxEvent?
+  deliveries     WebhookDelivery[]
 
   @@index([workspaceId, type, occurredAt])
   @@index([aggregateType, aggregateId, occurredAt])
+  @@index([traceId])
 }
 
 model OutboxEvent {
@@ -896,7 +899,7 @@ model WebhookDelivery {
   lastError      String?
   lastAttemptAt  DateTime?
   deliveredAt    DateTime?
-  traceId        String                   @unique
+  traceId        String
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
   workspace      Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -907,6 +910,7 @@ model WebhookDelivery {
   @@unique([domainEventId, endpointId])
   @@index([workspaceId, status, createdAt])
   @@index([endpointId, createdAt])
+  @@index([traceId])
 }
 
 model WebhookDeliveryAttempt {

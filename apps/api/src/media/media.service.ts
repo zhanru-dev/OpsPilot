@@ -255,6 +255,7 @@ export class MediaService {
         {
           workspaceId: user.workspaceId,
           type: 'media.processing.queued',
+          idempotencyKey: `media:${processingJobId}:queued`,
           aggregateType: 'MediaAsset',
           aggregateId: upload.mediaId,
           payload: { mediaId: upload.mediaId, processingJobId },

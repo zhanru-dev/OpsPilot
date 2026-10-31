@@ -244,6 +244,7 @@ export class MediaProcessingProcessor extends WorkerHost {
           {
             workspaceId: job.data.workspaceId,
             type: 'media.processing.completed',
+            idempotencyKey: `media:${record.id}:completed`,
             aggregateType: 'MediaAsset',
             aggregateId: record.mediaId,
             payload: {
@@ -483,6 +484,7 @@ export class MediaProcessingProcessor extends WorkerHost {
           {
             workspaceId: job.data.workspaceId,
             type: 'media.processing.failed',
+            idempotencyKey: `media:${record.id}:failed`,
             aggregateType: 'MediaAsset',
             aggregateId: record.mediaId,
             payload: {
