@@ -54,8 +54,10 @@ function BroadcastScope({ eventId, mode, actorId }: Props) {
   }
   async function begin() {
     if (!snapshot) return;
-    const intent = start ?? {
-      clientOperationId: crypto.randomUUID(),
+    const intent = {
+      // Keep the logical operation after a lost receipt, but refresh the version
+      // for a rejected command. The server resolves this ID before version checks.
+      clientOperationId: start?.clientOperationId ?? crypto.randomUUID(),
       expectedRevision: snapshot.revision,
     };
     setStart(intent);

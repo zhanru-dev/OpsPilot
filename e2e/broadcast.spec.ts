@@ -592,6 +592,67 @@ test("autoplay refusal, media retry, teardown and attendee revocation", async ({
   }
 });
 
+test("prepare conflict refreshes its revision while retaining the operation identity", async ({
+  page,
+}) => {
+  const event = await fixture();
+  await login(page, event.id);
+  await expect(page.getByTestId("broadcast-connection")).toHaveText(
+    "connected",
+  );
+  const commands: { clientOperationId: string; expectedRevision: number }[] =
+    [];
+  await page.route(`${api(event.id)}/sessions`, async (route) => {
+    commands.push(route.request().postDataJSON());
+    if (commands.length === 1)
+      await db.streamEvent.update({
+        where: { id: event.id },
+        data: { broadcastRevision: { increment: 1 } },
+      });
+    await route.continue();
+  });
+  const post = () =>
+    page.waitForResponse(
+      (r) =>
+        r.url() === `${api(event.id)}/sessions` &&
+        r.request().method() === "POST",
+    );
+  let response = post();
+  await page
+    .getByRole("button", { name: "Prepare broadcast", exact: true })
+    .click();
+  expect((await response).status()).toBe(409);
+  await expect(
+    page.getByText("Broadcast changed. Refresh before starting.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const refreshed = page.waitForResponse(
+    (r) => r.url() === api(event.id) && r.request().method() === "GET",
+  );
+  await page
+    .getByRole("button", { name: "Refresh broadcast", exact: true })
+    .click();
+  await refreshed;
+  response = post();
+  await page
+    .getByRole("button", { name: "Retry preparing broadcast", exact: true })
+    .click();
+  expect((await response).status()).toBe(201);
+  expect(commands[1].clientOperationId).toBe(commands[0].clientOperationId);
+  expect(commands[1].expectedRevision).toBeGreaterThan(
+    commands[0].expectedRevision,
+  );
+  await expect(
+    page.getByRole("button", { name: "Discard preparation retry" }),
+  ).toHaveCount(0);
+  expect(
+    await db.broadcastSession.count({
+      where: { eventId: event.id, state: "ACTIVE" },
+    }),
+  ).toBe(1);
+});
+
 test("lost start/end receipts, stale snapshots and replacement sessions keep canonical identity", async ({
   page,
   browser,

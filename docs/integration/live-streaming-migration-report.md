@@ -116,7 +116,8 @@ before awaiting work; all exits release slots. Playlists are capped at 256KiB,
 binary resources at 12MiB, with backpressure and a 15s upstream deadline.
 
 Endpoint throttles preserve the application's global protection: HLS6000/min,
-media callbacks12000/min, prepare/end20/min and playback grants120/min. Successful
+media callbacks12000/min, prepare20/min, end100/min (the global default),
+and playback grants120/min. Successful
 playback was exercised across real rate-limit windows with two viewers plus staff
 preview, with zero HLS429 responses. An application relay intentionally trades
 bandwidth/database work for a straightforward current-permission boundary.
