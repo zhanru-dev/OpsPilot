@@ -374,9 +374,15 @@ test("v1.1 reliability surfaces expose bounded media and webhook evidence", asyn
   const uploadDialog = page.getByRole("dialog", { name: "Upload media" });
   await expect(uploadDialog.getByLabel("Source file")).toBeVisible();
   await expect(
-    uploadDialog.getByText("Maximum 100 MB and 5 minutes."),
+    uploadDialog.getByText(
+      "MP4, MOV, MP3, WAV or M4A. Up to 100 MiB and 5 minutes each. Leaving this page pauses transfers; reselect files to resume.",
+    ),
   ).toBeVisible();
-  await uploadDialog.getByRole("button", { name: "Cancel" }).click();
+  await uploadDialog
+    .locator("form")
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
+  await expect(uploadDialog).toHaveCount(0);
 
   await page.goto("/integrations");
   await expect(

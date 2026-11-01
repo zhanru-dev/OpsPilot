@@ -123,6 +123,29 @@ describe('Media security and storage recovery boundaries', () => {
       one = await event(),
       two = await event(),
       outside = await event(foreign.id);
+    const upload = await db.mediaUpload.create({
+      data: {
+        mediaId: other.id,
+        workspaceId: foreign.id,
+        ownerUserId: userId,
+        clientOperationId: randomUUID(),
+        manifest: {
+          clientOperationId: randomUUID(),
+          name: 'Foreign',
+          kind: 'VIDEO',
+          contentType: 'video/mp4',
+          sizeBytes: 100,
+          hashes: [],
+        },
+        expectedSizeBytes: 100,
+        contentType: 'video/mp4',
+        objectKey: other.originalObjectKey!,
+        expiresAt: new Date(Date.now() + 3600000),
+      },
+    });
+    await manager.get(`${base}/multipart/${upload.id}`).expect(404);
+    for (const route of ['parts/1', 'complete', 'cancel'])
+      await manager.post(`${base}/multipart/${upload.id}/${route}`).expect(404);
     await manager.get(`${base}/${other.id}`).expect(404);
     await manager.post(`${base}/${other.id}/playback-url`).expect(404);
     await manager.delete(`${base}/${other.id}`).expect(404);
@@ -251,5 +274,72 @@ describe('Media security and storage recovery boundaries', () => {
     expect(
       (await db.mediaAsset.findUniqueOrThrow({ where: { id: a.id } })).status,
     ).toBe('FAILED');
+  });
+  it('serializes concurrent initialization against the twelve-session owner quota', async () => {
+    const seed = await db.user.findUniqueOrThrow({ where: { id: userId } });
+    const user = await db.user.create({
+      data: {
+        email: `media-quota-${randomUUID()}@test.invalid`,
+        passwordHash: seed.passwordHash,
+        name: 'Quota fixture',
+        avatarInitials: 'QT',
+        memberships: { create: { workspaceId, role: 'CONTENT_OPERATOR' } },
+      },
+    });
+    try {
+      const client = request.agent(app.getHttpServer());
+      await client
+        .post('/api/v1/auth/login')
+        .send({ email: user.email, password: 'DemoPass123!' })
+        .expect(200);
+      const responses = await Promise.all(
+        Array.from({ length: 13 }, () =>
+          client.post(`${base}/multipart`).send({
+            clientOperationId: randomUUID(),
+            name: 'Quota.mp4',
+            kind: 'VIDEO',
+            contentType: 'video/mp4',
+            sizeBytes: 100,
+            hashes: [
+              createHash('sha256').update(Buffer.alloc(100, 1)).digest('hex'),
+            ],
+          }),
+        ),
+      );
+      expect(responses.filter((r) => r.status === 201)).toHaveLength(12);
+      expect(responses.filter((r) => r.status === 409)).toHaveLength(1);
+      expect(
+        await db.mediaUpload.count({
+          where: { ownerUserId: user.id, status: 'PENDING' },
+        }),
+      ).toBe(12);
+      const first = responses.find((r) => r.status === 201)!
+        .body as UploadReceipt;
+      await client.post(`${base}/multipart/${first.id}/cancel`).expect(201);
+      const next = await client
+        .post(`${base}/multipart`)
+        .send({
+          clientOperationId: randomUUID(),
+          name: 'Released slot.mp4',
+          kind: 'VIDEO',
+          contentType: 'video/mp4',
+          sizeBytes: 100,
+          hashes: [
+            createHash('sha256').update(Buffer.alloc(100, 1)).digest('hex'),
+          ],
+        })
+        .expect(201);
+      expect(next.body).toHaveProperty('id');
+    } finally {
+      const uploads = await db.mediaUpload.findMany({
+        where: { ownerUserId: user.id },
+      });
+      for (const u of uploads) {
+        await storage.abortMultipartForKey(u.objectKey);
+        await storage.deleteObjects([u.objectKey]);
+        await db.mediaAsset.delete({ where: { id: u.mediaId } });
+      }
+      await db.user.delete({ where: { id: user.id } });
+    }
   });
 });

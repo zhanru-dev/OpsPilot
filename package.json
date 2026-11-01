@@ -43,7 +43,11 @@
     "broadcast:test:setup": "node scripts/setup-broadcast-test.mjs",
     "test:broadcast:api": "node scripts/with-broadcast-env.mjs npm run test:e2e --workspace=@opspilot/api -- --runInBand broadcast.e2e-spec",
     "test:broadcast:browser": "node scripts/with-broadcast-env.mjs playwright test --config=playwright.broadcast.config.ts",
-    "test:broadcast:migration": "node scripts/with-broadcast-env.mjs node scripts/check-broadcast-migration.mjs"
+    "test:broadcast:migration": "node scripts/with-broadcast-env.mjs node scripts/check-broadcast-migration.mjs",
+    "test:media:state": "node --import tsx --test tests/media-queue.test.ts",
+    "test:media:api": "npm run build --workspace=@opspilot/api && node scripts/with-media-test-env.mjs npm run test:e2e --workspace=@opspilot/api -- --runInBand media-multipart.e2e-spec media-processing.e2e-spec media-boundaries.e2e-spec media-restart.e2e-spec",
+    "test:media:browser": "node scripts/with-media-test-env.mjs env E2E_PRODUCTION_WEB=1 playwright test e2e/media-processing.spec.ts e2e/media-multipart.spec.ts e2e/media-performance.spec.ts",
+    "media:test:setup": "node scripts/setup-media-test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

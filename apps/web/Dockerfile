@@ -9,7 +9,7 @@ COPY packages/chat-contracts/package.json packages/chat-contracts/package.json
 COPY packages/topics-contracts/package.json packages/topics-contracts/package.json
 COPY packages/broadcast-contracts/package.json packages/broadcast-contracts/package.json
 COPY packages/media-contracts/package.json packages/media-contracts/package.json
-RUN npm ci
+RUN npm ci --workspace=@opspilot/web --include-workspace-root --fetch-retries=5
 
 FROM dependencies AS builder
 ARG NEXT_PUBLIC_API_URL=http://localhost:4100/api/v1
