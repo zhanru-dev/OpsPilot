@@ -188,6 +188,20 @@ still use the existing admission boundary for interaction and watching.
 
 The [updated task](live-streaming-integration-task.md), [contract and plan](live-streaming-integration-plan.md)
 and [migration report](live-streaming-migration-report.md) define the additive
-schema, protected RTMP/HLS transport, runtime and evidence. Media Library
-migration remains a future phase. The single-host relay is intentionally not a
+schema, protected RTMP/HLS transport, runtime and evidence. Media Library integration
+is documented below. The single-host relay is intentionally not a
 CDN, transcoder, WebRTC service or recording system.
+
+## Integrated media upload and processing boundary
+
+The Media Library now extends OpsPilot's existing workspace MediaAsset/MediaUpload
+and event-association model. Native MinIO multipart uploads feed the existing
+BullMQ/FFmpeg pipeline; no duplicate upload service, auth system, room hierarchy
+or media WebSocket is introduced. Staff-only ownership and current permissions
+protect upload coordination; private read grants have an explicit bounded TTL.
+
+See the [media plan](media-library-integration-plan.md) and
+[migration/recovery evidence](media-library-migration-report.md). Chat, Topics,
+Polls, Watch Room admission and live BroadcastSession transports remain separate.
+Uploads do not imply livestream recording, replay publication or attendee access.
+The next independent system-wide acceptance is a separate task.

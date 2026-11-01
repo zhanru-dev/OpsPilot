@@ -36,7 +36,7 @@ The centrepiece is **Launch Control**. A versioned rules engine converts operati
 - Direct browser uploads through short-lived presigned URLs into private S3-compatible storage.
 - ffprobe validation and FFmpeg video/audio derivatives in an independent BullMQ worker.
 - Persisted processing jobs, progress, attempts, failure evidence and controlled retries.
-- Short-lived private playback URLs plus scheduled demo-media retention cleanup.
+- Short-lived private playback URLs, resumable multipart uploads and durable cancellation/deletion cleanup.
 - Transactional domain-event outbox with signed `event.ready` and `event.started` webhooks.
 - Bounded webhook retries, duplicate suppression, attempt history, manual recovery and trace IDs.
 - Integration Centre for endpoint subscriptions, delivery health and retry evidence.
@@ -114,7 +114,7 @@ The first Mudu integration slice adds Chat to existing StreamOps Live Operations
 the admitted attendee page. See the [foundation contract](docs/integration/mudu-integration-foundation.md)
 and [migration report, verification and limitations](docs/integration/chat-migration-report.md).
 Topics/Q&A is now integrated on the same surfaces. See its [migration report](docs/integration/topics-migration-report.md).
-Mudu Media Library and Live Streaming migration remain outside this phase.
+These commands describe the original Chat/Topics slice; the later streaming and media sections below cover their separate integrations.
 
 From the repository root, use the separate services below to avoid the ordinary development database:
 
@@ -301,3 +301,29 @@ namespace. See the [migration report](docs/integration/live-streaming-migration-
 for the contracts, measured recovery, fault tests, production limitations and
 credential-safe FFmpeg example. No Live Streaming or Media Library assets are
 copied from captured historical Mudu material.
+
+
+## Integrated Media Library
+
+Staff can upload multiple MP4/MOV/MP3/WAV/M4A files (100 MiB / 5 minutes), pause,
+retry, cancel and resume after reload by reselecting the original file. Three
+file workers transfer sequential 5 MiB parts. The existing BullMQ/FFmpeg pipeline
+produces private previews and video thumbnails; READY means processing succeeded.
+Unreferenced terminal assets may be deleted, with durable storage cleanup.
+Existing ready assets are retained until explicit deletion.
+
+Use the existing `npm run broadcast:setup` / `npm run broadcast:dev` environment
+and open `/streamops/media`. Setup applies additive migrations without reseeding
+existing development data. For disposable verification:
+
+```sh
+npm run media:test:setup
+node scripts/with-media-test-env.mjs npm run build
+npm run test:media:state
+npm run test:media:api
+npm run test:media:browser
+```
+
+See [Media integration, recovery contracts and evidence](docs/integration/media-library-migration-report.md).
+Do not run test suites against shared data. Already issued private URLs retain
+their documented TTL; new operations use current server-side permissions.

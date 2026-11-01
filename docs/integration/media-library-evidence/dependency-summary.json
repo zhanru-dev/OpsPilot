@@ -1,0 +1,20 @@
+{
+  "registry": "https://registry.npmjs.org",
+  "production": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "includingDevelopment": {
+    "info": 0,
+    "low": 4,
+    "moderate": 36,
+    "high": 0,
+    "critical": 0,
+    "total": 40
+  },
+  "note": "No automatic major-version audit fix was applied. Production omission audit passed; dev-toolchain low/moderate advisories remain."
+}

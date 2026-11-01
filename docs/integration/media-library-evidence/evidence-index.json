@@ -1,0 +1,100 @@
+{
+  "date": "2026-11-01",
+  "branch": "feat/streamops-chat-integration",
+  "implementationCheckpoints": [
+    "ba91276",
+    "bda68de",
+    "8632e12"
+  ],
+  "logs": [
+    {
+      "path": ".runtime/media-integration-20261031/migration-preservation.log",
+      "sha256": "3c2b0585a3f252385e2fc9c7c10cc454a03eac39e4e31743b5638bbc5c477284"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/api-regression-final.log",
+      "sha256": "aeed2a354725580a489a82d7dea92251eb0307c3e3cdd9dcb21a515df98ac8a9"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/boundaries-final.log",
+      "sha256": "14c74a80bda6e8dc4e78baaf94b44b9fe4491b07d32c338635b3b2173ef7214c"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/init-recovery-api.log",
+      "sha256": "c5a99b5b05d668ecccb415dc763daf43cf99bb8688199dd9470bd7d65a9033b5"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/unit-final.log",
+      "sha256": "514f47f72283c939114b74c9fa8109eef7e2ecb5f74aaaafb5c41a84d4aaa51d"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/state-final.log",
+      "sha256": "1d2a0fa9a66c27c89b97dec53e35f31dbeb88cd62fa5e84964ccc0c435185e87"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/browser-regression.log",
+      "sha256": "f184c4d0b455209cd5d42b122da47096f2fb1efbd3580bfc6809cd6f2bac9694"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/browser-contract-rerun.log",
+      "sha256": "10f38d862b46295e34a7f81939536fc71e950f779ca80295efa545341071c9a3"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/broadcast-browser.log",
+      "sha256": "4f8c174b7e6b5f014514bd20deccc4d8ab0a27fc103285842eb26f10beaa1edc"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/chat-recovery.log",
+      "sha256": "860d4553e69855023786aebd491e2b21fae94f13a918d8a3d837216fcfab9896"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/container-runtime-final.log",
+      "sha256": "1104656245f4276134035b4dd41e880e6f49f8715b13659e370e1f876eb8d427"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/dependency-audit.json",
+      "sha256": "f0c4f48bba60c25e04b701063894ea5163fb8ff72b09ae379dc01250619847c1"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/dependency-audit-all.json",
+      "sha256": "3b9422b89f57aa42b2c0559e2566f791101fb93ad8d37a500f9b5c0e6c1929e9"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/isolated-ui.log",
+      "sha256": "3dfa0fc0cbf2ac7136d3e42402310c9f8c9657cc3760ae9cc07d23f5a9284856"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/build-final-combined.log",
+      "sha256": "5cf014dc00143aafc1691040b085b931f1fac997b37fd90d581fc5001a41172b"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/type-final-combined.log",
+      "sha256": "34e74c72fe19f5f80b57fdabf67fd7482366c625606bc21636ed4fd8ee123d71"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/lint-final-combined.log",
+      "sha256": "fa996bb5dd469221e1594feba7e45bcf3e4eb136689f7cc32badcefc653cf689"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/development-preservation-after.log",
+      "sha256": "cdef647efbd570d2809c7dd044e690f9bee161d5024979338f47341920e1f8a7"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/development-health-verified.log",
+      "sha256": "6189d5e747c707d1a62dac986e9857dd71b438bda70f1c700f3e7aebec32dc36"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/container-api-final.log",
+      "sha256": "4c20195bb22e7d9997807aee146a21a24aaad2906344bef22f58d644b2646ebd"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/container-worker-final.log",
+      "sha256": "48de7a4100ab72a544ed002cd216519eae6ffc354726487644734b6f205c918f"
+    },
+    {
+      "path": ".runtime/media-integration-20261031/container-web-scoped.log",
+      "sha256": "ea480c011d6ff6f0d52497433873d1175a8478a47449b7df602b548fc5ef6e8a"
+    }
+  ],
+  "note": "Local logs remain ignored. No tokens, signed URLs or raw heap snapshots are copied into this report. Counts and limitations are in the migration report."
+}
