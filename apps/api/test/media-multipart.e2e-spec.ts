@@ -452,4 +452,32 @@ describe('Multipart media with real PostgreSQL and MinIO', () => {
     }
     await owner.post(`${base}/${row.id}/cancel`).expect(201);
   });
+  it('resumes the same reserved upload after S3 initialization failed and the client reloaded', async () => {
+    const dto = input();
+    const failure = jest
+      .spyOn(storage, 'beginMultipart')
+      .mockRejectedValueOnce(new Error('Controlled S3 initialization outage'));
+    await owner.post(base).send(dto).expect(503);
+    failure.mockRestore();
+    const reserved = await db.mediaUpload.findFirstOrThrow({
+      where: { clientOperationId: dto.clientOperationId },
+    });
+    ids.push(reserved.id);
+    expect(reserved.multipartId).toBeNull();
+    const restored = (await owner.get(`${base}/${reserved.id}`).expect(200))
+      .body as UploadReceipt;
+    expect(restored.assetId).toBe(reserved.mediaId);
+    const receipt = await part(reserved.id, 1);
+    expect(receipt.parts).toHaveLength(1);
+    expect(
+      (await db.mediaUpload.findUniqueOrThrow({ where: { id: reserved.id } }))
+        .multipartId,
+    ).not.toBeNull();
+    expect(
+      await db.mediaUpload.count({
+        where: { clientOperationId: dto.clientOperationId },
+      }),
+    ).toBe(1);
+    await owner.post(`${base}/${reserved.id}/cancel`).expect(201);
+  });
 });

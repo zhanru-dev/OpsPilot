@@ -149,7 +149,11 @@ export class MultipartService {
       return uploadId;
     });
     return this.locked(id, user, async (tx, row) => {
-      if (row.status === 'PENDING' && !row.multipartId) {
+      if (
+        row.status === 'PENDING' &&
+        row.expiresAt > new Date() &&
+        !row.multipartId
+      ) {
         const multipartId = await this.storage.beginMultipart(
           row.objectKey,
           row.contentType,
@@ -202,15 +206,27 @@ export class MultipartService {
       if (
         !Number.isInteger(number) ||
         number < 1 ||
-        number > manifest(row).hashes.length ||
-        !row.multipartId
+        number > manifest(row).hashes.length
       )
         throw new BadRequestException(
           'Invalid part number or upload identity.',
         );
+      // A durable reservation can survive a failed/lost S3 initialization.
+      // Reloaded clients have the receipt, so recover that same upload here.
+      if (!row.multipartId) {
+        const multipartId = await this.storage.beginMultipart(
+          row.objectKey,
+          row.contentType,
+        );
+        row = await tx.mediaUpload.update({
+          where: { id },
+          data: { multipartId },
+          include,
+        });
+      }
       const result = await this.storage.partUrl(
         row.objectKey,
-        row.multipartId,
+        row.multipartId!,
         number,
         partSize(row.expectedSizeBytes, number),
         manifest(row).hashes[number - 1],
