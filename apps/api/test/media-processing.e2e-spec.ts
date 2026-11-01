@@ -128,12 +128,16 @@ describe('Real media processing, correlation and recovery', () => {
         where: { id: { in: ids } },
         include: { variants: true },
       });
-      await store.deleteObjects(
-        assets.flatMap((a) => [
-          ...(a.originalObjectKey ? [a.originalObjectKey] : []),
-          ...a.variants.map((v) => v.objectKey),
-        ]),
-      );
+      for (const asset of assets) {
+        await store.deleteObjects(
+          await store.listOwnedObjects(asset.workspaceId, asset.id),
+        );
+        for (const job of await db.mediaProcessingJob.findMany({
+          where: { mediaId: asset.id },
+        })) {
+          await (await queue.getJob(job.bullJobId!))?.remove();
+        }
+      }
       await db.domainEvent.deleteMany({
         where: {
           OR: [{ aggregateId: { in: ids } }, { id: { in: extraEvents } }],
@@ -420,5 +424,120 @@ describe('Real media processing, correlation and recovery', () => {
     await expect(
       run(process.execPath, [...command, '--apply']),
     ).rejects.toThrow();
+  });
+  it('retries a real transcode after transaction failure without publishing duplicate variants', async () => {
+    const lifecycle = worker.get(DomainEventsService),
+      original = lifecycle.record.bind(lifecycle);
+    let injected = false;
+    const failure = jest
+      .spyOn(lifecycle, 'record')
+      .mockImplementation(async (input, tx) => {
+        if (!injected && input.type === 'media.processing.completed') {
+          injected = true;
+          throw new Error(
+            'Controlled failure after real object upload before transaction commit',
+          );
+        }
+        return original(input, tx);
+      });
+    try {
+      const intent = await upload(fixture);
+      await until(
+        async () =>
+          (
+            await db.mediaAsset.findUniqueOrThrow({
+              where: { id: intent.assetId },
+            })
+          ).status === 'READY',
+      );
+      const job = await db.mediaProcessingJob.findFirstOrThrow({
+        where: { mediaId: intent.assetId },
+        include: { attempts: { orderBy: { attemptNumber: 'asc' } } },
+      });
+      expect(injected).toBe(true);
+      expect(job.attempts.map((a) => a.status)).toEqual([
+        'FAILED',
+        'SUCCEEDED',
+      ]);
+      expect(
+        await db.mediaVariant.count({ where: { mediaId: intent.assetId } }),
+      ).toBe(2);
+      expect(
+        await db.domainEvent.count({
+          where: {
+            aggregateId: intent.assetId,
+            type: 'media.processing.completed',
+          },
+        }),
+      ).toBe(1);
+    } finally {
+      failure.mockRestore();
+    }
+  });
+
+  it('preserves real audio processing and private MP3 preview', async () => {
+    const path = join(directory, 'source.wav');
+    await run(ffmpeg!, [
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-f',
+      'lavfi',
+      '-i',
+      'sine=frequency=440:sample_rate=44100',
+      '-t',
+      '2',
+      path,
+    ]);
+    const bytes = await readFile(path);
+    const result = await manager
+      .post('/api/v1/media-assets/uploads')
+      .send({
+        name: `Audio ${randomUUID()}`,
+        kind: 'AUDIO',
+        contentType: 'audio/wav',
+        sizeBytes: bytes.length,
+      })
+      .expect(201);
+    const intent = result.body as {
+      assetId: string;
+      uploadId: string;
+      uploadUrl: string;
+      requiredHeaders: Record<string, string>;
+    };
+    ids.push(intent.assetId);
+    expect(
+      (
+        await fetch(intent.uploadUrl, {
+          method: 'PUT',
+          headers: intent.requiredHeaders,
+          body: new Uint8Array(bytes),
+        })
+      ).status,
+    ).toBe(200);
+    await manager
+      .post(`/api/v1/media-assets/uploads/${intent.uploadId}/complete`)
+      .expect(201);
+    await until(
+      async () =>
+        (
+          await db.mediaAsset.findUniqueOrThrow({
+            where: { id: intent.assetId },
+          })
+        ).status === 'READY',
+    );
+    const variants = await db.mediaVariant.findMany({
+      where: { mediaId: intent.assetId },
+    });
+    expect(variants).toHaveLength(1);
+    expect(variants[0].contentType).toBe('audio/mpeg');
+    const preview = (
+      await manager
+        .post(`/api/v1/media-assets/${intent.assetId}/playback-url`)
+        .expect(201)
+    ).body as { url: string };
+    const response = await fetch(preview.url);
+    expect(response.status).toBe(200);
+    expect((await response.arrayBuffer()).byteLength).toBeGreaterThan(1000);
   });
 });

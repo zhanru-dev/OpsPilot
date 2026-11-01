@@ -27,7 +27,8 @@
     "recharts": "^3.2.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.3.1",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "@opspilot/media-contracts": "^1.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

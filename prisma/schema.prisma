@@ -78,6 +78,8 @@ enum MediaStatus {
 }
 
 enum MediaUploadStatus {
+  FINALIZING
+  FAILED
   PENDING
   UPLOADED
   EXPIRED
@@ -173,6 +175,7 @@ enum ErrorReportStatus {
 }
 
 model User {
+  mediaUploads                MediaUpload[]         @relation("MediaUploadOwner")
   id                          String                @id @default(uuid())
   email                       String                @unique
   passwordHash                String
@@ -565,6 +568,10 @@ model ContentBlock {
 }
 
 model MediaAsset {
+  sourceSha256       String?
+  cleanupPending     Boolean              @default(false)
+  cleanupAfter       DateTime?
+  cleanupAttemptedAt DateTime?
   id                 String               @id @default(uuid())
   workspaceId        String
   name               String
@@ -596,43 +603,57 @@ model MediaAsset {
 }
 
 model MediaUpload {
-  id                String            @id @default(uuid())
-  mediaId           String
-  workspaceId       String
-  objectKey         String            @unique
-  contentType       String
-  expectedSizeBytes Int
-  status            MediaUploadStatus @default(PENDING)
-  expiresAt         DateTime
-  completedAt       DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  media             MediaAsset        @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  workspace         Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ownerUserId          String?
+  owner                User?               @relation("MediaUploadOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  clientOperationId    String?
+  manifest             Json?
+  multipartId          String?
+  finalizingAt         DateTime?
+  lastGrantExpiresAt   DateTime?
+  failureReason        String?
+  parts                MediaUploadPart[]
+  initialProcessingJob MediaProcessingJob?
+  id                   String              @id @default(uuid())
+  mediaId              String
+  workspaceId          String
+  objectKey            String              @unique
+  contentType          String
+  expectedSizeBytes    Int
+  status               MediaUploadStatus   @default(PENDING)
+  expiresAt            DateTime
+  completedAt          DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  media                MediaAsset          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  workspace            Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@unique([workspaceId, ownerUserId, clientOperationId])
   @@index([workspaceId, status, expiresAt])
   @@index([mediaId, createdAt])
 }
 
 model MediaProcessingJob {
-  id             String                   @id @default(uuid())
-  mediaId        String
-  status         MediaProcessingJobStatus @default(QUEUED)
-  profileVersion String                   @default("1.0")
-  bullJobId      String?                  @unique
-  traceId        String                   @default(uuid())
-  attemptCount   Int                      @default(0)
-  maxAttempts    Int                      @default(3)
-  progress       Int                      @default(0)
-  failureCode    String?
-  failureReason  String?
-  queuedAt       DateTime                 @default(now())
-  startedAt      DateTime?
-  finishedAt     DateTime?
-  createdAt      DateTime                 @default(now())
-  updatedAt      DateTime                 @updatedAt
-  media          MediaAsset               @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  attempts       MediaProcessingAttempt[]
+  uploadId         String?                  @unique
+  upload           MediaUpload?             @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+  executionVersion Int                      @default(0)
+  id               String                   @id @default(uuid())
+  mediaId          String
+  status           MediaProcessingJobStatus @default(QUEUED)
+  profileVersion   String                   @default("1.0")
+  bullJobId        String?                  @unique
+  traceId          String                   @default(uuid())
+  attemptCount     Int                      @default(0)
+  maxAttempts      Int                      @default(3)
+  progress         Int                      @default(0)
+  failureCode      String?
+  failureReason    String?
+  queuedAt         DateTime                 @default(now())
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  media            MediaAsset               @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  attempts         MediaProcessingAttempt[]
 
   @@index([mediaId, createdAt])
   @@index([status, queuedAt])
@@ -1064,4 +1085,15 @@ model BroadcastPublisher {
   grant     BroadcastGrant @relation(fields: [grantHash], references: [hash], onDelete: Cascade)
 
   @@index([grantHash])
+}
+
+model MediaUploadPart {
+  uploadId  String
+  number    Int
+  sizeBytes Int
+  sha256    String
+  etag      String
+  upload    MediaUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@id([uploadId, number])
 }

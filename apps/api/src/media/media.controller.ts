@@ -7,22 +7,19 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { MediaKind, MediaStatus, WorkspaceRole } from '@prisma/client';
+import { MediaKind, MediaStatus, MediaVariantKind } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Roles } from '../common/decorators/roles.decorator';
+import { MediaAccessGuard } from './media-access.guard';
+import { mediaWriters } from './media-authority';
 import type { AuthenticatedUser } from '../common/request-context';
 import { CreateMediaUploadDto } from './dto/create-media-upload.dto';
 import { MediaService } from './media.service';
 
-const mediaMutators = [
-  WorkspaceRole.ADMIN,
-  WorkspaceRole.OPERATIONS_MANAGER,
-  WorkspaceRole.CONTENT_OPERATOR,
-] as const;
-
 @Controller('media-assets')
+@UseGuards(MediaAccessGuard)
 export class MediaController {
   constructor(private readonly media: MediaService) {}
 
@@ -36,6 +33,24 @@ export class MediaController {
     return this.media.list(user, { status, kind, search });
   }
 
+  @Get('context')
+  context(@CurrentUser() user: AuthenticatedUser) {
+    return {
+      userId: user.id,
+      workspaceId: user.workspaceId,
+      role: user.role,
+      canUpload: mediaWriters.includes(user.role),
+    };
+  }
+
+  @Delete(':id')
+  deleteAsset(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.media.deleteAsset(id, user);
+  }
+
   @Get(':id')
   get(
     @Param('id', ParseUUIDPipe) id: string,
@@ -45,7 +60,6 @@ export class MediaController {
   }
 
   @Post('uploads')
-  @Roles(...mediaMutators)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   createUploadIntent(
     @Body() dto: CreateMediaUploadDto,
@@ -55,7 +69,6 @@ export class MediaController {
   }
 
   @Post('uploads/:uploadId/complete')
-  @Roles(...mediaMutators)
   completeUpload(
     @Param('uploadId', ParseUUIDPipe) uploadId: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -71,8 +84,15 @@ export class MediaController {
     return this.media.createPlaybackUrl(id, user);
   }
 
+  @Post(':id/thumbnail-url')
+  thumbnail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.media.createPlaybackUrl(id, user, MediaVariantKind.THUMBNAIL);
+  }
+
   @Post(':id/retry-processing')
-  @Roles(...mediaMutators)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   retryProcessing(
     @Param('id', ParseUUIDPipe) id: string,
@@ -82,7 +102,6 @@ export class MediaController {
   }
 
   @Post(':id/simulate-successful-retry')
-  @Roles(...mediaMutators)
   retry(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -91,7 +110,6 @@ export class MediaController {
   }
 
   @Post(':mediaId/attach-to/:eventId')
-  @Roles(...mediaMutators)
   attach(
     @Param('mediaId', ParseUUIDPipe) mediaId: string,
     @Param('eventId', ParseUUIDPipe) eventId: string,
@@ -101,7 +119,6 @@ export class MediaController {
   }
 
   @Delete(':mediaId/detach-from/:eventId')
-  @Roles(...mediaMutators)
   detach(
     @Param('mediaId', ParseUUIDPipe) mediaId: string,
     @Param('eventId', ParseUUIDPipe) eventId: string,

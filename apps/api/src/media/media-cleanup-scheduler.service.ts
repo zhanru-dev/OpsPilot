@@ -16,7 +16,7 @@ export class MediaCleanupSchedulerService implements OnModuleInit {
   async onModuleInit() {
     await this.maintenanceQueue.upsertJobScheduler(
       'demo-media-cleanup-hourly',
-      { every: 60 * 60 * 1_000 },
+      { every: 30_000 },
       {
         name: MEDIA_CLEANUP_JOB,
         data: {},

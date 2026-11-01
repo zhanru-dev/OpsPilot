@@ -2,6 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  Prisma,
   MediaKind,
   MediaProcessingAttemptStatus,
   MediaProcessingJobStatus,
@@ -81,43 +82,79 @@ export class MediaProcessingProcessor extends WorkerHost {
       );
     }
 
+    const claim = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "MediaAsset" WHERE id=${record.mediaId} FOR UPDATE`;
+      const asset = await tx.mediaAsset.findUniqueOrThrow({
+        where: { id: record.mediaId },
+      });
+      const latest = await tx.mediaProcessingJob.findFirst({
+        where: { mediaId: record.mediaId },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      });
+      if (
+        asset.status === 'DELETED' ||
+        asset.cleanupPending ||
+        latest?.id !== record.id ||
+        latest.status === 'SUCCEEDED'
+      )
+        return null;
+      return tx.mediaProcessingJob.update({
+        where: { id: record.id },
+        data: { executionVersion: { increment: 1 } },
+      });
+    });
+    if (!claim) return { mediaId: record.mediaId, stale: true };
+    record.executionVersion = claim.executionVersion;
     const attemptNumber = job.attemptsMade + 1;
-    const attempt = await this.prisma.mediaProcessingAttempt.upsert({
-      where: {
-        processingJobId_attemptNumber: {
+    const attempt = await this.prisma.$transaction(async (tx) => {
+      try {
+        await this.assertCurrent(
+          tx,
+          record.mediaId,
+          record.id,
+          record.executionVersion,
+        );
+      } catch (error) {
+        if (error instanceof StaleMediaRun) return null;
+        throw error;
+      }
+      const attempt = await tx.mediaProcessingAttempt.upsert({
+        where: {
+          processingJobId_attemptNumber: {
+            processingJobId: record.id,
+            attemptNumber,
+          },
+        },
+        update: {
+          status: MediaProcessingAttemptStatus.PROCESSING,
+          failureCode: null,
+          failureReason: null,
+          startedAt: new Date(),
+          finishedAt: null,
+        },
+        create: {
           processingJobId: record.id,
           attemptNumber,
         },
-      },
-      update: {
-        status: MediaProcessingAttemptStatus.PROCESSING,
-        failureCode: null,
-        failureReason: null,
-        startedAt: new Date(),
-        finishedAt: null,
-      },
-      create: {
-        processingJobId: record.id,
-        attemptNumber,
-      },
-    });
-    await this.prisma.$transaction([
-      this.prisma.mediaProcessingJob.update({
+      });
+      await tx.mediaProcessingJob.update({
         where: { id: record.id },
         data: {
-          status: MediaProcessingJobStatus.PROCESSING,
+          status: 'PROCESSING',
           attemptCount: attemptNumber,
           progress: 5,
           startedAt: record.startedAt ?? new Date(),
           failureCode: null,
           failureReason: null,
         },
-      }),
-      this.prisma.mediaAsset.update({
+      });
+      await tx.mediaAsset.update({
         where: { id: record.mediaId },
-        data: { status: MediaStatus.PROCESSING, processingProgress: 5 },
-      }),
-    ]);
+        data: { status: 'PROCESSING', processingProgress: 5 },
+      });
+      return attempt;
+    });
+    if (!attempt) return { mediaId: record.mediaId, stale: true };
 
     const directory = await mkdtemp(join(tmpdir(), 'opspilot-media-'));
     const source = join(
@@ -127,14 +164,26 @@ export class MediaProcessingProcessor extends WorkerHost {
 
     try {
       await this.storage.downloadToFile(record.media.originalObjectKey, source);
-      await this.updateProgress(job, record.id, record.mediaId, 20);
+      await this.updateProgress(
+        job,
+        record.id,
+        record.mediaId,
+        20,
+        record.executionVersion,
+      );
       const metadata = await this.probe(source);
       assertProbedMedia(
         metadata,
         record.media.kind,
         Number(this.config.get('MEDIA_MAX_DURATION_SECONDS') ?? 300),
       );
-      await this.updateProgress(job, record.id, record.mediaId, 35);
+      await this.updateProgress(
+        job,
+        record.id,
+        record.mediaId,
+        35,
+        record.executionVersion,
+      );
 
       const outputs = await this.transcode(
         source,
@@ -142,21 +191,53 @@ export class MediaProcessingProcessor extends WorkerHost {
         record.media.kind,
         job.data.workspaceId,
         record.mediaId,
+        `${record.id}/${record.executionVersion}`,
       );
-      await this.updateProgress(job, record.id, record.mediaId, 75);
+      await this.updateProgress(
+        job,
+        record.id,
+        record.mediaId,
+        75,
+        record.executionVersion,
+      );
 
       const uploaded = [] as Array<VariantOutput & { sizeBytes: number }>;
       for (const output of outputs) {
-        const sizeBytes = await this.storage.uploadFile(
-          output.objectKey,
-          output.path,
-          output.contentType,
+        // Hold the asset fence across the external write. Cleanup/deletion or a
+        // replacement generation cannot finish before this write has settled.
+        const sizeBytes = await this.prisma.$transaction(
+          async (tx) => {
+            await this.assertCurrent(
+              tx,
+              record.mediaId,
+              record.id,
+              record.executionVersion,
+            );
+            return this.storage.uploadFile(
+              output.objectKey,
+              output.path,
+              output.contentType,
+            );
+          },
+          { timeout: 60000 },
         );
         uploaded.push({ ...output, sizeBytes });
       }
-      await this.updateProgress(job, record.id, record.mediaId, 90);
+      await this.updateProgress(
+        job,
+        record.id,
+        record.mediaId,
+        90,
+        record.executionVersion,
+      );
 
       await this.prisma.$transaction(async (transaction) => {
+        await this.assertCurrent(
+          transaction,
+          record.mediaId,
+          record.id,
+          record.executionVersion,
+        );
         for (const output of uploaded) {
           await transaction.mediaVariant.upsert({
             where: {
@@ -270,6 +351,8 @@ export class MediaProcessingProcessor extends WorkerHost {
       );
       return { mediaId: record.mediaId, processingJobId: record.id };
     } catch (error) {
+      if (error instanceof StaleMediaRun)
+        return { mediaId: record.mediaId, stale: true };
       await this.recordFailure(job, record, attempt.id, attemptNumber, error);
       throw error;
     } finally {
@@ -314,10 +397,11 @@ export class MediaProcessingProcessor extends WorkerHost {
     kind: MediaKind,
     workspaceId: string,
     mediaId: string,
+    runId: string,
   ): Promise<VariantOutput[]> {
     if (!ffmpegPath)
       throw new Error('FFMPEG_UNAVAILABLE: FFmpeg is not installed.');
-    const root = `workspaces/${workspaceId}/media/${mediaId}/variants/v1`;
+    const root = `workspaces/${workspaceId}/media/${mediaId}/variants/v1/${runId}`;
     if (kind === MediaKind.AUDIO) {
       const preview = join(directory, 'preview.mp3');
       await runCommand(ffmpegPath, [
@@ -396,23 +480,48 @@ export class MediaProcessingProcessor extends WorkerHost {
     ];
   }
 
+  private async assertCurrent(
+    tx: Prisma.TransactionClient,
+    mediaId: string,
+    jobId: string,
+    version: number,
+  ) {
+    await tx.$queryRaw`SELECT id FROM "MediaAsset" WHERE id=${mediaId} FOR UPDATE`;
+    const asset = await tx.mediaAsset.findUnique({ where: { id: mediaId } });
+    const latest = await tx.mediaProcessingJob.findFirst({
+      where: { mediaId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+    if (
+      !asset ||
+      asset.status === 'DELETED' ||
+      asset.cleanupPending ||
+      latest?.id !== jobId ||
+      latest.executionVersion !== version ||
+      latest.status === 'SUCCEEDED'
+    )
+      throw new StaleMediaRun();
+  }
+
   private async updateProgress(
     job: Job<MediaProcessingJobData>,
     processingJobId: string,
     mediaId: string,
     progress: number,
+    version: number,
   ) {
     await job.updateProgress(progress);
-    await this.prisma.$transaction([
-      this.prisma.mediaProcessingJob.update({
+    await this.prisma.$transaction(async (tx) => {
+      await this.assertCurrent(tx, mediaId, processingJobId, version);
+      await tx.mediaProcessingJob.update({
         where: { id: processingJobId },
         data: { progress },
-      }),
-      this.prisma.mediaAsset.update({
+      });
+      await tx.mediaAsset.update({
         where: { id: mediaId },
         data: { processingProgress: progress },
-      }),
-    ]);
+      });
+    });
   }
 
   private async recordFailure(
@@ -421,6 +530,7 @@ export class MediaProcessingProcessor extends WorkerHost {
       id: string;
       mediaId: string;
       maxAttempts: number;
+      executionVersion: number;
       media: { name: string };
     },
     attemptId: string,
@@ -435,6 +545,17 @@ export class MediaProcessingProcessor extends WorkerHost {
     const safeMessage = message.slice(0, 1_000);
 
     await this.prisma.$transaction(async (transaction) => {
+      try {
+        await this.assertCurrent(
+          transaction,
+          record.mediaId,
+          record.id,
+          record.executionVersion,
+        );
+      } catch (error) {
+        if (error instanceof StaleMediaRun) return;
+        throw error;
+      }
       await transaction.mediaProcessingAttempt.update({
         where: { id: attemptId },
         data: {
@@ -524,3 +645,5 @@ export class MediaProcessingProcessor extends WorkerHost {
     );
   }
 }
+
+class StaleMediaRun extends Error {}
