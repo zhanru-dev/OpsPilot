@@ -1,0 +1,71 @@
+[
+  {
+    "id": "direct-principal-operation-matrix",
+    "status": "PASS",
+    "matrix": [
+      {
+        "principal": "owner",
+        "status": 200,
+        "grant": 201,
+        "list": 200
+      },
+      {
+        "principal": "other-writer",
+        "status": 403,
+        "grant": 403,
+        "list": 200
+      },
+      {
+        "principal": "admin",
+        "status": 403,
+        "grant": 403,
+        "list": 200
+      },
+      {
+        "principal": "viewer",
+        "status": 403,
+        "grant": 403,
+        "list": 200
+      },
+      {
+        "principal": "foreign",
+        "status": 404,
+        "grant": 404,
+        "list": 200
+      },
+      {
+        "principal": "anonymous",
+        "status": 401,
+        "grant": 401,
+        "list": 401
+      },
+      {
+        "principal": "verified-attendee",
+        "protectedCodes": [
+          401,
+          401,
+          401,
+          401,
+          401
+        ]
+      }
+    ],
+    "spoofedFields": 400
+  },
+  {
+    "id": "revocation-expiry-and-manager-cancellation",
+    "status": "PASS",
+    "downgrade": 403,
+    "revokedSession": 401,
+    "expiredSession": 401,
+    "managerCancel": 201
+  },
+  {
+    "id": "workspace-quota-64-concurrent-verified-actors",
+    "status": "PASS",
+    "requests": 65,
+    "accepted": 64,
+    "conflicts": 1,
+    "releasedSlotReusable": true
+  }
+]

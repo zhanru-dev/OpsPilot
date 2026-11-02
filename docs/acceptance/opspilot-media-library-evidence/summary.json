@@ -1,0 +1,75 @@
+{
+  "reviewedCommit": "144a9aea08eacb2a64a2f95c9429b7c9facb20c7",
+  "branch": "feat/streamops-chat-integration",
+  "date": "2026-11-02",
+  "unit": {
+    "suites": 16,
+    "passed": 106
+  },
+  "state": {
+    "passed": 19
+  },
+  "api": {
+    "nonBroadcastPassed": 83,
+    "broadcastInitiallySkipped": 8,
+    "broadcastSeparatelyPassed": 8,
+    "distinctPassed": 91
+  },
+  "browser": {
+    "firstFull": {
+      "passed": 25,
+      "failed": 3,
+      "cause": "Audit copy storage-port interceptor still used 9002 instead of isolated 9006"
+    },
+    "multipartTargeted": {
+      "passed": 3
+    },
+    "chatRecovery": {
+      "passed": 12
+    },
+    "broadcast": {
+      "passed": 4
+    },
+    "independentIdentitySwitch": {
+      "passed": 1,
+      "initialProbeFailure": "Probe also intercepted the new workspace search and incorrectly expected old private data; scoped interception to first old response, retained the isolation assertions."
+    },
+    "independentChunkRetry": {
+      "passed": 1
+    },
+    "realDistinctPassedAcrossRuns": 46,
+    "isolatedMockUI": {
+      "passed": 12
+    }
+  },
+  "sourceComparison": {
+    "files": 273,
+    "changed": []
+  },
+  "versions": {
+    "@opspilot/api": "2.0.0",
+    "@opspilot/web": "2.0.0",
+    "@prisma/client": "6.19.3",
+    "@nestjs/core": "11.2.8",
+    "react": "19.2.4",
+    "@playwright/test": "1.62.1"
+  },
+  "dependencies": {
+    "audit-prod-official": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "audit-all-official": {
+      "info": 0,
+      "low": 4,
+      "moderate": 36,
+      "high": 0,
+      "critical": 0,
+      "total": 40
+    }
+  }
+}

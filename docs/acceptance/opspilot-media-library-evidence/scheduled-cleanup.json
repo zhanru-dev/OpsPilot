@@ -1,0 +1,19 @@
+{
+  "scenario": "Real 60s grant + cancellation + scheduled cleanup failure and recovery",
+  "grantTTLSeconds": 60,
+  "initial": {
+    "status": "DELETED",
+    "cleanupPending": true,
+    "cleanupAfter": "2026-11-02T11:32:24.552Z"
+  },
+  "firstDeleteFailureAfterSeconds": 65.054,
+  "status": "PASS",
+  "elapsedSeconds": 95.515,
+  "final": {
+    "status": "DELETED",
+    "cleanupPending": false,
+    "originalObjectKey": null
+  },
+  "processingJobs": 0,
+  "multipartSessions": 0
+}

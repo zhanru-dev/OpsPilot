@@ -1,0 +1,17 @@
+[
+  {
+    "scenario": "real chunk interruption and retry",
+    "partsAttempted": [
+      1,
+      2,
+      2,
+      3
+    ],
+    "confirmedBeforeRetry": [
+      1
+    ],
+    "sameAsset": true,
+    "initialProcessingJobs": 1,
+    "sourceHashMatch": true
+  }
+]

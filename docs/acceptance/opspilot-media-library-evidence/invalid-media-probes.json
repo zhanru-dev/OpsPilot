@@ -1,0 +1,22 @@
+[
+  {
+    "scenario": "over-duration",
+    "status": "PASS",
+    "bytes": 9994,
+    "fixtureSeconds": 301,
+    "fixtureCodec": "libx264",
+    "result": "FAILED",
+    "failureReason": "MEDIA_DURATION_EXCEEDED: Media must be 300 seconds or shorter.",
+    "attempts": 3
+  },
+  {
+    "scenario": "unsupported-codec",
+    "status": "PASS",
+    "bytes": 1370,
+    "fixtureSeconds": 2,
+    "fixtureCodec": "mjpeg",
+    "result": "FAILED",
+    "failureReason": "MEDIA_VIDEO_CODEC_UNSUPPORTED: Unsupported video codec mjpeg.",
+    "attempts": 3
+  }
+]
