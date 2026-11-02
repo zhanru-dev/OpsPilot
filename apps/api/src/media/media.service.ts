@@ -2,6 +2,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -100,8 +101,9 @@ export class MediaService {
   }
 
   async createUploadIntent(dto: CreateMediaUploadDto, user: AuthenticatedUser) {
-    const maxBytes = Number(
-      this.config.get('MEDIA_UPLOAD_MAX_BYTES') ?? 100 * 1024 * 1024,
+    const maxBytes = Math.min(
+      104857600,
+      Number(this.config.get('MEDIA_UPLOAD_MAX_BYTES') ?? 104857600),
     );
     if (dto.sizeBytes > maxBytes) {
       throw new BadRequestException(
@@ -112,7 +114,7 @@ export class MediaService {
     const profile = requireUploadProfile(dto.contentType, dto.kind);
     const mediaId = randomUUID();
     const uploadId = randomUUID();
-    const objectKey = `workspaces/${user.workspaceId}/media/${mediaId}/original.${profile.extension}`;
+    const objectKey = `workspaces/${user.workspaceId}/media/${mediaId}/uploads/${uploadId}/source.${profile.extension}`;
     const ttlSeconds = Number(
       this.config.get('MEDIA_UPLOAD_URL_TTL_SECONDS') ?? 600,
     );
@@ -142,6 +144,7 @@ export class MediaService {
       await transaction.mediaUpload.create({
         data: {
           id: uploadId,
+          ownerUserId: user.id,
           mediaId,
           workspaceId: user.workspaceId,
           objectKey,
@@ -188,96 +191,173 @@ export class MediaService {
       throw new BadRequestException(
         'Use the multipart completion endpoint for this upload.',
       );
-    if (upload.status !== MediaUploadStatus.PENDING) {
-      throw new ConflictException('This upload has already been completed.');
-    }
-    if (upload.expiresAt <= new Date()) {
-      await this.prisma.mediaUpload.update({
-        where: { id: upload.id },
-        data: { status: MediaUploadStatus.EXPIRED },
-      });
-      throw new BadRequestException('The upload intent has expired.');
-    }
-
-    let object: Awaited<ReturnType<StorageService['headObject']>>;
-    try {
-      object = await this.storage.headObject(upload.objectKey);
-    } catch {
-      throw new BadRequestException(
-        'The media object has not been uploaded to storage yet.',
-      );
-    }
-    if (object.contentLength !== upload.expectedSizeBytes) {
-      throw new BadRequestException(
-        'The uploaded object size does not match the signed upload intent.',
-      );
-    }
-    if (object.contentType?.toLowerCase() !== upload.contentType) {
-      throw new BadRequestException(
-        'The uploaded object MIME type does not match the signed upload intent.',
-      );
-    }
-
+    // Persist the intent separately from storage. A copy that survives a failed
+    // DB commit is reused on retry; it must never be replaced from mutable staging.
+    const assertOpen = (row: typeof upload | Omit<typeof upload, 'media'>) => {
+      if (row.ownerUserId && row.ownerUserId !== user.id)
+        throw new ForbiddenException('Only the upload owner can complete it.');
+      if (!['PENDING', 'FINALIZING'].includes(row.status))
+        throw new ConflictException('This upload has already been completed.');
+      if (row.expiresAt <= new Date())
+        throw new BadRequestException('The upload intent has expired.');
+    };
+    const profile = requireUploadProfile(upload.contentType, upload.media.kind);
+    const snapshotKey = `workspaces/${user.workspaceId}/media/${upload.mediaId}/originals/${upload.id}/source.${profile.extension}`;
+    const validateObject = (
+      object: Awaited<ReturnType<StorageService['headObject']>>,
+    ) => {
+      if (object.contentLength !== upload.expectedSizeBytes)
+        throw new BadRequestException(
+          'The uploaded object size does not match the signed upload intent.',
+        );
+      if (object.contentType?.toLowerCase() !== upload.contentType)
+        throw new BadRequestException(
+          'The uploaded object MIME type does not match the signed upload intent.',
+        );
+    };
+    await this.prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "MediaAsset" WHERE id=${upload.mediaId} FOR UPDATE`;
+        await mediaAuthority(tx, user, true);
+        const current = await tx.mediaUpload.findUniqueOrThrow({
+          where: { id: upload.id },
+        });
+        assertOpen(current);
+        if (!current.snapshotSourceEtag) {
+          let source: Awaited<ReturnType<StorageService['headObject']>>;
+          try {
+            source = await this.storage.headObject(upload.objectKey);
+          } catch (error) {
+            if (
+              (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+                ?.httpStatusCode !== 404
+            )
+              throw error;
+            throw new BadRequestException(
+              'The media object has not been uploaded to storage yet.',
+            );
+          }
+          validateObject(source);
+          if (!source.etag)
+            throw new ConflictException(
+              'Storage did not return a source version.',
+            );
+          // Every retry, including an uncertain/late CopyObject response, is bound
+          // to this same source version. Never choose a different staging ETag.
+          await tx.mediaUpload.update({
+            where: { id: upload.id },
+            data: {
+              status: 'FINALIZING',
+              finalizingAt: new Date(),
+              snapshotSourceEtag: source.etag,
+            },
+          });
+        }
+      },
+      { timeout: 60000 },
+    );
     const processingJobId = randomUUID();
     const bullJobId = `media-${processingJobId}`;
     const traceId = this.trace.current() ?? randomUUID();
-    await this.prisma.$transaction(async (transaction) => {
-      await mediaAuthority(transaction, user, true);
-      await transaction.$queryRaw`SELECT id FROM "MediaAsset" WHERE id=${upload.mediaId} FOR UPDATE`;
-      const currentUpload = await transaction.mediaUpload.findUniqueOrThrow({
-        where: { id: upload.id },
-      });
-      if (currentUpload.status !== 'PENDING')
-        throw new ConflictException('This upload has already been completed.');
-      await transaction.mediaUpload.update({
-        where: { id: upload.id },
-        data: {
-          status: MediaUploadStatus.UPLOADED,
-          completedAt: new Date(),
-        },
-      });
-      await transaction.mediaAsset.update({
-        where: { id: upload.mediaId },
-        data: {
-          status: MediaStatus.PROCESSING,
-          processingProgress: 0,
-          uploadedAt: new Date(),
-          failureReason: null,
-        },
-      });
-      await transaction.mediaProcessingJob.create({
-        data: {
-          id: processingJobId,
-          mediaId: upload.mediaId,
-          bullJobId,
-          traceId,
-        },
-      });
-      await this.audit.record(
-        {
-          workspaceId: user.workspaceId,
-          actorId: user.id,
-          action: 'media.processing_queued',
-          entityType: 'MediaAsset',
-          entityId: upload.mediaId,
-          summary: `Queued ${upload.media.name} for media processing.`,
-          changes: { processingJobId, uploadId: upload.id },
-        },
-        transaction,
-      );
-      await this.domainEvents.record(
-        {
-          workspaceId: user.workspaceId,
-          type: 'media.processing.queued',
-          idempotencyKey: `media:${processingJobId}:queued`,
-          aggregateType: 'MediaAsset',
-          aggregateId: upload.mediaId,
-          payload: { mediaId: upload.mediaId, processingJobId },
-          traceId,
-        },
-        transaction,
-      );
-    });
+    await this.prisma.$transaction(
+      async (transaction) => {
+        await transaction.$queryRaw`SELECT id FROM "MediaAsset" WHERE id=${upload.mediaId} FOR UPDATE`;
+        await mediaAuthority(transaction, user, true);
+        const currentUpload = await transaction.mediaUpload.findUniqueOrThrow({
+          where: { id: upload.id },
+        });
+        assertOpen(currentUpload);
+        const currentAsset = await transaction.mediaAsset.findUniqueOrThrow({
+          where: { id: upload.mediaId },
+        });
+        if (currentAsset.status !== 'UPLOADING' || currentAsset.cleanupPending)
+          throw new ConflictException('Media cannot be finalized.');
+        let frozen: Awaited<ReturnType<StorageService['headObject']>>;
+        try {
+          frozen = await this.storage.headObject(snapshotKey);
+        } catch (error) {
+          if (
+            (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+              ?.httpStatusCode !== 404
+          )
+            throw error;
+          try {
+            await this.storage.copyObject(
+              upload.objectKey,
+              snapshotKey,
+              currentUpload.snapshotSourceEtag!,
+            );
+          } catch (error) {
+            if (
+              (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+                ?.httpStatusCode === 412
+            )
+              throw new ConflictException(
+                'The upload changed during completion. Retry completion.',
+              );
+            throw error;
+          }
+          frozen = await this.storage.headObject(snapshotKey);
+        }
+        validateObject(frozen);
+        const sha256 = await this.storage.sha256Object(
+          snapshotKey,
+          upload.expectedSizeBytes,
+        );
+        await transaction.mediaUpload.update({
+          where: { id: upload.id },
+          data: {
+            status: MediaUploadStatus.UPLOADED,
+            completedAt: new Date(),
+          },
+        });
+        await transaction.mediaAsset.update({
+          where: { id: upload.mediaId },
+          data: {
+            status: MediaStatus.PROCESSING,
+            originalObjectKey: snapshotKey,
+            sourceSha256: sha256,
+            processingProgress: 0,
+            uploadedAt: new Date(),
+            failureReason: null,
+          },
+        });
+        await transaction.mediaProcessingJob.create({
+          data: {
+            id: processingJobId,
+            uploadId: upload.id,
+            mediaId: upload.mediaId,
+            bullJobId,
+            traceId,
+          },
+        });
+        await this.audit.record(
+          {
+            workspaceId: user.workspaceId,
+            actorId: user.id,
+            action: 'media.processing_queued',
+            entityType: 'MediaAsset',
+            entityId: upload.mediaId,
+            summary: `Queued ${upload.media.name} for media processing.`,
+            changes: { processingJobId, uploadId: upload.id },
+          },
+          transaction,
+        );
+        await this.domainEvents.record(
+          {
+            workspaceId: user.workspaceId,
+            type: 'media.processing.queued',
+            idempotencyKey: `media:${processingJobId}:queued`,
+            aggregateType: 'MediaAsset',
+            aggregateId: upload.mediaId,
+            payload: { mediaId: upload.mediaId, processingJobId },
+            traceId,
+          },
+          transaction,
+        );
+      },
+      { timeout: 120000 },
+    );
 
     await this.enqueueProcessing({
       processingJobId,

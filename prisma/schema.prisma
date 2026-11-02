@@ -603,6 +603,7 @@ model MediaAsset {
 }
 
 model MediaUpload {
+  snapshotSourceEtag   String?
   ownerUserId          String?
   owner                User?               @relation("MediaUploadOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
   clientOperationId    String?

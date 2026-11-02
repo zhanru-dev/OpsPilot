@@ -32,7 +32,7 @@ async function snapshot(tables) {
   return result;
 }
 try {
-  const migration = "20261031020000_media_multipart";
+  const migration = "20261102000000_media_snapshot_version";
   for (const entry of readdirSync("prisma/migrations")
     .filter((n) => n < migration && /^\d/.test(n))
     .sort())
@@ -50,12 +50,14 @@ try {
   await db.$executeRaw`INSERT INTO "StreamEvent" (id,"workspaceId",title,slug,description,"scheduledStart","scheduledEnd","updatedAt") VALUES (${e},${w},'Preserved event',${e},'Migration fixture',now(),now()+interval '1 hour',now())`;
   await db.$executeRaw`INSERT INTO "EventChatMessage" (id,"eventId","authorKind","authorKey","staffUserId","authorName","clientMessageId","requestHash",text,"createdSequence",version) VALUES (${c},${e},'STAFF',${"staff:" + u},${u},'Preserved user',${randomUUID()},${"0".repeat(64)},'Preserve chat 世界',1,1)`;
   await db.$executeRaw`INSERT INTO "EventTopic" (id,"eventId","authorKind","authorKey","staffUserId","authorName","clientOperationId","requestHash",text,"createdSequence",version,"updatedAt") VALUES (${t},${e},'STAFF',${"staff:" + u},${u},'Preserved user',${randomUUID()},${"1".repeat(64)},'Preserve topic 世界',1,1,now())`;
-  const a=randomUUID(), j=randomUUID(), d=randomUUID();
+  const a = randomUUID(),
+    j = randomUUID(),
+    d = randomUUID();
   await db.$executeRaw`INSERT INTO "MediaAsset" (id,"workspaceId",name,kind,status,"updatedAt") VALUES (${a},${w},'Preserved media','VIDEO','PROCESSING',now())`;
-  await db.$executeRaw`INSERT INTO "MediaProcessingJob" (id,"mediaId","traceId","updatedAt") VALUES (${j},${a},${'legacy-trace'},now())`;
-  await db.$executeRaw`INSERT INTO "DomainEvent" (id,"workspaceId",type,"aggregateType","aggregateId",payload,"traceId") VALUES (${d},${w},'media.processing.queued','MediaAsset',${a},'{}'::jsonb,${'legacy-trace'})`;
-  const upload=randomUUID();
-  await db.$executeRaw`INSERT INTO "MediaUpload" (id,"mediaId","workspaceId","objectKey","contentType","expectedSizeBytes","expiresAt","updatedAt") VALUES (${upload},${a},${w},${'workspaces/'+w+'/media/'+a+'/original.mp4'},'video/mp4',10,now()+interval '1 hour',now())`;
+  await db.$executeRaw`INSERT INTO "MediaProcessingJob" (id,"mediaId","traceId","updatedAt") VALUES (${j},${a},${"legacy-trace"},now())`;
+  await db.$executeRaw`INSERT INTO "DomainEvent" (id,"workspaceId",type,"aggregateType","aggregateId",payload,"traceId") VALUES (${d},${w},'media.processing.queued','MediaAsset',${a},'{}'::jsonb,${"legacy-trace"})`;
+  const upload = randomUUID();
+  await db.$executeRaw`INSERT INTO "MediaUpload" (id,"mediaId","workspaceId","objectKey","contentType","expectedSizeBytes","expiresAt","updatedAt") VALUES (${upload},${a},${w},${"workspaces/" + w + "/media/" + a + "/original.mp4"},'video/mp4',10,now()+interval '1 hour',now())`;
   const tables = await db.$queryRawUnsafe(
     `SELECT table_name::text, array_agg(column_name::text ORDER BY ordinal_position) columns FROM information_schema.columns WHERE table_schema='public' GROUP BY table_name ORDER BY table_name`,
   );
@@ -67,8 +69,17 @@ try {
   const after = await snapshot(tables);
   if (JSON.stringify(before) !== JSON.stringify(after))
     throw new Error("Original table contents changed.");
-  const row = await db.mediaUpload.findUniqueOrThrow({where:{id:upload},include:{media:true}});
-  if(row.manifest!==null || row.ownerUserId!==null || row.media.cleanupPending)throw new Error('Legacy upload compatibility changed.');
+  const row = await db.mediaUpload.findUniqueOrThrow({
+    where: { id: upload },
+    include: { media: true },
+  });
+  if (
+    row.manifest !== null ||
+    row.ownerUserId !== null ||
+    row.snapshotSourceEtag !== null ||
+    row.media.cleanupPending
+  )
+    throw new Error("Legacy upload compatibility changed.");
   console.log(
     JSON.stringify({
       result: "PASS",

@@ -510,9 +510,10 @@ export class MediaProcessingProcessor extends WorkerHost {
     progress: number,
     version: number,
   ) {
-    await job.updateProgress(progress);
     await this.prisma.$transaction(async (tx) => {
       await this.assertCurrent(tx, mediaId, processingJobId, version);
+      // Redis progress is an externally visible write and uses the same fence.
+      await job.updateProgress(progress);
       await tx.mediaProcessingJob.update({
         where: { id: processingJobId },
         data: { progress },

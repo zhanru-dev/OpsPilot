@@ -1,5 +1,6 @@
 import {
   CreateBucketCommand,
+  CopyObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadBucketCommand,
@@ -19,6 +20,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
@@ -91,6 +93,49 @@ export class StorageService implements OnModuleInit {
       contentType: result.ContentType ?? null,
       etag: result.ETag ?? null,
     };
+  }
+
+  // The destination is server-owned and never receives a client write grant.
+  async copyObject(source: string, destination: string, etag: string) {
+    await this.internalClient.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        Key: destination,
+        CopySource: `${encodeURIComponent(this.bucket)}/${source.split('/').map(encodeURIComponent).join('/')}`,
+        CopySourceIfMatch: etag,
+      }),
+    );
+  }
+
+  async sha256Object(objectKey: string, expectedBytes: number) {
+    const result = await this.internalClient.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+      { abortSignal: AbortSignal.timeout(60000) },
+    );
+    if (!(result.Body instanceof Readable))
+      throw new Error('Object storage returned an unsupported response body.');
+    const body = result.Body;
+    const timer = setTimeout(
+      () => body.destroy(new Error('Media verification timed out.')),
+      60000,
+    );
+    let bytes = 0;
+    const hash = createHash('sha256');
+    try {
+      for await (const chunk of body) {
+        const buffer = chunk as Buffer;
+        bytes += buffer.length;
+        if (bytes > expectedBytes || bytes > 104857600)
+          throw new Error('Stored original exceeds its upload size limit.');
+        hash.update(buffer);
+      }
+      if (bytes !== expectedBytes)
+        throw new Error('Stored original size mismatch.');
+      return hash.digest('hex');
+    } finally {
+      clearTimeout(timer);
+      body.destroy();
+    }
   }
 
   async downloadToFile(objectKey: string, destination: string) {

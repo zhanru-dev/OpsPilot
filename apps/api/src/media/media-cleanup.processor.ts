@@ -62,8 +62,14 @@ export class MediaCleanupProcessor extends WorkerHost {
     }
     const pending = await this.db.mediaAsset.findMany({
       where: {
-        cleanupPending: true,
-        OR: [{ cleanupAfter: null }, { cleanupAfter: { lte: new Date() } }],
+        // A PUT admitted before grant expiry can settle after the first sweep.
+        // Retained tombstones remain eligible to collect these late objects.
+        AND: [
+          { OR: [{ cleanupPending: true }, { status: 'DELETED' }] },
+          {
+            OR: [{ cleanupAfter: null }, { cleanupAfter: { lte: new Date() } }],
+          },
+        ],
       },
       take: 100,
       orderBy: [
@@ -87,7 +93,8 @@ export class MediaCleanupProcessor extends WorkerHost {
               include: { uploads: true, variants: true },
             });
             if (
-              !asset?.cleanupPending ||
+              !asset ||
+              (!asset.cleanupPending && asset.status !== 'DELETED') ||
               (asset.cleanupAfter && asset.cleanupAfter > new Date()) ||
               !['DELETED', 'FAILED'].includes(asset.status)
             )
@@ -108,18 +115,25 @@ export class MediaCleanupProcessor extends WorkerHost {
               where: { id: asset.id },
               data: { cleanupPending: false, originalObjectKey: null },
             });
-            await this.audit.record(
-              {
-                workspaceId: asset.workspaceId,
-                action: 'media.cleanup_completed',
-                entityType: 'MediaAsset',
-                entityId: asset.id,
-                summary:
-                  'Removed objects for cancelled, expired or deleted media.',
-              },
-              tx,
-            );
-            cleaned++;
+            if (
+              asset.cleanupPending ||
+              objects.length ||
+              asset.variants.length ||
+              asset.originalObjectKey
+            ) {
+              await this.audit.record(
+                {
+                  workspaceId: asset.workspaceId,
+                  action: 'media.cleanup_completed',
+                  entityType: 'MediaAsset',
+                  entityId: asset.id,
+                  summary:
+                    'Removed objects for cancelled, expired or deleted media.',
+                },
+                tx,
+              );
+              cleaned++;
+            }
           },
           { timeout: 60000 },
         );

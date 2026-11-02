@@ -293,7 +293,19 @@ describe('Real media processing, correlation and recovery', () => {
   });
 
   it('persists terminal failure, safely reconciles legacy stranded state and retries the retained source', async () => {
-    const intent = await upload(Buffer.alloc(fixture.length));
+    // A retry repairs transient processing failure, never changes frozen bytes.
+    const transient = jest
+      .spyOn(worker.get(StorageService), 'downloadToFile')
+      .mockRejectedValueOnce(
+        new Error('Injected transient source read failure'),
+      )
+      .mockRejectedValueOnce(
+        new Error('Injected transient source read failure'),
+      )
+      .mockRejectedValueOnce(
+        new Error('Injected transient source read failure'),
+      );
+    const intent = await upload(fixture);
     await until(
       async () =>
         (
@@ -302,6 +314,7 @@ describe('Real media processing, correlation and recovery', () => {
           })
         ).status === 'FAILED',
     );
+    transient.mockRestore();
     const failed = await db.mediaProcessingJob.findFirstOrThrow({
       where: { mediaId: intent.assetId },
       include: { attempts: true },
@@ -399,10 +412,16 @@ describe('Real media processing, correlation and recovery', () => {
         await fetch(intent.uploadUrl, {
           method: 'PUT',
           headers: intent.requiredHeaders,
-          body: new Uint8Array(fixture),
+          body: new Uint8Array(Buffer.alloc(fixture.length)),
         })
       ).status,
     ).toBe(200);
+    const frozen = await db.mediaAsset.findUniqueOrThrow({
+      where: { id: intent.assetId },
+    });
+    expect(
+      await store.sha256Object(frozen.originalObjectKey!, fixture.length),
+    ).toBe(digest(fixture));
     await manager
       .post(`/api/v1/media-assets/${intent.assetId}/retry-processing`)
       .set('x-request-id', sharedTrace)
@@ -424,6 +443,52 @@ describe('Real media processing, correlation and recovery', () => {
     await expect(
       run(process.execPath, [...command, '--apply']),
     ).rejects.toThrow();
+  });
+  it('keeps corrupted originals failed after replay and requires a new upload for replacement content', async () => {
+    const corrupt = Buffer.alloc(fixture.length);
+    const intent = await upload(corrupt);
+    const isFailed = async () =>
+      (await db.mediaAsset.findUniqueOrThrow({ where: { id: intent.assetId } }))
+        .status === 'FAILED';
+    await until(isFailed);
+    expect(
+      (
+        await fetch(intent.uploadUrl, {
+          method: 'PUT',
+          headers: intent.requiredHeaders,
+          body: new Uint8Array(fixture),
+        })
+      ).status,
+    ).toBe(200);
+    await manager
+      .post(`/api/v1/media-assets/${intent.assetId}/retry-processing`)
+      .expect(201);
+    await until(isFailed);
+    const source = await db.mediaAsset.findUniqueOrThrow({
+      where: { id: intent.assetId },
+    });
+    expect(source.sourceSha256).toBe(digest(corrupt));
+    expect(
+      await store.sha256Object(source.originalObjectKey!, corrupt.length),
+    ).toBe(digest(corrupt));
+    const jobs = await db.mediaProcessingJob.findMany({
+      where: { mediaId: intent.assetId },
+    });
+    expect(jobs).toHaveLength(2);
+    expect(jobs.every((j) => j.status === 'FAILED')).toBe(true);
+    expect(
+      await db.mediaVariant.count({ where: { mediaId: intent.assetId } }),
+    ).toBe(0);
+    const replacement = await upload(fixture);
+    expect(replacement.assetId).not.toBe(intent.assetId);
+    await until(
+      async () =>
+        (
+          await db.mediaAsset.findUniqueOrThrow({
+            where: { id: replacement.assetId },
+          })
+        ).status === 'READY',
+    );
   });
   it('retries a real transcode after transaction failure without publishing duplicate variants', async () => {
     const lifecycle = worker.get(DomainEventsService),
