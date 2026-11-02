@@ -52,6 +52,7 @@ const docker = async (...args) =>
   (await exec("docker", args, { env: containerEnv })).stdout;
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 let cookie, assetId, dir;
+const assetIds = [];
 const store = new S3Client({
   endpoint: process.env.S3_ENDPOINT,
   region: process.env.S3_REGION,
@@ -167,6 +168,7 @@ try {
   assert.equal(init.status, 201);
   const u = await init.json();
   assetId = u.assetId;
+  assetIds.push(assetId);
   const grant = await (
     await call(`/media-assets/multipart/${u.id}/parts/1`, {})
   ).json();
@@ -221,12 +223,75 @@ try {
       .digest("hex"),
     sha,
   );
+  const legacy = await call("/media-assets/uploads", {
+    name: `Frozen legacy ${suffix}`,
+    kind: "VIDEO",
+    contentType: "video/mp4",
+    sizeBytes: bytes.length,
+  });
+  assert.equal(legacy.status, 201);
+  const legacyUpload = await legacy.json();
+  assetIds.push(legacyUpload.assetId);
+  assert.equal(
+    (
+      await fetch(legacyUpload.uploadUrl, {
+        method: "PUT",
+        headers: legacyUpload.requiredHeaders,
+        body: bytes,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await call(`/media-assets/uploads/${legacyUpload.uploadId}/complete`, {}))
+      .status,
+    201,
+  );
+  for (let i = 0; i < 120; i++) {
+    if (
+      (
+        await db.mediaAsset.findUniqueOrThrow({
+          where: { id: legacyUpload.assetId },
+        })
+      ).status === "READY"
+    )
+      break;
+    await delay(500);
+  }
+  const frozen = await db.mediaAsset.findUniqueOrThrow({
+    where: { id: legacyUpload.assetId },
+  });
+  assert.equal(frozen.status, "READY");
+  assert.equal(frozen.sourceSha256, sha);
+  assert.equal(
+    (
+      await fetch(legacyUpload.uploadUrl, {
+        method: "PUT",
+        headers: legacyUpload.requiredHeaders,
+        body: Buffer.alloc(bytes.length),
+      })
+    ).status,
+    200,
+  );
+  const frozenObject = await store.send(
+    new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET,
+      Key: frozen.originalObjectKey,
+    }),
+  );
+  assert.equal(
+    createHash("sha256")
+      .update(await frozenObject.Body.transformToByteArray())
+      .digest("hex"),
+    sha,
+  );
   console.log(
     JSON.stringify({
       apiReady: true,
       workerReady,
       webLogin: 200,
       realMultipart: true,
+      legacyFrozenAfterReplay: true,
       realLinuxFfmpeg: true,
       variants: 2,
       sourceHashMatch: true,
@@ -238,7 +303,7 @@ try {
 } finally {
   for (const name of names.reverse())
     await docker("rm", "-f", name).catch(() => {});
-  if (assetId) {
+  for (const assetId of assetIds) {
     const a = await db.mediaAsset.findUniqueOrThrow({
       where: { id: assetId },
       include: { processingJobs: true },
