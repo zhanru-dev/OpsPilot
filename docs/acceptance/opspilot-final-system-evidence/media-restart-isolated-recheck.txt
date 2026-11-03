@@ -1,0 +1,13 @@
+
+> @opspilot/api@2.0.0 test:e2e
+> jest --config ./test/jest-e2e.json --runInBand media-restart.e2e-spec
+
+PASS test/media-restart.e2e-spec.ts (66.508 s)
+  Media recovery across actual API and worker process death
+    ✓ recovers a stored original after SIGKILL and fences a dead worker before publishing one completed result (64426 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        66.719 s
+Ran all test suites matching /media-restart.e2e-spec/i.

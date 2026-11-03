@@ -1,0 +1,11 @@
+
+> opspilot-platform@2.0.0 lint
+> npm run lint --workspace=@opspilot/api && npm run lint --workspace=@opspilot/web
+
+
+> @opspilot/api@2.0.0 lint
+> eslint "{src,apps,libs,test}/**/*.ts"
+
+
+> @opspilot/web@2.0.0 lint
+> eslint

@@ -1,0 +1,33 @@
+
+> opspilot-platform@2.0.0 test
+> npm run test --workspace=@opspilot/api --runInBand
+
+
+> @opspilot/api@2.0.0 test
+> jest
+
+PASS src/config/request-origin.spec.ts
+PASS src/integrations/webhook-signature.spec.ts
+PASS src/config/environment.spec.ts
+PASS src/recommendations/recommendation-output.spec.ts
+PASS src/media/media-validation.spec.ts
+PASS src/domain-events/domain-events.service.spec.ts
+PASS src/attendee-access/attendee-eligibility.spec.ts
+PASS src/readiness/readiness.service.spec.ts
+PASS src/live-sessions/live-sessions.service.spec.ts
+PASS src/attendee-access/attendee-token.service.spec.ts
+PASS src/attendee-access/attendee-mail.service.spec.ts
+PASS src/event-registrations/event-registrations.service.spec.ts
+PASS src/live-polls/live-polls.service.spec.ts
+PASS src/event-topics/topics.spec.ts
+PASS src/event-chat/chat.spec.ts
+PASS src/broadcast/broadcast.spec.ts
+[Nest] 80173  - 11/03/2026, 1:09:26 AM    WARN [AttendeeMailService] {"event":"attendee_email.delivery_failed","verificationId":"challenge","attempt":1}
+[Nest] 80173  - 11/03/2026, 1:09:26 AM    WARN [AttendeeMailService] {"event":"attendee_email.delivery_failed","verificationId":"challenge","attempt":5}
+[Nest] 80173  - 11/03/2026, 1:09:26 AM    WARN [AttendeeMailService] {"event":"invitation_email.delivery_failed","invitationId":"invite","attempt":1}
+
+Test Suites: 16 passed, 16 total
+Tests:       106 passed, 106 total
+Snapshots:   0 total
+Time:        3.494 s
+Ran all test suites.

@@ -1,0 +1,146 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.72kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 DONE 0.8s
+
+#4 docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/node:22-bookworm-slim
+#5 ...
+
+#6 [auth] library/node:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/node:22-bookworm-slim
+#5 DONE 0.6s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 216B done
+#7 DONE 0.0s
+
+#8 [runtime  1/11] FROM docker.io/library/node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 1.54MB 0.1s done
+#9 DONE 0.1s
+
+#10 [dependencies  3/11] RUN apt-get update   && apt-get install -y --no-install-recommends ca-certificates openssl   && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [dependencies 11/11] RUN npm ci
+#11 CACHED
+
+#12 [builder 1/8] COPY prisma.config.ts ./
+#12 CACHED
+
+#13 [dependencies  7/11] COPY packages/chat-contracts/package.json packages/chat-contracts/package.json
+#13 CACHED
+
+#14 [runtime  2/11] WORKDIR /app
+#14 CACHED
+
+#15 [dependencies  5/11] COPY apps/api/package.json apps/api/package.json
+#15 CACHED
+
+#16 [dependencies  6/11] COPY apps/web/package.json apps/web/package.json
+#16 CACHED
+
+#17 [dependencies  8/11] COPY packages/topics-contracts/package.json packages/topics-contracts/package.json
+#17 CACHED
+
+#18 [dependencies  9/11] COPY packages/broadcast-contracts/package.json packages/broadcast-contracts/package.json
+#18 CACHED
+
+#19 [dependencies 10/11] COPY packages/media-contracts/package.json packages/media-contracts/package.json
+#19 CACHED
+
+#20 [dependencies  4/11] COPY package.json package-lock.json ./
+#20 CACHED
+
+#21 [builder 2/8] COPY prisma ./prisma
+#21 CACHED
+
+#22 [builder 3/8] COPY apps/api ./apps/api
+#22 DONE 0.1s
+
+#23 [builder 4/8] COPY packages/chat-contracts ./packages/chat-contracts
+#23 DONE 0.0s
+
+#24 [builder 5/8] COPY packages/topics-contracts ./packages/topics-contracts
+#24 DONE 0.0s
+
+#25 [builder 6/8] COPY packages/broadcast-contracts ./packages/broadcast-contracts
+#25 DONE 0.1s
+
+#26 [builder 7/8] COPY packages/media-contracts ./packages/media-contracts
+#26 DONE 0.0s
+
+#27 [builder 8/8] RUN npm run db:generate && npm run build --workspace=@opspilot/api
+#27 0.391
+#27 0.391 > opspilot-platform@2.0.0 db:generate
+#27 0.391 > prisma generate
+#27 0.391
+#27 1.538 Loaded Prisma config from prisma.config.ts.
+#27 1.538
+#27 1.867 Prisma config detected, skipping environment variable loading.
+#27 1.868 Prisma schema loaded from prisma/schema.prisma
+#27 2.760
+#27 2.760 ✔ Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 402ms
+#27 2.760
+#27 2.760 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+#27 2.760
+#27 2.760 Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
+#27 2.760
+#27 2.954
+#27 2.954 > @opspilot/api@2.0.0 build
+#27 2.954 > nest build
+#27 2.954
+#27 DONE 14.0s
+
+#28 [runtime  7/11] COPY --from=builder --chown=node:node /app/package.json /app/package-lock.json ./
+#28 CACHED
+
+#29 [runtime  8/11] COPY --from=builder --chown=node:node /app/prisma.config.ts ./
+#29 CACHED
+
+#30 [runtime  3/11] RUN apt-get update   && apt-get install -y --no-install-recommends ca-certificates openssl   && rm -rf /var/lib/apt/lists/*
+#30 CACHED
+
+#31 [production-dependencies 1/1] RUN npm prune --omit=dev --workspace=@opspilot/api --include-workspace-root   && mkdir -p apps/api/node_modules   && npm cache clean --force
+#31 CACHED
+
+#32 [runtime  4/11] COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
+#32 CACHED
+
+#33 [runtime  6/11] COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
+#33 CACHED
+
+#34 [runtime  9/11] COPY --from=builder --chown=node:node /app/prisma ./prisma
+#34 CACHED
+
+#35 [runtime 10/11] COPY --from=builder --chown=node:node /app/apps/api/package.json ./apps/api/package.json
+#35 CACHED
+
+#36 [runtime  5/11] COPY --from=production-dependencies --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
+#36 CACHED
+
+#37 [runtime 11/11] COPY --from=builder --chown=node:node /app/apps/api/dist ./apps/api/dist
+#37 CACHED
+
+#38 exporting to image
+#38 exporting layers done
+#38 writing image sha256:0f54d7bcf06b4bc061c7148d4615bfac0bed945c98dbd6f6970beace55e397a7 done
+#38 naming to docker.io/library/opspilot-final-audit-api:20261103 done
+#38 DONE 0.0s

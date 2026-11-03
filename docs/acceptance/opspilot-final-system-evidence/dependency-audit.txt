@@ -1,0 +1,48 @@
+npm warn audit 404 Not Found - POST https://registry.npmmirror.com/-/npm/v1/security/audits/quick - [NOT_IMPLEMENTED] /-/npm/v1/security/* not implemented yet
+npm error audit endpoint returned an error
+{
+  "message": "404 Not Found - POST https://registry.npmmirror.com/-/npm/v1/security/audits/quick - [NOT_IMPLEMENTED] /-/npm/v1/security/* not implemented yet",
+  "method": "POST",
+  "uri": "https://registry.npmmirror.com/-/npm/v1/security/audits/quick",
+  "headers": {
+    "server": [
+      "Tengine"
+    ],
+    "date": [
+      "Tue, 03 Nov 2026 01:14:37 GMT"
+    ],
+    "content-type": [
+      "application/json"
+    ],
+    "transfer-encoding": [
+      "chunked"
+    ],
+    "connection": [
+      "keep-alive"
+    ],
+    "strict-transport-security": [
+      "max-age=5184000"
+    ],
+    "via": [
+      "ens-cache13.gb9[,404666]"
+    ],
+    "timing-allow-origin": [
+      "*"
+    ],
+    "eagleid": [
+      "a3b5f3a117936684776452760e"
+    ],
+    "x-fetch-attempts": [
+      "1"
+    ]
+  },
+  "statusCode": 404,
+  "body": {
+    "error": "[NOT_IMPLEMENTED] /-/npm/v1/security/* not implemented yet"
+  },
+  "error": {
+    "summary": "",
+    "detail": ""
+  }
+}
+npm error A complete log of this run can be found in: /Users/ruzhan/.npm/_logs/2026-11-03T01_14_35_916Z-debug-0.log

@@ -1,0 +1,1 @@
+{"knownAuditSecretMatches":[],"generatedSecretCount":8,"scannedBodies":552,"compiledClientBundles":41,"errorRecords":19,"trackedEnvFiles":[".env.example"],"suspiciousHistoricalCapturePaths":[],"limit":"Known audit values and credential URL patterns only; not proof of absence of all historical or third-party secrets. No secret or raw credential value exported."}

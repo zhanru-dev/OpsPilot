@@ -1,0 +1,8 @@
+{
+  "expected": "No stale command accepted by UI while requested refresh is unresolved",
+  "retryEnabledDuringRefresh": true,
+  "retryResponse": 409,
+  "recoveryAfterRefresh": 201,
+  "observedDefect": true,
+  "scope": "Real API and PostgreSQL; only browser GET delivery held; current session ends after fresh revision."
+}

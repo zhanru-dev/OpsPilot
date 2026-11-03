@@ -1,0 +1,71 @@
+[WebServer] (node:98352) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:98353) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:98358) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:98360) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:98361) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:98538) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/broadcast.spec.ts:202:5 › real publisher, two admitted viewers, renewal, transport/process recovery and unchanged interactions (1.4m)
+  ✓  2 e2e/broadcast.spec.ts:474:5 › autoplay refusal, media retry, teardown and attendee revocation (31.7s)
+  ✓  3 e2e/broadcast.spec.ts:595:5 › prepare conflict refreshes its revision while retaining the operation identity (1.3s)
+  ✘  4 e2e/broadcast.spec.ts:656:5 › lost start/end receipts, stale snapshots and replacement sessions keep canonical identity (2.2s)
+
+
+  1) e2e/broadcast.spec.ts:656:5 › lost start/end receipts, stale snapshots and replacement sessions keep canonical identity
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 409
+
+      734 |         dropEnd = false;
+      735 |         const response = await route.fetch();
+    > 736 |         expect(response.status()).toBe(201);
+          |                                   ^
+      737 |         await route.abort();
+      738 |       } else await route.continue();
+      739 |     },
+        at /Users/ruzhan/computer_science/projects/OpsPilot/.runtime/final-system-acceptance/20261103/verify/e2e/broadcast.spec.ts:736:35
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByTestId('broadcast-status')
+    Expected: "Broadcast ended"
+    Received: "Waiting for the publisher"
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for getByTestId('broadcast-status')
+        3 × locator resolved to <p role="status" class="text-sm font-medium" data-testid="broadcast-status">Waiting for the publisher</p>
+          - unexpected value "Waiting for the publisher"
+      - Test ended.
+
+
+      753 |     .getByRole("button", { name: "Retry ending broadcast", exact: true })
+      754 |     .click();
+    > 755 |   await expect(page.getByTestId("broadcast-status")).toHaveText(
+          |                                                      ^
+      756 |     "Broadcast ended",
+      757 |   );
+      758 |   const another = await browser.newContext();
+        at /Users/ruzhan/computer_science/projects/OpsPilot/.runtime/final-system-acceptance/20261103/verify/e2e/broadcast.spec.ts:755:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/broadcast-lost-start-end-r-41347-ons-keep-canonical-identity/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/broadcast-lost-start-end-r-41347-ons-keep-canonical-identity/error-context.md
+
+    Error Context: test-results/broadcast-lost-start-end-r-41347-ons-keep-canonical-identity/error-context.md
+
+  1 failed
+    e2e/broadcast.spec.ts:656:5 › lost start/end receipts, stale snapshots and replacement sessions keep canonical identity
+  3 passed (2.3m)

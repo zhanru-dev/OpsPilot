@@ -1,0 +1,8 @@
+{
+  "replayMessages": 430,
+  "replayMs": 1446,
+  "liveMessages": 450,
+  "liveDeliveryMs": 3646,
+  "renderedRows": 300,
+  "fixture": "direct committed journal; actual REST and WebSocket recovery"
+}

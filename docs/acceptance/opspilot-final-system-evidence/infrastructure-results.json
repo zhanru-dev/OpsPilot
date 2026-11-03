@@ -1,0 +1,125 @@
+{
+  "checks": [
+    {
+      "name": "initial canonical chat send",
+      "actual": 201,
+      "expected": 201,
+      "result": "PASS"
+    },
+    {
+      "name": "PG unavailability observed as client timeout",
+      "actual": true,
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "PG recovers without API process restart",
+      "actual": true,
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "PG volume persists messages after restart",
+      "actual": true,
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "retry keeps one canonical persisted message",
+      "actual": 1,
+      "expected": 1,
+      "result": "PASS"
+    },
+    {
+      "name": "Redis outage interrupts ticket issue",
+      "actual": true,
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "Redis resume permits fresh authenticated tickets",
+      "actual": true,
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "Redis process restart reconnects clients",
+      "actual": true,
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "owned real upload session",
+      "actual": 201,
+      "expected": 201,
+      "result": "PASS"
+    },
+    {
+      "name": "MinIO outage interrupts actual part bytes",
+      "actual": true,
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "same part succeeds after MinIO resume",
+      "actual": 200,
+      "expected": 200,
+      "result": "PASS"
+    },
+    {
+      "name": "confirmed part after retry",
+      "actual": 201,
+      "expected": 201,
+      "result": "PASS"
+    },
+    {
+      "name": "one completion after transport failure",
+      "actual": 201,
+      "expected": 201,
+      "result": "PASS"
+    },
+    {
+      "name": "real BullMQ and FFmpeg reach READY after dependency restarts",
+      "actual": true,
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "MinIO comes back with stored objects",
+      "actual": true,
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "SHA256 survives MinIO restart",
+      "actual": "272d394bacb30c063fcd653dddcbd115a3d8a048a88112b415c796d30adc4907",
+      "expected": "272d394bacb30c063fcd653dddcbd115a3d8a048a88112b415c796d30adc4907",
+      "result": "PASS"
+    },
+    {
+      "name": "one durable media processing job",
+      "actual": 1,
+      "expected": 1,
+      "result": "PASS"
+    },
+    {
+      "name": "two derivatives registered",
+      "actual": 2,
+      "expected": 2,
+      "result": "PASS"
+    },
+    {
+      "name": "all dependency readiness restored",
+      "actual": 200,
+      "expected": 200,
+      "result": "PASS"
+    }
+  ],
+  "workload": "One owned staff/event fixture, real H264 upload; bounded dependency outages and persisted idempotency; no shared service changed.",
+  "readinessOutage": {
+    "dependency": "Redis paused",
+    "elapsedMs": 6065,
+    "outcome": "no response before 6000ms client deadline",
+    "source": "HealthService.readiness Promise.allSettled has no deadline; BullMQ connection maxRetriesPerRequest=null"
+  }
+}

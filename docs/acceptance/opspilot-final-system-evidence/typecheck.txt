@@ -1,0 +1,11 @@
+
+> opspilot-platform@2.0.0 typecheck
+> npm run typecheck --workspace=@opspilot/api && npm run typecheck --workspace=@opspilot/web
+
+
+> @opspilot/api@2.0.0 typecheck
+> tsc --noEmit
+
+
+> @opspilot/web@2.0.0 typecheck
+> tsc --noEmit

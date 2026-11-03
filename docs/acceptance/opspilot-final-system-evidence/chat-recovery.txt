@@ -1,0 +1,27 @@
+[WebServer] (node:1010) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1011) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1045) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1054) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 1 worker
+
+(node:1055) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 e2e/chat-recovery.spec.ts:185:9 › staff recovers from a real PostgreSQL timeout during initial subscription without reloading (10.8s)
+  ✓   2 e2e/chat-recovery.spec.ts:185:9 › staff recovers from a real PostgreSQL timeout during reconnection without reloading (11.6s)
+  ✓   3 e2e/chat-recovery.spec.ts:270:7 › staff recovers from a transient gateway replay failure (4.1s)
+  ✓   4 e2e/chat-recovery.spec.ts:296:7 › staff renews a rejected one-use ticket without losing valid session access (3.0s)
+  ✓   5 e2e/chat-recovery.spec.ts:352:7 › staff tolerates a legacy gateway reporting a transient 503 as denied (2.8s)
+  ✓   6 e2e/chat-recovery.spec.ts:384:7 › staff cannot reconnect after session revocation and private history stays hidden (2.6s)
+  ✓   7 e2e/chat-recovery.spec.ts:185:9 › attendee recovers from a real PostgreSQL timeout during initial subscription without reloading (10.1s)
+  ✓   8 e2e/chat-recovery.spec.ts:185:9 › attendee recovers from a real PostgreSQL timeout during reconnection without reloading (11.5s)
+  ✓   9 e2e/chat-recovery.spec.ts:270:7 › attendee recovers from a transient gateway replay failure (3.4s)
+  ✓  10 e2e/chat-recovery.spec.ts:296:7 › attendee renews a rejected one-use ticket without losing valid session access (2.1s)
+  ✓  11 e2e/chat-recovery.spec.ts:352:7 › attendee tolerates a legacy gateway reporting a transient 503 as denied (2.3s)
+  ✓  12 e2e/chat-recovery.spec.ts:384:7 › attendee cannot reconnect after session revocation and private history stays hidden (2.2s)
+
+  12 passed (1.4m)

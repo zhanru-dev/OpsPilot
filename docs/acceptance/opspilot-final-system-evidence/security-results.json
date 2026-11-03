@@ -1,0 +1,225 @@
+{
+  "revision": "516f2a3",
+  "setup": "Owned workspace and staff fixtures; real password login. Authority mutations are explicit DB fixtures, not an invented role-management UI.",
+  "checks": [
+    {
+      "name": "valid staff event access",
+      "expected": [
+        200
+      ],
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "name": "foreign fixture event remains unavailable to seeded workspace",
+      "expected": [
+        404
+      ],
+      "actual": 404,
+      "result": "PASS"
+    },
+    {
+      "name": "demoted staff cannot edit event with previously issued cookie",
+      "expected": [
+        403
+      ],
+      "actual": 200,
+      "result": "FAIL"
+    },
+    {
+      "name": "demoted staff cannot create poll with previously issued cookie",
+      "expected": [
+        403
+      ],
+      "actual": 201,
+      "result": "FAIL"
+    },
+    {
+      "name": "demoted staff cannot write live operations",
+      "expected": [
+        403
+      ],
+      "actual": 201,
+      "result": "FAIL"
+    },
+    {
+      "name": "fresh viewer token rejects event edit",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "media evaluates current demoted role",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "removed member denied workspace",
+      "expected": [
+        401,
+        403,
+        404
+      ],
+      "actual": 200,
+      "result": "FAIL"
+    },
+    {
+      "name": "removed member denied events",
+      "expected": [
+        401,
+        403,
+        404
+      ],
+      "actual": 200,
+      "result": "FAIL"
+    },
+    {
+      "name": "removed member denied live operations",
+      "expected": [
+        401,
+        403,
+        404
+      ],
+      "actual": 200,
+      "result": "FAIL"
+    },
+    {
+      "name": "removed member denied chat",
+      "expected": [
+        401,
+        403,
+        404
+      ],
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "removed member denied topics",
+      "expected": [
+        401,
+        403,
+        404
+      ],
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "removed member denied broadcast",
+      "expected": [
+        401,
+        403,
+        404
+      ],
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "removed member denied media",
+      "expected": [
+        401,
+        403,
+        404
+      ],
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "authorized operator publishes new private live update",
+      "expected": [
+        201
+      ],
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "name": "existing SSE does not receive new private data after membership removal",
+      "expected": false,
+      "actual": true,
+      "result": "FAIL"
+    },
+    {
+      "name": "logout returns normal contract",
+      "expected": [
+        204
+      ],
+      "actual": 204,
+      "result": "PASS"
+    },
+    {
+      "name": "replayed logged-out cookie cannot read workspace",
+      "expected": [
+        401
+      ],
+      "actual": 200,
+      "result": "FAIL"
+    },
+    {
+      "name": "replayed logged-out cookie cannot read media",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "result": "PASS"
+    },
+    {
+      "name": "replayed logged-out refresh rejected",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "result": "PASS"
+    },
+    {
+      "name": "expired access JWT rejected on a new request",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "result": "PASS"
+    },
+    {
+      "name": "open SSE stops delivering newly authored data after JWT expiry",
+      "expected": false,
+      "actual": true,
+      "result": "FAIL",
+      "fixture": "same verified admin identity, test-signed two-second JWT; new REST request returned 401"
+    },
+    {
+      "name": "write from foreign Origin rejected",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "refresh receipt should become single-use after a successful rotation",
+      "expected": [
+        401
+      ],
+      "actual": 200,
+      "result": "FAIL"
+    }
+  ],
+  "currentTopicsCapabilities": {
+    "read": true,
+    "viewPending": false,
+    "create": false,
+    "reply": false,
+    "moderate": false,
+    "configure": false,
+    "publish": false
+  },
+  "refreshRotation": {
+    "firstStatus": 200,
+    "secondStatus": 200,
+    "replayedSecondStatus": 200,
+    "tokenChanged": false,
+    "method": "Real password login; refresh, then immediately reuse the just-rotated refresh cookie. No token value recorded."
+  }
+}

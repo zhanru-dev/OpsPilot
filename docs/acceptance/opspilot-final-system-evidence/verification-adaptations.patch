@@ -1,0 +1,276 @@
+--- a/apps/api/test/broadcast.e2e-spec.ts
++++ b/apps/api/test/broadcast.e2e-spec.ts
+@@ -62,2 +62,2 @@
+-      await app.listen(4100, '0.0.0.0');
+-      base = 'http://127.0.0.1:4100';
++      await app.listen(4225, '0.0.0.0');
++      base = 'http://127.0.0.1:4225';
+@@ -197 +197 @@
+-      origin = 'http://localhost:3000',
++      origin = 'http://localhost:3125',
+@@ -380 +380 @@
+-      const raw = await fetch(`http://127.0.0.1:8890/live/${id}/index.m3u8`);
++      const raw = await fetch(`http://127.0.0.1:8898/live/${id}/index.m3u8`);
+--- a/apps/api/test/chat.e2e-spec.ts
++++ b/apps/api/test/chat.e2e-spec.ts
+@@ -165 +165 @@
+-    origin = 'http://localhost:3000',
++    origin = 'http://localhost:3125',
+--- a/apps/api/test/topics.e2e-spec.ts
++++ b/apps/api/test/topics.e2e-spec.ts
+@@ -181 +181 @@
+-    origin = 'http://localhost:3000',
++    origin = 'http://localhost:3125',
+--- a/e2e/attendee-access.ui.spec.ts
++++ b/e2e/attendee-access.ui.spec.ts
+@@ -66 +66 @@
+-  await expect(page).toHaveURL(`http://localhost:3000${path}`);
++  await expect(page).toHaveURL(`http://localhost:3125${path}`);
+--- a/e2e/broadcast.spec.ts
++++ b/e2e/broadcast.spec.ts
+@@ -78 +78 @@
+-  const mail = process.env.MAILPIT_URL ?? "http://localhost:8025";
++  const mail = process.env.MAILPIT_URL ?? "http://localhost:8028";
+@@ -99 +99 @@
+-    /http:\/\/localhost:3000\/events\/[^\s]+/,
++    /http:\/\/localhost:3125\/events\/[^\s]+/,
+@@ -112 +112 @@
+-  `http://localhost:4100/api/v1/${attendee ? "public/events" : "stream-events"}/${eventId}/broadcast`;
++  `http://localhost:4225/api/v1/${attendee ? "public/events" : "stream-events"}/${eventId}/broadcast`;
+@@ -380 +380 @@
+-    await run("docker", ["restart", "opspilot-broadcast-test-mediamtx-1"]);
++    await run("docker", ["restart", "opspilot-final-audit-20261103-mediamtx"]);
+--- a/e2e/chat-recovery.spec.ts
++++ b/e2e/chat-recovery.spec.ts
+@@ -8 +8 @@
+-const api = "http://localhost:4100/api/v1";
++const api = "http://localhost:4225/api/v1";
+--- a/e2e/chat.spec.ts
++++ b/e2e/chat.spec.ts
+@@ -68 +68 @@
+-  const mail = process.env.MAILPIT_URL ?? "http://localhost:8025";
++  const mail = process.env.MAILPIT_URL ?? "http://localhost:8028";
+@@ -89 +89 @@
+-    /http:\/\/localhost:3000\/events\/[^\s]+/,
++    /http:\/\/localhost:3125\/events\/[^\s]+/,
+@@ -292 +292 @@
+-      `http://localhost:4100/api/v1/public/events/${other.id}/chat/messages`,
++      `http://localhost:4225/api/v1/public/events/${other.id}/chat/messages`,
+@@ -335 +335 @@
+-    await attendee.request.post("http://localhost:4100/api/v1/auth/login", {
++    await attendee.request.post("http://localhost:4225/api/v1/auth/login", {
+@@ -340 +340 @@
+-        `http://localhost:4100/api/v1/public/events/${event.id}/chat/context`,
++        `http://localhost:4225/api/v1/public/events/${event.id}/chat/context`,
+@@ -351 +351 @@
+-          `http://localhost:4100/api/v1/public/events/${event.id}/chat/messages`,
++          `http://localhost:4225/api/v1/public/events/${event.id}/chat/messages`,
+--- a/e2e/launch-control.spec.ts
++++ b/e2e/launch-control.spec.ts
+@@ -90 +90 @@
+-    await analystPage.goto("http://localhost:3000/login");
++    await analystPage.goto("http://localhost:3125/login");
+@@ -102 +102 @@
+-    await analystPage.goto(`http://localhost:3000${livePath}`);
++    await analystPage.goto(`http://localhost:3125${livePath}`);
+--- a/e2e/media-multipart.spec.ts
++++ b/e2e/media-multipart.spec.ts
+@@ -138 +138 @@
+-  url.port === "9002" && url.searchParams.has("partNumber");
++  url.port === "9010" && url.searchParams.has("partNumber");
+@@ -283 +283 @@
+-          `http://localhost:4100/api/v1/media-assets/multipart/${upload.id}/complete`,
++          `http://localhost:4225/api/v1/media-assets/multipart/${upload.id}/complete`,
+--- a/e2e/media-performance.spec.ts
++++ b/e2e/media-performance.spec.ts
+@@ -96 +96 @@
+-    const pid = (await run("lsof", ["-tiTCP:4100", "-sTCP:LISTEN"])).stdout
++    const pid = (await run("lsof", ["-tiTCP:4225", "-sTCP:LISTEN"])).stdout
+--- a/e2e/registration.spec.ts
++++ b/e2e/registration.spec.ts
+@@ -115 +115 @@
+-    await manager.goto("http://localhost:3000/login");
++    await manager.goto("http://localhost:3125/login");
+@@ -123 +123 @@
+-    await manager.goto(`http://localhost:3000/streamops/events/${event.id}`);
++    await manager.goto(`http://localhost:3125/streamops/events/${event.id}`);
+@@ -158 +158 @@
+-            "http://localhost:8025/api/v1/messages",
++            "http://localhost:8028/api/v1/messages",
+@@ -175 +175 @@
+-      `http://localhost:8025/api/v1/message/${messageId}`,
++      `http://localhost:8028/api/v1/message/${messageId}`,
+@@ -179 +179 @@
+-      /http:\/\/localhost:3000\/events\/[^\s]+/,
++      /http:\/\/localhost:3125\/events\/[^\s]+/,
+@@ -187 +187 @@
+-      `http://localhost:3000/events/${event.id}/confirm`,
++      `http://localhost:3125/events/${event.id}/confirm`,
+@@ -262 +262 @@
+-      (await page.request.get("http://localhost:4100/api/v1/auth/me")).status(),
++      (await page.request.get("http://localhost:4225/api/v1/auth/me")).status(),
+@@ -334 +334 @@
+-          `http://localhost:4100/api/v1/public/events/${event.id}/attendee/session`,
++          `http://localhost:4225/api/v1/public/events/${event.id}/attendee/session`,
+--- a/e2e/restricted-registration.spec.ts
++++ b/e2e/restricted-registration.spec.ts
+@@ -11 +11 @@
+-          "http://localhost:8025/api/v1/messages",
++          "http://localhost:8028/api/v1/messages",
+@@ -25 +25 @@
+-    `http://localhost:8025/api/v1/message/${id}`,
++    `http://localhost:8028/api/v1/message/${id}`,
+@@ -119 +119 @@
+-      /http:\/\/localhost:3000\/events\/[^\s]+/,
++      /http:\/\/localhost:3125\/events\/[^\s]+/,
+@@ -156 +156 @@
+-      /http:\/\/localhost:3000\/events\/[^\s]+/,
++      /http:\/\/localhost:3125\/events\/[^\s]+/,
+@@ -174 +174 @@
+-        await guest.request.get("http://localhost:4100/api/v1/stream-events")
++        await guest.request.get("http://localhost:4225/api/v1/stream-events")
+--- a/e2e/topics.spec.ts
++++ b/e2e/topics.spec.ts
+@@ -71 +71 @@
+-  const mail = process.env.MAILPIT_URL ?? "http://localhost:8025";
++  const mail = process.env.MAILPIT_URL ?? "http://localhost:8028";
+@@ -92 +92 @@
+-    /http:\/\/localhost:3000\/events\/[^\s]+/,
++    /http:\/\/localhost:3125\/events\/[^\s]+/,
+@@ -104 +104 @@
+-  `http://localhost:4100/api/v1/stream-events/${id}/topics`;
++  `http://localhost:4225/api/v1/stream-events/${id}/topics`;
+@@ -106 +106 @@
+-  `http://localhost:4100/api/v1/public/events/${id}/topics`;
++  `http://localhost:4225/api/v1/public/events/${id}/topics`;
+--- a/playwright.broadcast.config.ts
++++ b/playwright.broadcast.config.ts
+@@ -11 +11 @@
+-    baseURL: "http://localhost:3000",
++    baseURL: "http://localhost:3125",
+@@ -25 +25 @@
+-      url: "http://localhost:4100/api/v1/health/ready",
++      url: "http://localhost:4225/api/v1/health/ready",
+@@ -31 +31 @@
+-      url: "http://localhost:3000/login",
++      url: "http://localhost:3125/login",
+--- a/playwright.config.ts
++++ b/playwright.config.ts
+@@ -20 +20 @@
+-    baseURL: "http://localhost:3000",
++    baseURL: "http://localhost:3125",
+@@ -34 +34 @@
+-      url: "http://localhost:4100/api/v1/health/ready",
++      url: "http://localhost:4225/api/v1/health/ready",
+@@ -44 +44 @@
+-      url: "http://localhost:3000/login",
++      url: "http://localhost:3125/login",
+--- a/playwright.ui.config.ts
++++ b/playwright.ui.config.ts
+@@ -11 +11 @@
+-    baseURL: "http://localhost:3000",
++    baseURL: "http://localhost:3125",
+@@ -18,3 +18,3 @@
+-    command: "npm run dev:web",
+-    url: "http://localhost:3000/login",
+-    reuseExistingServer: !process.env.CI,
++    command: "node scripts/start-chat-recovery-web.mjs",
++    url: "http://localhost:3125/login",
++    reuseExistingServer: false,
+--- a/scripts/check-broadcast-containers.mjs
++++ b/scripts/check-broadcast-containers.mjs
+@@ -14 +14 @@
+-  "/opspilot_broadcast_test",
++  "/opspilot_final_audit_20261103_test",
+@@ -17 +17 @@
+-assert.equal(database.port, "5546");
++assert.equal(database.port, "5549");
+@@ -22,2 +22,2 @@
+-const api = "http://localhost:4100/api/v1";
+-const origin = "http://localhost:3000";
++const api = "http://localhost:4225/api/v1";
++const origin = "http://localhost:3125";
+@@ -72 +72 @@
+-  if (port) args.push("-p", `127.0.0.1:${port}:${port}`);
++  if (port) args.push("-p", `127.0.0.1:${port}:${kind === "web" ? 3000 : port}`);
+@@ -75 +75 @@
+-  args.push(`opspilot-${kind}:broadcast-integration`);
++  args.push(`opspilot-final-audit-${kind}:20261103`);
+@@ -91 +91 @@
+-  const apiName = await start("api", 4100);
++  const apiName = await start("api", 4225);
+@@ -94 +94 @@
+-  await start("web", 3000);
++  await start("web", 3125);
+@@ -227 +227 @@
+-  socket = io("http://localhost:4100/chat", {
++  socket = io("http://localhost:4225/chat", {
+--- a/scripts/check-broadcast-logs.mjs
++++ b/scripts/check-broadcast-logs.mjs
+@@ -13 +13 @@
+-  ["logs", "opspilot-broadcast-test-mediamtx-1"],
++  ["logs", "opspilot-final-audit-20261103-mediamtx"],
+--- a/scripts/check-broadcast-migration.mjs
++++ b/scripts/check-broadcast-migration.mjs
+@@ -7 +7 @@
+-if (!url.pathname.endsWith("_test") || url.port !== "5546")
++if (!url.pathname.endsWith("_test") || url.port !== "5549")
+@@ -13 +13 @@
+-    ["exec", "-i", "opspilot-chat-test-postgres-1", ...args],
++    ["exec", "-i", "opspilot-final-audit-20261103-postgres", ...args],
+@@ -20 +20 @@
+-command(["createdb", "-U", "opspilot", name]);
++command(["createdb", "-U", "audit", name]);
+@@ -40 +40 @@
+-      ["psql", "-U", "opspilot", "-d", name, "-v", "ON_ERROR_STOP=1"],
++      ["psql", "-U", "audit", "-d", name, "-v", "ON_ERROR_STOP=1"],
+@@ -58 +58 @@
+-    ["psql", "-U", "opspilot", "-d", name, "-v", "ON_ERROR_STOP=1"],
++    ["psql", "-U", "audit", "-d", name, "-v", "ON_ERROR_STOP=1"],
+@@ -77 +77 @@
+-  command(["dropdb", "-U", "opspilot", name]);
++  command(["dropdb", "-U", "audit", name]);
+--- a/scripts/check-media-containers.mjs
++++ b/scripts/check-media-containers.mjs
+@@ -20 +20 @@
+-assert.equal(database.port, "5546");
++assert.equal(database.port, "5549");
+@@ -25,2 +25,2 @@
+-const api = "http://localhost:4112/api/v1",
+-  origin = "http://localhost:3012";
++const api = "http://localhost:4225/api/v1",
++  origin = "http://localhost:3125";
+@@ -94 +94 @@
+-  args.push(`opspilot-${kind}:local`);
++  args.push(`opspilot-final-audit-${kind}:20261103`);
+@@ -111 +111 @@
+-  const apiName = await start("api", 4112, 4100);
++  const apiName = await start("api", 4225, 4100);
+@@ -114 +114 @@
+-  await start("web", 3012, 3000);
++  await start("web", 3125, 3000);
+--- a/scripts/check-media-migration.mjs
++++ b/scripts/check-media-migration.mjs
+@@ -7 +7 @@
+-if (!url.pathname.endsWith("_test") || url.port !== "5546")
++if (!url.pathname.endsWith("_test") || url.port !== "5549")
+@@ -13 +13 @@
+-    ["exec", "-i", "opspilot-chat-test-postgres-1", ...args],
++    ["exec", "-i", "opspilot-final-audit-20261103-postgres", ...args],
+@@ -20 +20 @@
+-command(["createdb", "-U", "opspilot", name]);
++command(["createdb", "-U", "audit", name]);
+@@ -40 +40 @@
+-      ["psql", "-U", "opspilot", "-d", name, "-v", "ON_ERROR_STOP=1"],
++      ["psql", "-U", "audit", "-d", name, "-v", "ON_ERROR_STOP=1"],
+@@ -66 +66 @@
+-    ["psql", "-U", "opspilot", "-d", name, "-v", "ON_ERROR_STOP=1"],
++    ["psql", "-U", "audit", "-d", name, "-v", "ON_ERROR_STOP=1"],
+@@ -94 +94 @@
+-  command(["dropdb", "-U", "opspilot", name]);
++  command(["dropdb", "-U", "audit", name]);
+--- a/scripts/start-chat-recovery-web.mjs
++++ b/scripts/start-chat-recovery-web.mjs
+@@ -13 +13 @@
+-  env: { ...process.env, HOSTNAME: "127.0.0.1", PORT: "3000" },
++  env: { ...process.env, HOSTNAME: "127.0.0.1", PORT: "3125" },

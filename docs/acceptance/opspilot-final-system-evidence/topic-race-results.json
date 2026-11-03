@@ -1,0 +1,95 @@
+{
+  "fixture": "Two distinct normally authenticated operators in one owned event. Pending roots are explicit DB moderation fixtures after normal REST creation.",
+  "checks": [
+    {
+      "name": "two moderator approval receipts",
+      "expected": [
+        201,
+        201
+      ],
+      "actual": [
+        201,
+        201
+      ],
+      "result": "PASS"
+    },
+    {
+      "name": "approval increments event revision once",
+      "expected": 1,
+      "actual": 1,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 0 has one committed mutation",
+      "expected": 1,
+      "actual": 1,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 0 preserves valid root",
+      "expected": true,
+      "actual": true,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 1 has one committed mutation",
+      "expected": 1,
+      "actual": 1,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 1 preserves valid root",
+      "expected": true,
+      "actual": true,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 2 has one committed mutation",
+      "expected": 1,
+      "actual": 1,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 2 preserves valid root",
+      "expected": true,
+      "actual": true,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 3 has one committed mutation",
+      "expected": 1,
+      "actual": 1,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 3 preserves valid root",
+      "expected": true,
+      "actual": true,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 4 has one committed mutation",
+      "expected": 1,
+      "actual": 1,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 4 preserves valid root",
+      "expected": true,
+      "actual": true,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 5 has one committed mutation",
+      "expected": 1,
+      "actual": 1,
+      "result": "PASS"
+    },
+    {
+      "name": "approval/delete race 5 preserves valid root",
+      "expected": true,
+      "actual": true,
+      "result": "PASS"
+    }
+  ]
+}

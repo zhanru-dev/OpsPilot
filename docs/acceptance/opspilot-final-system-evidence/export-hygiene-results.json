@@ -1,0 +1,9 @@
+{
+  "exportedFilesAndReportsScanned": 75,
+  "generatedCredentialFormsScanned": 9,
+  "knownSecretMatches": [],
+  "credentialPatternMatches": [],
+  "screenshotsVisuallyChecked": 3,
+  "screenshotCredentialValuesVisible": false,
+  "scope": "Known audit secrets and JWT/S3/publishing query patterns; not an exhaustive historical secret scanner."
+}

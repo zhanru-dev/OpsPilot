@@ -1,0 +1,50 @@
+
+> @opspilot/api@2.0.0 test:e2e
+> jest --config ./test/jest-e2e.json --runInBand
+
+PASS test/app.e2e-spec.ts (5.606 s)
+PASS test/topics.e2e-spec.ts (12.639 s)
+PASS test/chat.e2e-spec.ts (15.57 s)
+PASS test/broadcast.e2e-spec.ts (27.538 s)
+PASS test/media-remediation.e2e-spec.ts (88.989 s)
+  ● Console
+
+    console.info
+      {"boundary":"slow-multipart-after-abort","status":404,"code":"NoSuchUpload"}
+
+      at Object.<anonymous> (media-remediation.e2e-spec.ts:397:13)
+
+PASS test/media-processing.e2e-spec.ts (32.414 s)
+PASS test/media-multipart.e2e-spec.ts (67.412 s)
+PASS test/restricted-access.e2e-spec.ts
+PASS test/attendee-access.e2e-spec.ts
+PASS test/media-boundaries.e2e-spec.ts
+FAIL test/media-restart.e2e-spec.ts
+  ● Media recovery across actual API and worker process death › recovers a stored original after SIGKILL and fences a dead worker before publishing one completed result
+
+    Test child exited before expected boundary
+
+      39 |       if (found) return found;
+      40 |       if (child.exitCode !== null || child.signalCode !== null)
+    > 41 |         throw Error('Test child exited before expected boundary');
+         |               ^
+      42 |       await new Promise((r) => setTimeout(r, 50));
+      43 |     }
+      44 |     throw Error(`Missing child boundary: ${event}`);
+
+      at signal (media-restart.e2e-spec.ts:41:15)
+      at start (media-restart.e2e-spec.ts:58:19)
+      at Object.<anonymous> (media-restart.e2e-spec.ts:104:28)
+
+Test Suites: 1 failed, 10 passed, 11 total
+Tests:       1 failed, 101 passed, 102 total
+Snapshots:   0 total
+Time:        260.145 s
+Ran all test suites.
+npm error Lifecycle script `test:e2e` failed with error:
+npm error code 1
+npm error path /Users/ruzhan/computer_science/projects/OpsPilot/.runtime/final-system-acceptance/20261103/verify/apps/api
+npm error workspace @opspilot/api@2.0.0
+npm error location /Users/ruzhan/computer_science/projects/OpsPilot/.runtime/final-system-acceptance/20261103/verify/apps/api
+npm error command failed
+npm error command sh -c jest --config ./test/jest-e2e.json --runInBand

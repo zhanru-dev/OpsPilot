@@ -1,0 +1,57 @@
+{
+  "utc": "2026-11-03T15:37:12.988037+00:00",
+  "action": "Stopped only five audit-owned containers; no containers, volumes, databases or storage objects deleted during final cleanup. Application test processes already exited.",
+  "containers": [
+    {
+      "name": "opspilot-final-audit-20261103-postgres",
+      "running": false,
+      "paused": false
+    },
+    {
+      "name": "opspilot-final-audit-20261103-redis",
+      "running": false,
+      "paused": false
+    },
+    {
+      "name": "opspilot-final-audit-20261103-minio",
+      "running": false,
+      "paused": false
+    },
+    {
+      "name": "opspilot-final-audit-20261103-mailpit",
+      "running": false,
+      "paused": false
+    },
+    {
+      "name": "opspilot-final-audit-20261103-mediamtx",
+      "running": false,
+      "paused": false
+    }
+  ],
+  "auditPorts": [
+    {
+      "port": 3125,
+      "listenerPids": []
+    },
+    {
+      "port": 4225,
+      "listenerPids": []
+    }
+  ],
+  "ordinaryServicesAfterCleanup": [
+    {
+      "url": "http://127.0.0.1:3000/login",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4100/api/v1/health/ready",
+      "status": 200
+    }
+  ],
+  "primaryWorkingTreeBeforeDocsMerge": "",
+  "imagesRetained": [
+    "opspilot-final-audit-api:20261103",
+    "opspilot-final-audit-worker:20261103",
+    "opspilot-final-audit-web:20261103"
+  ]
+}

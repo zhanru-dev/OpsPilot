@@ -1,0 +1,13 @@
+const fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('node:child_process');const {PrismaClient}=require('@prisma/client');
+(async()=>{
+const primary='/Users/ruzhan/computer_science/projects/OpsPilot',baseline='516f2a31242c615ab6858dc6472438aa38f13e00',db=new PrismaClient();
+const keys=['JWT_ACCESS_SECRET','JWT_REFRESH_SECRET','BROADCAST_INTERNAL_SECRET','S3_SECRET_KEY','ATTENDEE_TOKEN_ENCRYPTION_KEY','WEBHOOK_SECRET_ENCRYPTION_KEY'];const secrets=keys.map(k=>process.env[k]).filter(s=>s&&s.length>=16);for(const user of ['relay','mediamtx'])secrets.push(Buffer.from(user+':'+process.env.BROADCAST_INTERNAL_SECRET).toString('base64'));
+const hits=[];let scanned=0;const scan=(name,body)=>{scanned++;if(secrets.some(s=>body.includes(Buffer.from(s))))hits.push({name,kind:'generated audit secret'});if(/[?&](?:pass|password|ticket)=[a-f0-9]{64}/i.test(body.toString()))hits.push({name,kind:'raw credential query pattern'});};
+function files(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(d=>d.isDirectory()?files(path.join(dir,d.name)):[path.join(dir,d.name)]);}
+const tracked=execFileSync('git',['ls-tree','-r','--name-only',baseline],{cwd:primary,encoding:'utf8'}).trim().split('\n');for(const n of tracked){const p=path.resolve(n);if(fs.existsSync(p)&&fs.statSync(p).isFile())scan('tracked:'+n,fs.readFileSync(p));}
+for(const n of files('../logs'))scan('runtime:'+path.basename(n),fs.readFileSync(n));
+let bundles=0;for(const n of files('apps/web/.next/static').filter(n=>n.endsWith('.js'))){scan('compiled-client:'+path.relative('apps/web/.next/static',n),fs.readFileSync(n));bundles++;}
+const media=execFileSync('docker',['logs','opspilot-final-audit-20261103-mediamtx'],{encoding:'utf8',stdio:['ignore','pipe','pipe']});scan('MediaMTX log',Buffer.from(media));
+const errors=await db.errorReport.findMany({select:{message:true,stack:true,path:true,metadata:true}});scan('persisted ErrorReport records',Buffer.from(JSON.stringify(errors)));
+const result={knownAuditSecretMatches:hits,generatedSecretCount:secrets.length,scannedBodies:scanned,compiledClientBundles:bundles,errorRecords:errors.length,trackedEnvFiles:tracked.filter(n=>/(^|\/)\.env/.test(n)),suspiciousHistoricalCapturePaths:tracked.filter(n=>/(mudu.*(bundle|capture)|webpack.*prod|historical.*assets)/i.test(n)),limit:'Known audit values and credential URL patterns only; not proof of absence of all historical or third-party secrets. No secret or raw credential value exported.'};fs.writeFileSync('../hygiene-results.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));await db.$disconnect();
+})().catch(e=>{console.error(e.name);process.exitCode=1});
