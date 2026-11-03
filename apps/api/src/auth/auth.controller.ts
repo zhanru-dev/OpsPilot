@@ -49,13 +49,16 @@ export class AuthController {
     return { user: this.publicUser(session.user) };
   }
 
+  @Public()
   @Post('logout')
   @HttpCode(204)
   async logout(
-    @CurrentUser() user: AuthenticatedUser,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    await this.auth.logout(user.sessionId);
+    await this.auth.logout(
+      request.cookies?.opspilot_access as string | undefined,
+    );
     response.clearCookie('opspilot_access', this.cookieOptions('/'));
     response.clearCookie(
       'opspilot_refresh',

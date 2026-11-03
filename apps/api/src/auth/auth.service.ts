@@ -63,10 +63,26 @@ export class AuthService {
     return this.rotateSession(session.user, session.id);
   }
 
-  async logout(sessionId?: string) {
-    if (sessionId) {
+  async logout(rawAccessToken?: string) {
+    if (rawAccessToken) {
+      let identity: AccessTokenPayload;
+      try {
+        // A removed member or expired access token can still end its own signed
+        // session. This route grants no resource access and still checks Origin.
+        identity = await this.jwt.verifyAsync<AccessTokenPayload>(
+          rawAccessToken,
+          { secret: this.accessSecret, ignoreExpiration: true },
+        );
+        if (!identity.sessionId || !identity.sub) return;
+      } catch {
+        return;
+      }
       await this.prisma.session.updateMany({
-        where: { id: sessionId, revokedAt: null },
+        where: {
+          id: identity.sessionId,
+          userId: identity.sub,
+          revokedAt: null,
+        },
         data: { revokedAt: new Date() },
       });
     }

@@ -12,6 +12,7 @@ import type { AuthenticatedUser } from '../common/request-context';
 import { DomainEventsService } from '../domain-events/domain-events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LiveSessionsService } from './live-sessions.service';
+import { StaffAuthorityService } from '../auth/staff-authority.service';
 
 describe('LiveSessionsService', () => {
   const findEvent = jest.fn();
@@ -45,7 +46,7 @@ describe('LiveSessionsService', () => {
   const domainEvents = {
     record: domainEventRecord,
   } as unknown as DomainEventsService;
-  const service = new LiveSessionsService(prisma, audit, domainEvents);
+  const service = new LiveSessionsService(prisma, audit, domainEvents, {} as StaffAuthorityService);
   const user: AuthenticatedUser = {
     id: 'user-id',
     email: 'manager@example.com',

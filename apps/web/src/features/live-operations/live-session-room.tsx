@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { useAuth } from "@/features/auth/auth-provider";
-import { API_URL, apiFetch } from "@/lib/api";
+import { API_URL, ApiError, apiFetch } from "@/lib/api";
 import { canManageEvents } from "@/lib/permissions";
 import type {
   LiveSessionSnapshot,
@@ -49,7 +49,19 @@ function formatRuntime(startedAt: string, endedAt: string | null, now: number) {
 
 export function LiveSessionRoom({ eventId }: { eventId: string }) {
   const { user } = useAuth();
+  return (
+    <LiveSessionScope
+      key={`${eventId}:${user?.workspaceId}:${user?.id}`}
+      eventId={eventId}
+    />
+  );
+}
+
+function LiveSessionScope({ eventId }: { eventId: string }) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [accessFailure, setAccessFailure] = useState<string | null>(null);
+  const [streamEpoch, setStreamEpoch] = useState(0);
   const [connection, setConnection] = useState<ConnectionState>("connecting");
   const [clock, setClock] = useState<number | null>(null);
   const [severity, setSeverity] = useState<LiveSessionUpdateSeverity>("INFO");
@@ -57,8 +69,11 @@ export function LiveSessionRoom({ eventId }: { eventId: string }) {
   const [confirmComplete, setConfirmComplete] = useState(false);
   const query = useQuery({
     queryKey: ["live-session", eventId],
-    queryFn: () =>
-      apiFetch<LiveSessionSnapshot>(`/stream-events/${eventId}/live-session`),
+    queryFn: ({ signal }) =>
+      apiFetch<LiveSessionSnapshot>(`/stream-events/${eventId}/live-session`, {
+        signal,
+      }),
+    enabled: !accessFailure,
     refetchInterval: 15_000,
   });
 
@@ -68,24 +83,77 @@ export function LiveSessionRoom({ eventId }: { eventId: string }) {
   }, []);
 
   useEffect(() => {
+    let active = true,
+      recovering = false;
+    const abort = new AbortController();
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const key = ["live-session", eventId];
     const source = new EventSource(
       `${API_URL}/stream-events/${eventId}/live-session/stream`,
       { withCredentials: true },
     );
-    source.onopen = () => setConnection("live");
+    async function recover() {
+      if (!active || recovering) return;
+      recovering = true;
+      source.close();
+      setConnection("reconnecting");
+      await queryClient.cancelQueries({ queryKey: key });
+      queryClient.removeQueries({ queryKey: key });
+      if (active) setAccessFailure("Rechecking access to live operations…");
+      try {
+        // apiFetch may renew an expired access cookie, but revoked sessions or
+        // memberships cannot be refreshed into access. No stale snapshot stays visible.
+        const snapshot = await apiFetch<LiveSessionSnapshot>(
+          `/stream-events/${eventId}/live-session`,
+          { signal: abort.signal },
+        );
+        if (!active) return;
+        queryClient.setQueryData(key, snapshot);
+        setAccessFailure(null);
+        setStreamEpoch((value) => value + 1);
+      } catch (cause) {
+        if (
+          active &&
+          !(cause instanceof ApiError && [401, 403, 404].includes(cause.status))
+        )
+          retry = setTimeout(() => {
+            if (active) setStreamEpoch((value) => value + 1);
+          }, 2000);
+        if (active)
+          setAccessFailure(
+            cause instanceof ApiError && [401, 403, 404].includes(cause.status)
+              ? "Live operations access is no longer available. Sign in again or contact your workspace administrator."
+              : "Live operations are temporarily unavailable. Retry to reconnect.",
+          );
+      }
+    }
+    source.onopen = () => {
+      if (active) setConnection("live");
+    };
     source.onmessage = (event) => {
+      if (!active || recovering) return;
       try {
         const snapshot = JSON.parse(event.data) as LiveSessionSnapshot;
-        queryClient.setQueryData(["live-session", eventId], snapshot);
+        if (snapshot.event.id !== eventId) return;
+        queryClient.setQueryData(key, snapshot);
         void queryClient.invalidateQueries({ queryKey: ["live-sessions"] });
+        setAccessFailure(null);
         setConnection("live");
       } catch {
-        setConnection("reconnecting");
+        void recover();
       }
     };
-    source.onerror = () => setConnection("reconnecting");
-    return () => source.close();
-  }, [eventId, queryClient]);
+    source.addEventListener("access-changed", () => void recover());
+    source.onerror = () => void recover();
+    return () => {
+      active = false;
+      clearTimeout(retry);
+      abort.abort();
+      source.close();
+      void queryClient.cancelQueries({ queryKey: key });
+      queryClient.removeQueries({ queryKey: key });
+    };
+  }, [eventId, queryClient, streamEpoch]);
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -124,6 +192,13 @@ export function LiveSessionRoom({ eventId }: { eventId: string }) {
     if (message.trim().length >= 2) updateMutation.mutate();
   };
 
+  if (accessFailure)
+    return (
+      <ErrorState
+        message={accessFailure}
+        retry={() => setStreamEpoch((value) => value + 1)}
+      />
+    );
   if (query.isLoading) return <LoadingState label="Opening live operations" />;
   if (query.error || !query.data) {
     return (
@@ -140,7 +215,7 @@ export function LiveSessionRoom({ eventId }: { eventId: string }) {
 
   const snapshot = query.data;
   const session = snapshot.session;
-  const canManage = canManageEvents(user?.role);
+  const canManage = canManageEvents(snapshot.viewerRole ?? user?.role);
   const active = session?.status === "ACTIVE";
   const currentTime = clock ?? new Date(snapshot.serverTime).getTime();
 
