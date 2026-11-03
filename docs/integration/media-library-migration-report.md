@@ -2,6 +2,8 @@
 
 This is implementation evidence for the approved Media Library slice, not the final independent system-wide acceptance. OpsPilot remains the application. No attendee uploads, interaction attachments, recording, replay publication or livestream insertion were added.
 
+Follow-up: the independent 2026-11-02 audit identified a legacy original-integrity defect and recovery gaps. Their scoped fixes and fresh regression evidence are recorded in [Media Library remediation](../acceptance/opspilot-media-library-remediation.md). The original implementation and acceptance results below remain historical evidence.
+
 ## Baseline and provenance
 
 Destination: `feat/streamops-chat-integration`, architecture checkpoint `3be8621`. Before integration, `928405b` fixed lifecycle correlation/idempotency, `ecbb7d4` fixed prepare-retry revision handling, and `77c5fd9` recorded real regression evidence. The historical streaming acceptance FAIL was preserved, with a separate remediation report. The approved task is `media-library-integration-task.md`.

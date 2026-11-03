@@ -1,0 +1,26 @@
+{
+  "changes": "Test-only URLs/port predicates; no assertions or application source changed",
+  "files": [
+    "e2e/registration.spec.ts",
+    "e2e/chat-recovery.spec.ts",
+    "e2e/media-multipart.spec.ts",
+    "e2e/launch-control.spec.ts",
+    "e2e/chat.spec.ts",
+    "e2e/attendee-access.ui.spec.ts",
+    "e2e/restricted-registration.spec.ts",
+    "e2e/broadcast.spec.ts",
+    "e2e/topics.spec.ts",
+    "playwright.broadcast.config.ts",
+    "playwright.config.ts",
+    "playwright.ui.config.ts",
+    "scripts/start-chat-recovery-web.mjs",
+    "apps/api/test/broadcast.e2e-spec.ts",
+    "apps/api/test/chat.e2e-spec.ts",
+    "apps/api/test/topics.e2e-spec.ts"
+  ],
+  "additionalChanges": [
+    "media-performance: lsof PID lookup 4100 -> 4215",
+    "container probe: fix-owned image tags",
+    "playwright.ui.config: standalone production wrapper, reuseExistingServer=false"
+  ]
+}
