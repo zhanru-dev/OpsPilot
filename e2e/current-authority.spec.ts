@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { randomUUID, createHmac } from "node:crypto";
+import { API_URL } from "./support/env";
 const db = new PrismaClient();
-const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4100/api/v1";
+const api = API_URL;
 
 test.afterAll(() => db.$disconnect());
 for (const scenario of ["membership", "expired-access"] as const) {

@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { WEB_URL } from "./support/env";
 
 test.afterAll(async () => {
   const prisma = new PrismaClient();
@@ -87,7 +88,7 @@ test("live poll responses update across manager and analyst sessions", async ({
   const analystContext = await browser.newContext();
   try {
     const analystPage = await analystContext.newPage();
-    await analystPage.goto("http://localhost:3000/login");
+    await analystPage.goto(`${WEB_URL}/login`);
     await analystPage
       .getByRole("button", { name: "Use Maya Chen demo account" })
       .click();
@@ -99,7 +100,7 @@ test("live poll responses update across manager and analyst sessions", async ({
         name: "Launch readiness at a glance",
       }),
     ).toBeVisible();
-    await analystPage.goto(`http://localhost:3000${livePath}`);
+    await analystPage.goto(`${WEB_URL}${livePath}`);
     await expect(analystPage.getByText("Live updates connected")).toBeVisible();
     await expect(
       analystPage.getByRole("button", { name: "New poll" }),

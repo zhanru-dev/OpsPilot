@@ -3,9 +3,10 @@ import { PrismaClient } from "@prisma/client";
 import { createDecipheriv, createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { API_URL } from "./support/env";
 
 const db = new PrismaClient();
-const api = "http://localhost:4100/api/v1";
+const api = API_URL;
 const directory = resolve(".runtime/chat-recovery");
 const eventIds: string[] = [];
 type Actor = "staff" | "attendee";

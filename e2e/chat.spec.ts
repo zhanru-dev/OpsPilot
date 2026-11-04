@@ -8,6 +8,7 @@ import {
 import { PrismaClient } from "@prisma/client";
 import { createHash, randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
+import { API_URL, MAILPIT_URL, eventLinkPattern } from "./support/env";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222221";
@@ -65,7 +66,7 @@ async function admit(page: Page, request: APIRequestContext, eventId: string) {
     where: { registrationId: registration.id },
   });
   let id = "";
-  const mail = process.env.MAILPIT_URL ?? "http://localhost:8025";
+  const mail = MAILPIT_URL;
   await expect
     .poll(
       async () => {
@@ -86,7 +87,7 @@ async function admit(page: Page, request: APIRequestContext, eventId: string) {
     await request.get(`${mail}/api/v1/message/${id}`)
   ).json()) as { Text: string };
   const url = message.Text.match(
-    /http:\/\/localhost:3000\/events\/[^\s]+/,
+    eventLinkPattern,
   )?.[0];
   expect(url).toBeTruthy();
   await page.goto(url!);
@@ -289,7 +290,7 @@ test("staff and email-admitted attendee chat, paginate, moderate, retry and relo
       await page.getByTestId("chat-log").locator("img,script").count(),
     ).toBe(0);
     const cross = await attendee.request.get(
-      `http://localhost:4100/api/v1/public/events/${other.id}/chat/messages`,
+      `${API_URL}/public/events/${other.id}/chat/messages`,
     );
     expect(cross.status()).toBe(401);
     // Cookie paths retain independent admissions for two events in one browser.
@@ -332,12 +333,12 @@ test("staff and email-admitted attendee chat, paginate, moderate, retry and relo
       ),
     ).toBe(true);
     // The same browser now also has a staff cookie: attendee routes must keep the admitted identity.
-    await attendee.request.post("http://localhost:4100/api/v1/auth/login", {
+    await attendee.request.post(`${API_URL}/auth/login`, {
       data: { email: "alex.morgan@opspilot.demo", password: "DemoPass123!" },
     });
     const context = await (
       await attendee.request.get(
-        `http://localhost:4100/api/v1/public/events/${event.id}/chat/context`,
+        `${API_URL}/public/events/${event.id}/chat/context`,
       )
     ).json();
     expect(context.actor.id).toBe(`attendee:${registration.id}`);
@@ -348,7 +349,7 @@ test("staff and email-admitted attendee chat, paginate, moderate, retry and relo
     expect(
       (
         await attendee.request.get(
-          `http://localhost:4100/api/v1/public/events/${event.id}/chat/messages`,
+          `${API_URL}/public/events/${event.id}/chat/messages`,
         )
       ).status(),
     ).toBe(401);

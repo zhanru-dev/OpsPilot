@@ -3,14 +3,15 @@ import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import { testEnv } from "./test-env.mjs";
 const url = new URL(process.env.DATABASE_URL);
-if (!url.pathname.endsWith("_test") || url.port !== "5546")
+if (!url.pathname.endsWith("_test") || url.port !== testEnv.postgresPort)
   throw new Error("Use the isolated local test environment.");
 const name = `media_multipart_migration_${randomUUID().replaceAll("-", "")}_test`;
 function command(args, input) {
   const r = spawnSync(
     "docker",
-    ["exec", "-i", "opspilot-chat-test-postgres-1", ...args],
+    ["exec", "-i", testEnv.postgresContainer, ...args],
     { input, encoding: "utf8" },
   );
   if (r.status !== 0)

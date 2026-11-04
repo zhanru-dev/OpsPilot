@@ -1,6 +1,7 @@
 // Inspect isolated runtime evidence without printing logs or credential values.
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { testEnv } from "./test-env.mjs";
 if (
   process.env.BROADCAST_ENABLED !== "true" ||
   !new URL(process.env.DATABASE_URL).pathname.endsWith("_test")
@@ -10,7 +11,7 @@ const directory = ".runtime/broadcast";
 const names = readdirSync(directory).filter((n) => n.endsWith(".log"));
 const logged = spawnSync(
   "docker",
-  ["logs", "opspilot-broadcast-test-mediamtx-1"],
+  ["logs", testEnv.mediamtxContainer],
   { encoding: "utf8" },
 );
 if (logged.status !== 0) throw new Error("Media log read failed");

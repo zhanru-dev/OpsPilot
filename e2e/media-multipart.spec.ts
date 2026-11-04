@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import ffmpeg from "ffmpeg-static";
+import { API_URL, MINIO_PORT } from "./support/env";
 
 const db = new PrismaClient();
 const names: string[] = [];
@@ -135,7 +136,7 @@ async function asset(name: string) {
   });
 }
 const isPart = (url: URL) =>
-  url.port === "9002" && url.searchParams.has("partNumber");
+  url.port === MINIO_PORT && url.searchParams.has("partNumber");
 
 test("reload resumes only missing parts, rejects a different same-size file, verifies stored hash and decodes preview", async ({
   page,
@@ -280,7 +281,7 @@ test("lost completion response resolves one asset/job and a revoked writer loses
     expect(
       (
         await page.request.post(
-          `http://localhost:4100/api/v1/media-assets/multipart/${upload.id}/complete`,
+          `${API_URL}/media-assets/multipart/${upload.id}/complete`,
         )
       ).status(),
     ).toBe(403);

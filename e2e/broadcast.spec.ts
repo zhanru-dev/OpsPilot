@@ -14,6 +14,7 @@ import type {
   PublishGrant,
 } from "@opspilot/broadcast-contracts";
 import { writeFile } from "node:fs/promises";
+import { API_URL, MAILPIT_URL, MEDIAMTX_CONTAINER, eventLinkPattern } from "./support/env";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222221";
@@ -75,7 +76,7 @@ async function admit(page: Page, request: APIRequestContext, eventId: string) {
     where: { registrationId: registration.id },
   });
   let id = "";
-  const mail = process.env.MAILPIT_URL ?? "http://localhost:8025";
+  const mail = MAILPIT_URL;
   await expect
     .poll(
       async () => {
@@ -96,7 +97,7 @@ async function admit(page: Page, request: APIRequestContext, eventId: string) {
     await request.get(`${mail}/api/v1/message/${id}`)
   ).json()) as { Text: string };
   const url = message.Text.match(
-    /http:\/\/localhost:3000\/events\/[^\s]+/,
+    eventLinkPattern,
   )?.[0];
   expect(url).toBeTruthy();
   await page.goto(url!);
@@ -109,7 +110,7 @@ async function admit(page: Page, request: APIRequestContext, eventId: string) {
 }
 const run = promisify(execFile);
 const api = (eventId: string, attendee = false) =>
-  `http://localhost:4100/api/v1/${attendee ? "public/events" : "stream-events"}/${eventId}/broadcast`;
+  `${API_URL}/${attendee ? "public/events" : "stream-events"}/${eventId}/broadcast`;
 const processes: ChildProcess[] = [];
 async function stop(child: ChildProcess) {
   if (child.exitCode !== null || child.signalCode !== null) return;
@@ -377,7 +378,7 @@ test("real publisher, two admitted viewers, renewal, transport/process recovery 
       });
     }
     // Actual media-server restart, not a mocked player response.
-    await run("docker", ["restart", "opspilot-broadcast-test-mediamtx-1"]);
+    await run("docker", ["restart", MEDIAMTX_CONTAINER]);
     await stop(publisher);
     await expect(a.getByTestId("live-player")).toHaveCount(0, {
       timeout: 10000,

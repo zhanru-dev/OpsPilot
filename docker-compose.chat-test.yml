@@ -6,7 +6,7 @@ services:
       POSTGRES_DB: opspilot_chat_test
       POSTGRES_USER: opspilot
       POSTGRES_PASSWORD: local-test-only
-    ports: ["127.0.0.1:5546:5432"]
+    ports: ["127.0.0.1:${OPSPILOT_TEST_POSTGRES_PORT:-5546}:5432"]
     volumes: ["postgres:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U opspilot -d opspilot_chat_test"]
@@ -15,7 +15,7 @@ services:
       retries: 30
   redis:
     image: redis:7.4.10-alpine
-    ports: ["127.0.0.1:6381:6379"]
+    ports: ["127.0.0.1:${OPSPILOT_TEST_REDIS_PORT:-6381}:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s
@@ -27,8 +27,8 @@ services:
     environment:
       MINIO_ROOT_USER: opspilot-test
       MINIO_ROOT_PASSWORD: local-test-storage-only
-      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:3000
-    ports: ["127.0.0.1:9002:9000", "127.0.0.1:9003:9001"]
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:${OPSPILOT_TEST_WEB_PORT:-3000}
+    ports: ["127.0.0.1:${OPSPILOT_TEST_MINIO_PORT:-9002}:9000", "127.0.0.1:${OPSPILOT_TEST_MINIO_CONSOLE_PORT:-9003}:9001"]
     volumes: ["objects:/data"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -37,7 +37,7 @@ services:
       retries: 30
   mailpit:
     image: axllent/mailpit:v1.31.0
-    ports: ["127.0.0.1:1026:1025", "127.0.0.1:8025:8025"]
+    ports: ["127.0.0.1:${OPSPILOT_TEST_SMTP_PORT:-1026}:1025", "127.0.0.1:${OPSPILOT_TEST_MAILPIT_PORT:-8025}:8025"]
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
       interval: 2s

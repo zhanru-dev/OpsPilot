@@ -162,7 +162,7 @@ describe('StreamOps Chat with real PostgreSQL, Redis and WebSockets', () => {
   async function connect(
     attendee = false,
     ticket?: string,
-    origin = 'http://localhost:3000',
+    origin = process.env.WEB_ORIGIN ?? 'http://localhost:3000',
   ) {
     const value =
       ticket ??

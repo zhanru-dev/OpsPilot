@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { API_URL, MAILPIT_URL, WEB_URL, eventLinkPattern } from "./support/env";
 
 test("a guest registers, verifies an email, and signs out without workspace access", async ({
   page,
@@ -112,7 +113,7 @@ test("a guest registers, verifies an email, and signs out without workspace acce
     ).toHaveLength(0);
 
     const manager = await managerContext.newPage();
-    await manager.goto("http://localhost:3000/login");
+    await manager.goto(`${WEB_URL}/login`);
     await manager
       .getByRole("button", { name: "Use Alex Morgan demo account" })
       .click();
@@ -120,7 +121,7 @@ test("a guest registers, verifies an email, and signs out without workspace acce
     await expect(
       manager.getByRole("heading", { name: "Launch readiness at a glance" }),
     ).toBeVisible();
-    await manager.goto(`http://localhost:3000/streamops/events/${event.id}`);
+    await manager.goto(`${WEB_URL}/streamops/events/${event.id}`);
     await manager
       .getByRole("link", { name: "Registrations", exact: true })
       .click();
@@ -155,7 +156,7 @@ test("a guest registers, verifies an email, and signs out without workspace acce
       .poll(
         async () => {
           const response = await request.get(
-            "http://localhost:8025/api/v1/messages",
+            `${MAILPIT_URL}/api/v1/messages`,
           );
           const inbox = (await response.json()) as {
             messages: { ID: string; MessageID: string }[];
@@ -172,11 +173,11 @@ test("a guest registers, verifies an email, and signs out without workspace acce
       )
       .toBe(true);
     const messageResponse = await request.get(
-      `http://localhost:8025/api/v1/message/${messageId}`,
+      `${MAILPIT_URL}/api/v1/message/${messageId}`,
     );
     const message = (await messageResponse.json()) as { Text: string };
     const confirmationUrl = message.Text.match(
-      /http:\/\/localhost:3000\/events\/[^\s]+/,
+      eventLinkPattern,
     )?.[0];
     expect(confirmationUrl).toBeTruthy();
     await page.goto(confirmationUrl!);
@@ -184,7 +185,7 @@ test("a guest registers, verifies an email, and signs out without workspace acce
       page.getByRole("heading", { name: "Confirm your registration" }),
     ).toBeVisible();
     await expect(page).toHaveURL(
-      `http://localhost:3000/events/${event.id}/confirm`,
+      `${WEB_URL}/events/${event.id}/confirm`,
     );
     expect(
       (
@@ -259,7 +260,7 @@ test("a guest registers, verifies an email, and signs out without workspace acce
     expect(cookies.map((cookie) => cookie.name)).toEqual(["opspilot_attendee"]);
     expect(cookies[0].httpOnly).toBe(true);
     expect(
-      (await page.request.get("http://localhost:4100/api/v1/auth/me")).status(),
+      (await page.request.get(`${API_URL}/auth/me`)).status(),
     ).toBe(401);
     await page.reload();
     await expect(
@@ -331,7 +332,7 @@ test("a guest registers, verifies an email, and signs out without workspace acce
     expect(
       (
         await page.request.get(
-          `http://localhost:4100/api/v1/public/events/${event.id}/attendee/session`,
+          `${API_URL}/public/events/${event.id}/attendee/session`,
         )
       ).status(),
     ).toBe(401);

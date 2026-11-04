@@ -59,8 +59,10 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
       }).compile();
       app = module.createNestApplication();
       configureApp(app);
-      await app.listen(4100, '0.0.0.0');
-      base = 'http://127.0.0.1:4100';
+      // MediaMTX calls back to this fixed port (docker-compose.broadcast.yml API_PORT).
+      const port = Number(process.env.API_PORT ?? 4100);
+      await app.listen(port, '0.0.0.0');
+      base = `http://127.0.0.1:${port}`;
       db = app.get(PrismaService);
       broadcasts = app.get(BroadcastService);
       workspaceId = (
@@ -194,7 +196,7 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
     async function connect(
       attendee = false,
       ticket?: string,
-      origin = 'http://localhost:3000',
+      origin = process.env.WEB_ORIGIN ?? 'http://localhost:3000',
     ) {
       const value =
         ticket ??
@@ -377,7 +379,9 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
           path: `live/${id}`,
         })
         .expect(403);
-      const raw = await fetch(`http://127.0.0.1:8890/live/${id}/index.m3u8`);
+      const raw = await fetch(
+        `${process.env.BROADCAST_HLS_URL ?? 'http://127.0.0.1:8890'}/live/${id}/index.m3u8`,
+      );
       expect(raw.status).toBe(401);
     });
     it('delivers authenticated snapshots to independent clients, recovers missed state and isolates commands', async () => {

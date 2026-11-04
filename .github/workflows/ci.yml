@@ -70,13 +70,52 @@ jobs:
       - run: npm run test
       - run: npm run test:chat:state
       - run: npm run test:topics:state
-      - run: npm run test:e2e --workspace=@opspilot/api -- --runInBand
+      # Real-process recovery suites (media-restart/live-fence children) run the
+      # compiled API, so build before the API integration tests on a cold checkout.
       - run: npm run build
+      - run: npm run test:e2e --workspace=@opspilot/api -- --runInBand
       - run: npm audit --omit=dev
       - run: npx playwright install --with-deps chromium
       - run: npm run test:ui
       - run: npm run test:ui:isolated
       - run: CHAT_RECOVERY_PRODUCTION_WEB=1 npm run test:chat:recovery
+
+  # Real RTMP -> MediaMTX -> authenticated HLS. The quality job runs without
+  # BROADCAST_ENABLED, so broadcast.e2e-spec is skipped there; this job runs it and
+  # the real-browser broadcast suite against the disposable broadcast test stack.
+  broadcast:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      FFMPEG_PATH: /usr/bin/ffmpeg
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install FFmpeg publisher
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: npm ci
+      - run: node scripts/with-broadcast-env.mjs npm run db:generate
+      # Starts Postgres/MinIO/Mailpit (docker-compose.chat-test.yml), the broadcast
+      # Redis, migrates/seeds opspilot_broadcast_test and starts MediaMTX.
+      - run: npm run broadcast:test:setup
+      - run: node scripts/with-broadcast-env.mjs npm run build
+      - run: npm run test:broadcast:api
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:broadcast:browser
+      - name: Print MediaMTX logs on failure
+        if: failure()
+        run: docker logs opspilot-broadcast-test-mediamtx-1 2>&1 | tail -200 || true
+      - name: Clean up broadcast services
+        if: always()
+        run: |
+          node scripts/with-broadcast-env.mjs docker compose -p opspilot-broadcast-test -f docker-compose.broadcast.yml down || true
+          docker rm -f opspilot-broadcast-test-redis 2>/dev/null || true
+          docker compose -f docker-compose.chat-test.yml down --volumes
 
   containers:
     needs: quality

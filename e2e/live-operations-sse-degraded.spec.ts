@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { API_URL } from "./support/env";
 
-const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4100/api/v1";
+const api = API_URL;
 
 // Regression for CA-LIVEOPS-01: when only the SSE transport is unavailable,
 // the room must stay usable on its last authorised snapshot and reconnect with

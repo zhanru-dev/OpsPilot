@@ -9,6 +9,7 @@ import {
   chmodSync,
 } from "node:fs";
 import { randomBytes } from "node:crypto";
+import { testDatabaseUrl, testEnv } from "./test-env.mjs";
 const args = process.argv.slice(2);
 if (args[0] !== "--inner") {
   const child = spawn(
@@ -50,12 +51,11 @@ if (args[0] !== "--inner") {
     BROADCAST_ENABLED: process.env.BROADCAST_ENABLED ?? "false",
     BROADCAST_INTERNAL_SECRET: secret,
     API_HOST: "0.0.0.0",
-    BROADCAST_CONTROL_URL: "http://127.0.0.1:9999",
-    BROADCAST_HLS_URL: "http://127.0.0.1:8890",
-    BROADCAST_RTMP_URL: "rtmp://127.0.0.1:1937/live",
-    DATABASE_URL:
-      "postgresql://opspilot:local-test-only@localhost:5546/opspilot_media_test?schema=public",
-    REDIS_URL: "redis://localhost:6402/0",
+    BROADCAST_CONTROL_URL: `http://127.0.0.1:${testEnv.mediaControlPort}`,
+    BROADCAST_HLS_URL: `http://127.0.0.1:${testEnv.hlsPort}`,
+    BROADCAST_RTMP_URL: `rtmp://127.0.0.1:${testEnv.rtmpPort}/live`,
+    DATABASE_URL: testDatabaseUrl("opspilot_media_test"),
+    REDIS_URL: `redis://localhost:${testEnv.mediaRedisPort}/0`,
     S3_BUCKET: "opspilot-media-test",
   };
   const [command, ...rest] = args;

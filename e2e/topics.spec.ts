@@ -7,6 +7,7 @@ import {
 import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
+import { API_URL, MAILPIT_URL, eventLinkPattern } from "./support/env";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222221";
@@ -68,7 +69,7 @@ async function admit(page: Page, request: APIRequestContext, eventId: string) {
     where: { registrationId: registration.id },
   });
   let id = "";
-  const mail = process.env.MAILPIT_URL ?? "http://localhost:8025";
+  const mail = MAILPIT_URL;
   await expect
     .poll(
       async () => {
@@ -89,7 +90,7 @@ async function admit(page: Page, request: APIRequestContext, eventId: string) {
     await request.get(`${mail}/api/v1/message/${id}`)
   ).json()) as { Text: string };
   const url = message.Text.match(
-    /http:\/\/localhost:3000\/events\/[^\s]+/,
+    eventLinkPattern,
   )?.[0];
   expect(url).toBeTruthy();
   await page.goto(url!);
@@ -101,9 +102,9 @@ async function admit(page: Page, request: APIRequestContext, eventId: string) {
   return registration;
 }
 const staffPath = (id: string) =>
-  `http://localhost:4100/api/v1/stream-events/${id}/topics`;
+  `${API_URL}/stream-events/${id}/topics`;
 const attendeePath = (id: string) =>
-  `http://localhost:4100/api/v1/public/events/${id}/topics`;
+  `${API_URL}/public/events/${id}/topics`;
 const card = (page: Page, text: string) =>
   page
     .getByTestId("topic-card")

@@ -129,9 +129,29 @@ node scripts/with-chat-test-env.mjs npm run dev
 ```
 
 On subsequent starts, run Compose, `db:generate`, `db:deploy` and `dev`; do not reseed. Secrets are
-generated locally in ignored `.runtime/chat-test-secrets.json` with mode 0600. The wrapper
-always targets `opspilot_chat_test` on port 5546, Redis 6381 and isolated object storage 9002.
-Use `localhost` consistently for browser cookies. Web/API ports remain 3000/4100.
+generated locally in ignored `.runtime/chat-test-secrets.json` with mode 0600. By default the wrapper
+targets `opspilot_chat_test` on port 5546, Redis 6381 and isolated object storage 9002, with
+Web/API on 3000/4100. Use `localhost` consistently for browser cookies.
+
+### Running tests beside a developer environment
+
+All disposable test addresses come from [`scripts/test-env.mjs`](scripts/test-env.mjs); the
+wrappers, Compose files, Playwright configurations and specs read the same values. Override
+them to run a second fully isolated stack while ordinary development servers keep running:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `OPSPILOT_TEST_WEB_PORT` / `OPSPILOT_TEST_API_PORT` | 3000 / 4100 | Test web and API processes |
+| `OPSPILOT_TEST_POSTGRES_PORT` / `_CONTAINER` | 5546 / `opspilot-chat-test-postgres-1` | Disposable PostgreSQL |
+| `OPSPILOT_TEST_REDIS_PORT`, `_BROADCAST_REDIS_PORT`, `_MEDIA_REDIS_PORT` | 6381, 6394, 6402 | Redis per suite |
+| `OPSPILOT_TEST_MINIO_PORT`, `_SMTP_PORT`, `_MAILPIT_PORT` | 9002, 1026, 8025 | Object storage and mail |
+| `OPSPILOT_TEST_RTMP_PORT`, `_HLS_PORT`, `_MEDIA_CONTROL_PORT` | 1937, 8890, 9999 | MediaMTX |
+| `OPSPILOT_TEST_MEDIAMTX_CONTAINER` | `opspilot-broadcast-test-mediamtx-1` | MediaMTX container used by restart tests |
+
+Use `COMPOSE_PROJECT_NAME=<name>` with `docker-compose.chat-test.yml` to create separately named
+containers, and set the matching `*_CONTAINER` variables. Browser suites refuse any
+`DATABASE_URL` that is not a `*_test` database and never reuse an already running server
+unless `E2E_REUSE_SERVER=1` is set.
 
 1. Sign in at `http://localhost:3000/login` with the seeded Alex account below.
 2. Open **Product Operations Forum → Live Operations**, or
@@ -210,6 +230,10 @@ npm run test:ui
 npm run build
 npm audit --omit=dev
 ```
+
+`test:ui` refuses to run against a database that is not `*_test`. CI provides one; locally run it
+through the isolated wrapper, for example `node scripts/with-media-test-env.mjs env E2E_PRODUCTION_WEB=1 npm run test:ui`
+after `npm run build` under the same wrapper.
 
 The Playwright suite exercises the complete manager lifecycle through Archive, verifies analyst read-only boundaries, checks AI/analytics evidence, protects core pages from mobile overflow, and runs axe checks on key product surfaces.
 

@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { testEnv } from "./test-env.mjs";
 function run(command, args, capture = false) {
   const result = spawnSync(command, args, {
     stdio: capture ? "pipe" : "inherit",
@@ -23,7 +24,7 @@ const exists =
     "docker",
     [
       "exec",
-      "opspilot-chat-test-postgres-1",
+      testEnv.postgresContainer,
       "psql",
       "-U",
       "opspilot",
@@ -37,24 +38,24 @@ const exists =
 if (!exists)
   run("docker", [
     "exec",
-    "opspilot-chat-test-postgres-1",
+    testEnv.postgresContainer,
     "createdb",
     "-U",
     "opspilot",
     "opspilot_media_test",
   ]);
-const redis = spawnSync("docker", ["inspect", "opspilot-media-test-redis"], {
+const redis = spawnSync("docker", ["inspect", testEnv.mediaRedisContainer], {
   stdio: "ignore",
 });
-if (redis.status === 0) run("docker", ["start", "opspilot-media-test-redis"]);
+if (redis.status === 0) run("docker", ["start", testEnv.mediaRedisContainer]);
 else
   run("docker", [
     "run",
     "-d",
     "--name",
-    "opspilot-media-test-redis",
+    testEnv.mediaRedisContainer,
     "-p",
-    "127.0.0.1:6402:6379",
+    `127.0.0.1:${testEnv.mediaRedisPort}:6379`,
     "redis:7.4.10-alpine",
   ]);
 run("node", ["scripts/with-media-test-env.mjs", "npm", "run", "db:deploy"]);

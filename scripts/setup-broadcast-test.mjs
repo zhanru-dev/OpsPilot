@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { testEnv } from "./test-env.mjs";
 function run(command, args, capture = false) {
   const result = spawnSync(command, args, {
     stdio: capture ? "pipe" : "inherit",
@@ -23,7 +24,7 @@ const exists =
     "docker",
     [
       "exec",
-      "opspilot-chat-test-postgres-1",
+      testEnv.postgresContainer,
       "psql",
       "-U",
       "opspilot",
@@ -37,7 +38,7 @@ const exists =
 if (!exists)
   run("docker", [
     "exec",
-    "opspilot-chat-test-postgres-1",
+    testEnv.postgresContainer,
     "createdb",
     "-U",
     "opspilot",
@@ -45,19 +46,19 @@ if (!exists)
   ]);
 const redis = spawnSync(
   "docker",
-  ["inspect", "opspilot-broadcast-test-redis"],
+  ["inspect", testEnv.broadcastRedisContainer],
   { stdio: "ignore" },
 );
 if (redis.status === 0)
-  run("docker", ["start", "opspilot-broadcast-test-redis"]);
+  run("docker", ["start", testEnv.broadcastRedisContainer]);
 else
   run("docker", [
     "run",
     "-d",
     "--name",
-    "opspilot-broadcast-test-redis",
+    testEnv.broadcastRedisContainer,
     "-p",
-    "127.0.0.1:6394:6379",
+    `127.0.0.1:${testEnv.broadcastRedisPort}:6379`,
     "redis:7.4.10-alpine",
   ]);
 run("node", ["scripts/with-broadcast-env.mjs", "npm", "run", "db:deploy"]);
@@ -68,7 +69,7 @@ run("node", [
   "docker",
   "compose",
   "-p",
-  "opspilot-broadcast-test",
+  testEnv.mediamtxContainer.replace(/-mediamtx-1$/, ""),
   "-f",
   "docker-compose.broadcast.yml",
   "up",

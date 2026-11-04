@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import ffmpeg from "ffmpeg-static";
+import { API_URL } from "./support/env";
 
 // Explicit performance workload; this is a local measurement, not a capacity claim.
 test("measures a near-limit real multipart upload and repeated preview teardown", async ({
@@ -93,7 +94,7 @@ test("measures a near-limit real multipart upload and repeated preview teardown"
       );
     };
     samples.push(await memory());
-    const pid = (await run("lsof", ["-tiTCP:4100", "-sTCP:LISTEN"])).stdout
+    const pid = (await run("lsof", [`-tiTCP:${new URL(API_URL).port}`, "-sTCP:LISTEN"])).stdout
       .trim()
       .split("\n")[0];
     let sampling = false;

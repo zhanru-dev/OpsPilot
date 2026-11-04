@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { WEB_URL } from "./support/env";
 
 const eventId = "33333333-3333-4333-8333-333333333335";
 const path = `/events/${eventId}/confirm`;
@@ -63,7 +64,7 @@ test("opening a link never submits it and stale links show recovery", async ({
   await expect(
     page.getByRole("heading", { name: "Confirm your registration" }),
   ).toBeVisible();
-  await expect(page).toHaveURL(`http://localhost:3000${path}`);
+  await expect(page).toHaveURL(`${WEB_URL}${path}`);
   expect(state.mutations).toEqual([]);
   await page.getByRole("checkbox").check();
   await page

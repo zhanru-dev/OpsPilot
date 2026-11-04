@@ -15,9 +15,10 @@ import {
   DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 import ffmpeg from "ffmpeg-static";
+import { testEnv } from "./test-env.mjs";
 const database = new URL(process.env.DATABASE_URL ?? "");
 assert.ok(database.pathname.endsWith("_test"), "Disposable database required");
-assert.equal(database.port, "5546");
+assert.equal(database.port, testEnv.postgresPort);
 const exec = promisify(execFile),
   db = new PrismaClient(),
   names = [],

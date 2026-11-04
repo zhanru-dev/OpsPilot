@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { io } from "socket.io-client";
+import { testEnv, testUrls } from "./test-env.mjs";
 
 const exec = promisify(execFile);
 const database = new URL(process.env.DATABASE_URL ?? "");
@@ -14,13 +15,13 @@ assert.equal(
   "/opspilot_chat_test",
   "Disposable Chat database required",
 );
-assert.equal(database.port, "5546");
+assert.equal(database.port, testEnv.postgresPort);
 const db = new PrismaClient();
 const suffix = randomUUID().slice(0, 8);
 const names = [];
 const eventId = randomUUID();
-const api = "http://localhost:4100/api/v1";
-const origin = "http://localhost:3000";
+const api = testUrls.api;
+const origin = testUrls.web;
 let cookie;
 let socket;
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -60,6 +61,7 @@ async function start(kind, port) {
   const name = `opspilot-chat-probe-${kind}-${suffix}`;
   const args = ["run", "-d", "--name", name];
   if (port) args.push("-p", `127.0.0.1:${port}:${port}`);
+  if (kind === "web") args.push("-e", `PORT=${port}`);
   if (kind !== "web")
     for (const key of [...forwarded, "NODE_ENV"]) args.push("-e", key);
   args.push(`opspilot-${kind}:chat-integration`);
@@ -78,10 +80,10 @@ async function call(path, init = {}) {
   });
 }
 try {
-  const apiName = await start("api", 4100);
+  const apiName = await start("api", Number(testEnv.apiPort));
   await ready(api + "/health/ready");
   const workerName = await start("worker");
-  await start("web", 3000);
+  await start("web", Number(testEnv.webPort));
   await ready(origin + "/login");
   let workerReady = false;
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -144,7 +146,7 @@ try {
   const ticketResponse = await call(base + "/ticket", { method: "POST" });
   assert.equal(ticketResponse.status, 201);
   const { ticket } = await ticketResponse.json();
-  socket = io("http://localhost:4100/chat", {
+  socket = io(`${new URL(testUrls.api).origin}/chat`, {
     transports: ["websocket"],
     auth: { ticket },
     extraHeaders: { Origin: origin },

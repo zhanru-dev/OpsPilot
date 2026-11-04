@@ -1,4 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
+const webUrl = (
+  process.env.E2E_WEB_URL ??
+  `http://localhost:${process.env.OPSPILOT_TEST_WEB_PORT ?? "3000"}`
+).replace(/\/+$/, "");
+const apiUrl = (
+  process.env.NEXT_PUBLIC_API_URL ??
+  `http://localhost:${process.env.OPSPILOT_TEST_API_PORT ?? "4100"}/api/v1`
+).replace(/\/+$/, "");
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "broadcast.spec.ts",
@@ -8,7 +16,7 @@ export default defineConfig({
   reporter: "list",
   timeout: 240000,
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: webUrl,
     ...devices["Desktop Chrome"],
     ...(process.env.CI ? {} : { channel: "chrome" }),
     trace: "off",
@@ -22,13 +30,13 @@ export default defineConfig({
     },
     {
       command: "node scripts/start-broadcast-test-api.mjs",
-      url: "http://localhost:4100/api/v1/health/ready",
+      url: `${apiUrl}/health/ready`,
       reuseExistingServer: false,
       timeout: 120000,
     },
     {
       command: "node scripts/start-chat-recovery-web.mjs",
-      url: "http://localhost:3000/login",
+      url: `${webUrl}/login`,
       reuseExistingServer: false,
       timeout: 120000,
     },
