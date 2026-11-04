@@ -13,6 +13,9 @@ export function useBroadcast(
   const [snapshot, setSnapshot] = useState<BroadcastSnapshot | null>(null);
   const [connection, setConnection] = useState("connecting");
   const [error, setError] = useState<string | null>(null);
+  // True while a requested or server-announced snapshot is not yet applied.
+  // Revision-dependent commands must wait, or they send an obsolete revision.
+  const [refreshing, setRefreshing] = useState(false);
   const commands = useRef<{
     refresh: () => Promise<void>;
     reconnect: () => void;
@@ -31,6 +34,15 @@ export function useBroadcast(
       retry: ReturnType<typeof setTimeout> | undefined,
       queued: ReturnType<typeof setTimeout> | undefined;
     const controllers = new Set<AbortController>();
+    let waiters: (() => void)[] = [];
+    // Resolve refresh() callers only when no fetch is running, queued or owed.
+    const settle = (force = false) => {
+      if (!force && (syncing || dirty || queued)) return;
+      const pending = waiters;
+      waiters = [];
+      for (const resolve of pending) resolve();
+      if (active) setRefreshing(false);
+    };
     const reset = () => {
       epoch++;
       for (const c of controllers) c.abort();
@@ -47,8 +59,10 @@ export function useBroadcast(
       reset();
       clearTimeout(retry);
       clearTimeout(queued);
+      queued = undefined;
       socket?.removeAllListeners();
       socket?.disconnect();
+      settle(true);
       setSnapshot(null);
       setConnection("denied");
       setError(
@@ -70,13 +84,30 @@ export function useBroadcast(
     }
     function schedule() {
       if (!active || denied || queued) return;
+      setRefreshing(true);
       queued = setTimeout(() => {
         queued = undefined;
-        void refresh();
+        void sync();
       }, 50);
     }
-    async function refresh() {
-      if (!active || denied || !joined) return;
+    // Explicit refresh: resolves after a snapshot at least as new as every
+    // revision requested so far has been applied (or the scope is torn down).
+    function refresh() {
+      return new Promise<void>((resolve) => {
+        if (!active || denied || !joined) {
+          resolve();
+          return;
+        }
+        waiters.push(resolve);
+        setRefreshing(true);
+        void sync();
+      });
+    }
+    async function sync() {
+      if (!active || denied || !joined) {
+        settle(true);
+        return;
+      }
       if (syncing) {
         dirty = true;
         return;
@@ -122,6 +153,7 @@ export function useBroadcast(
       } finally {
         syncing = false;
         if (dirty) schedule();
+        else settle();
       }
     }
     function recover() {
@@ -130,6 +162,7 @@ export function useBroadcast(
       reset();
       socket?.removeAllListeners();
       socket?.disconnect();
+      settle(true);
       setSnapshot(null);
       setConnection("recovering");
       if (!retry)
@@ -168,7 +201,7 @@ export function useBroadcast(
             return;
           }
           joined = true;
-          void refresh();
+          void sync();
         });
         socket.on("broadcast.snapshot", (input: unknown) => {
           if (!active || denied || !joined) return;
@@ -213,7 +246,7 @@ export function useBroadcast(
     }
     commands.current = { refresh, reconnect: recover };
     const online = () => {
-      if (joined) void refresh();
+      if (joined) void sync();
       else void connect();
     };
     window.addEventListener("online", online);
@@ -226,6 +259,7 @@ export function useBroadcast(
       clearTimeout(queued);
       clearInterval(timer);
       window.removeEventListener("online", online);
+      settle(true);
       socket?.removeAllListeners();
       socket?.disconnect();
       commands.current = null;
@@ -236,7 +270,8 @@ export function useBroadcast(
     snapshot,
     connection,
     error,
-    refresh: () => commands.current?.refresh(),
+    refreshing,
+    refresh: () => commands.current?.refresh() ?? Promise.resolve(),
     reconnect: () => commands.current?.reconnect(),
   };
 }

@@ -654,6 +654,92 @@ test("prepare conflict refreshes its revision while retaining the operation iden
   ).toBe(1);
 });
 
+test("end retry stays disabled until a requested refresh is applied (SYS-BCAST-01)", async ({
+  page,
+}) => {
+  const event = await fixture();
+  await login(page, event.id);
+  await expect(page.getByTestId("broadcast-connection")).toHaveText(
+    "connected",
+  );
+  await page
+    .getByRole("button", { name: "Prepare broadcast", exact: true })
+    .click();
+  await expect(page.getByTestId("broadcast-status")).toHaveText(
+    "Waiting for the publisher",
+  );
+  let release!: () => void;
+  let held = 0;
+  // Snapshot GETs are held only after the conflict, so background notifications
+  // cannot pre-empt the scenario before the first end request.
+  let blocking = false;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  const ends: number[] = [];
+  page.on("response", (response) => {
+    if (
+      response.url().endsWith("/end") &&
+      response.request().method() === "POST"
+    )
+      ends.push(response.status());
+  });
+  await page.route(api(event.id), async (route) => {
+    if (route.request().method() === "GET" && blocking) {
+      held++;
+      await gate;
+    }
+    await route.continue();
+  });
+  let conflicted = false;
+  await page.route(/\/sessions\/[^/]+\/end$/, async (route) => {
+    // Another operator changes the broadcast just before the first end request
+    // reaches the API, so that request deterministically conflicts.
+    if (!conflicted) {
+      conflicted = true;
+      await db.streamEvent.update({
+        where: { id: event.id },
+        data: { broadcastRevision: { increment: 1 } },
+      });
+    }
+    await route.continue();
+  });
+  try {
+    await page.getByRole("button", { name: "End broadcast", exact: true }).click();
+    await expect(
+      page.getByText("Broadcast changed. Refresh before ending.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    blocking = true;
+    await page
+      .getByRole("button", { name: "Refresh broadcast", exact: true })
+      .click();
+    await expect.poll(() => held).toBeGreaterThan(0);
+    const retry = page.getByRole("button", {
+      name: "Retry ending broadcast",
+      exact: true,
+    });
+    // The requested snapshot is still in flight: no stale revision may be sent.
+    await expect(retry).toBeDisabled();
+    await page.waitForTimeout(300);
+    expect(ends).toEqual([409]);
+    blocking = false;
+    release();
+    await expect(retry).toBeEnabled();
+    const final = page.waitForResponse(
+      (r) => r.url().endsWith("/end") && r.request().method() === "POST",
+    );
+    await retry.click();
+    expect((await final).status()).toBe(201);
+    expect(ends).toEqual([409, 201]);
+    await expect(page.getByTestId("broadcast-status")).toHaveText(
+      "Broadcast ended",
+    );
+  } finally {
+    blocking = false;
+    release();
+  }
+});
+
 test("lost start/end receipts, stale snapshots and replacement sessions keep canonical identity", async ({
   page,
   browser,

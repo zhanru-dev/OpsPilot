@@ -30,6 +30,9 @@ function BroadcastScope({ eventId, mode, actorId }: Props) {
   const snapshot = live.snapshot,
     session = snapshot?.session,
     ctx = snapshot?.context;
+  // Commands carry snapshot.revision; never send one while a newer snapshot is
+  // requested or announced but not yet applied (SYS-BCAST-01).
+  const locked = busy || live.refreshing;
   async function action(path: string, data?: object) {
     setBusy(true);
     setError(null);
@@ -53,7 +56,7 @@ function BroadcastScope({ eventId, mode, actorId }: Props) {
     }
   }
   async function begin() {
-    if (!snapshot) return;
+    if (!snapshot || locked) return;
     const intent = {
       // Keep the logical operation after a lost receipt, but refresh the version
       // for a rejected command. The server resolves this ID before version checks.
@@ -69,7 +72,7 @@ function BroadcastScope({ eventId, mode, actorId }: Props) {
     }
   }
   async function end() {
-    if (!snapshot || !session) return;
+    if (!snapshot || !session || locked) return;
     const intent = {
       // Keep the original target after a lost receipt, but retry a version
       // conflict against the latest verified event revision.
@@ -174,7 +177,7 @@ function BroadcastScope({ eventId, mode, actorId }: Props) {
                 ctx.capabilities.start && (
                   <Button
                     size="sm"
-                    disabled={busy}
+                    disabled={locked}
                     onClick={() => void begin()}
                   >
                     {start ? "Retry preparing broadcast" : "Prepare broadcast"}
@@ -184,7 +187,7 @@ function BroadcastScope({ eventId, mode, actorId }: Props) {
                 <Button
                   size="sm"
                   variant="danger"
-                  disabled={busy}
+                  disabled={locked}
                   onClick={() => void end()}
                 >
                   {ending ? "Retry ending broadcast" : "End broadcast"}
