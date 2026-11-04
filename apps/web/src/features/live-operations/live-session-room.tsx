@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, type SubmitEventHandler } from "react";
+import { useEffect, useRef, useState, type SubmitEventHandler } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,7 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
   const queryClient = useQueryClient();
   const [accessFailure, setAccessFailure] = useState<string | null>(null);
   const [streamEpoch, setStreamEpoch] = useState(0);
+  const reconnectAttempts = useRef(0);
   const [connection, setConnection] = useState<ConnectionState>("connecting");
   const [clock, setClock] = useState<number | null>(null);
   const [severity, setSeverity] = useState<LiveSessionUpdateSeverity>("INFO");
@@ -82,6 +83,16 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
     return () => window.clearInterval(timer);
   }, []);
 
+  // Discard private snapshots only when this scope unmounts (event or identity
+  // change). Stream reconnection epochs must not unmount a still-authorised room.
+  useEffect(() => {
+    const key = ["live-session", eventId];
+    return () => {
+      void queryClient.cancelQueries({ queryKey: key });
+      queryClient.removeQueries({ queryKey: key });
+    };
+  }, [eventId, queryClient]);
+
   useEffect(() => {
     let active = true,
       recovering = false;
@@ -92,6 +103,25 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
       `${API_URL}/stream-events/${eventId}/live-session/stream`,
       { withCredentials: true },
     );
+    const deniedStatus = (cause: unknown) =>
+      cause instanceof ApiError && [401, 403, 404].includes(cause.status);
+    function deny() {
+      void queryClient.cancelQueries({ queryKey: key });
+      queryClient.removeQueries({ queryKey: key });
+      setAccessFailure(
+        "Live operations access is no longer available. Sign in again or contact your workspace administrator.",
+      );
+    }
+    function scheduleReconnect() {
+      // Bounded exponential backoff for transport failures: 2s, 4s ... 30s.
+      const delay = Math.min(30_000, 2_000 * 2 ** reconnectAttempts.current);
+      reconnectAttempts.current += 1;
+      retry = setTimeout(() => {
+        if (active) setStreamEpoch((value) => value + 1);
+      }, delay);
+    }
+    // The server signalled an authority change: hide private data first, then
+    // re-establish access through REST (which may renew an expired cookie).
     async function recover() {
       if (!active || recovering) return;
       recovering = true;
@@ -110,22 +140,42 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
         if (!active) return;
         queryClient.setQueryData(key, snapshot);
         setAccessFailure(null);
+        reconnectAttempts.current = 0;
         setStreamEpoch((value) => value + 1);
       } catch (cause) {
-        if (
-          active &&
-          !(cause instanceof ApiError && [401, 403, 404].includes(cause.status))
-        )
-          retry = setTimeout(() => {
-            if (active) setStreamEpoch((value) => value + 1);
-          }, 2000);
-        if (active)
-          setAccessFailure(
-            cause instanceof ApiError && [401, 403, 404].includes(cause.status)
-              ? "Live operations access is no longer available. Sign in again or contact your workspace administrator."
-              : "Live operations are temporarily unavailable. Retry to reconnect.",
-          );
+        if (!active) return;
+        if (deniedStatus(cause)) {
+          deny();
+          return;
+        }
+        setAccessFailure(
+          "Live operations are temporarily unavailable. Retry to reconnect.",
+        );
+        scheduleReconnect();
       }
+    }
+    // Transport failure (proxy, network, server restart): keep the last
+    // authorised snapshot, verify access once through REST and retry with backoff.
+    async function reconnect() {
+      if (!active || recovering) return;
+      recovering = true;
+      source.close();
+      setConnection("reconnecting");
+      try {
+        const snapshot = await apiFetch<LiveSessionSnapshot>(
+          `/stream-events/${eventId}/live-session`,
+          { signal: abort.signal },
+        );
+        if (!active) return;
+        if (snapshot.event.id === eventId) queryClient.setQueryData(key, snapshot);
+      } catch (cause) {
+        if (!active) return;
+        if (deniedStatus(cause)) {
+          deny();
+          return;
+        }
+      }
+      scheduleReconnect();
     }
     source.onopen = () => {
       if (active) setConnection("live");
@@ -137,21 +187,31 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
         if (snapshot.event.id !== eventId) return;
         queryClient.setQueryData(key, snapshot);
         void queryClient.invalidateQueries({ queryKey: ["live-sessions"] });
+        reconnectAttempts.current = 0;
         setAccessFailure(null);
         setConnection("live");
       } catch {
         void recover();
       }
     };
-    source.addEventListener("access-changed", () => void recover());
-    source.onerror = () => void recover();
+    source.addEventListener("access-changed", (event) => {
+      let reason: unknown;
+      try {
+        reason = (JSON.parse((event as MessageEvent<string>).data) as {
+          reason?: unknown;
+        }).reason;
+      } catch {
+        reason = undefined;
+      }
+      // "unavailable" is a server-side transient failure, not an authority change.
+      void (reason === "unavailable" ? reconnect() : recover());
+    });
+    source.onerror = () => void reconnect();
     return () => {
       active = false;
       clearTimeout(retry);
       abort.abort();
       source.close();
-      void queryClient.cancelQueries({ queryKey: key });
-      queryClient.removeQueries({ queryKey: key });
     };
   }, [eventId, queryClient, streamEpoch]);
 
@@ -196,7 +256,10 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
     return (
       <ErrorState
         message={accessFailure}
-        retry={() => setStreamEpoch((value) => value + 1)}
+        retry={() => {
+          reconnectAttempts.current = 0;
+          setStreamEpoch((value) => value + 1);
+        }}
       />
     );
   if (query.isLoading) return <LoadingState label="Opening live operations" />;
