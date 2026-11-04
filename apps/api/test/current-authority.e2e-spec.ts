@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import request from 'supertest';
+import type { Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { AppModule } from '../src/app.module';
@@ -18,7 +19,7 @@ async function until(check: () => boolean, timeout = 6000) {
 }
 
 describe('Current staff authority at original REST and live SSE boundaries', () => {
-  let app: INestApplication, db: PrismaService, base: string;
+  let app: INestApplication<Server>, db: PrismaService, base: string;
   const workspaceId = randomUUID(),
     userId = randomUUID(),
     adminId = randomUUID(),
@@ -190,12 +191,12 @@ describe('Current staff authority at original REST and live SSE boundaries', () 
       .get('/api/v1/auth/me')
       .set('Cookie', cookie)
       .expect(200);
-    expect(me.body.user.role).toBe('VIEWER');
+    expect((me.body as { user: { role: string } }).user.role).toBe('VIEWER');
     const snapshot = await request(app.getHttpServer())
       .get(`/api/v1/stream-events/${eventId}/live-session`)
       .set('Cookie', cookie)
       .expect(200);
-    expect(snapshot.body.viewerRole).toBe('VIEWER');
+    expect((snapshot.body as { viewerRole: string }).viewerRole).toBe('VIEWER');
   });
   it('denies removed members across old and integrated resources and still lets them log out', async () => {
     await db.workspaceMembership.delete({ where: membership });
@@ -353,5 +354,96 @@ describe('Current staff authority at original REST and live SSE boundaries', () 
     const text = await marker();
     await until(() => live.done);
     expect(live.text).not.toContain(text);
+  });
+  it('rotates unique refresh identities in the same second and rejects the consumed receipt', async () => {
+    const now = Date.now();
+    jest.spyOn(Date, 'now').mockReturnValue(now);
+    const first = await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', cookie)
+      .expect(200);
+    const firstCookies = (first.headers['set-cookie'] as unknown as string[])
+      .map((c) => c.split(';')[0])
+      .join('; ');
+    const second = await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', firstCookies)
+      .expect(200);
+    const extract = (values: string[]) =>
+      values
+        .find((c) => c.startsWith('opspilot_refresh='))!
+        .split(';')[0]
+        .slice('opspilot_refresh='.length);
+    const one = app
+      .get(JwtService)
+      .decode<{ iat: number; jti: string }>(
+        extract(first.headers['set-cookie'] as unknown as string[]),
+      );
+    const two = app
+      .get(JwtService)
+      .decode<{ iat: number; jti: string }>(
+        extract(second.headers['set-cookie'] as unknown as string[]),
+      );
+    expect(one.iat).toBe(two.iat);
+    expect(one.jti).not.toBe(two.jti);
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', firstCookies)
+      .expect(401);
+  });
+  it('atomically consumes a refresh receipt once under concurrent requests', async () => {
+    const results = await Promise.all(
+      [1, 2].map(() =>
+        request(app.getHttpServer())
+          .post('/api/v1/auth/refresh')
+          .set('Cookie', cookie),
+      ),
+    );
+    expect(results.map((r) => r.status).sort()).toEqual([200, 401]);
+    const winner = results.find((r) => r.status === 200)!;
+    const current = (winner.headers['set-cookie'] as unknown as string[])
+      .map((c) => c.split(';')[0])
+      .join('; ');
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', current)
+      .expect(200);
+  });
+  it('cannot rotate a session revoked while the next token hash is being prepared', async () => {
+    const original = db.session.updateMany.bind(db.session);
+    let signal!: () => void, release!: () => void;
+    const entered = new Promise<void>((r) => {
+        signal = r;
+      }),
+      gate = new Promise<void>((r) => {
+        release = r;
+      });
+    jest.spyOn(db.session, 'updateMany').mockImplementationOnce((args) => {
+      // Only delay dispatch; the write and its compare-and-swap remain real PG.
+      const delayed = (async () => {
+        signal();
+        await gate;
+        return original(args);
+      })();
+      return delayed as ReturnType<typeof original>;
+    });
+    const refreshing = request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', cookie)
+      .then((r) => r);
+    await entered;
+    try {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/logout')
+        .set('Cookie', cookie)
+        .expect(204);
+    } finally {
+      release();
+    }
+    expect((await refreshing).status).toBe(401);
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Cookie', cookie)
+      .expect(401);
   });
 });

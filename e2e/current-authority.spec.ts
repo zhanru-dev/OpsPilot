@@ -64,7 +64,7 @@ for (const scenario of ["membership", "expired-access"] as const) {
       await page.getByLabel("Email address").fill(`${userId}@browser.invalid`);
       await page.getByLabel("Password", { exact: true }).fill("DemoPass123!");
       await page.getByRole("button", { name: "Sign in", exact: true }).click();
-      await expect(page).toHaveURL(/\/streamops/);
+      await expect(page).toHaveURL(/\/dashboard/);
       await page.goto(`/streamops/events/${eventId}/live`);
       await expect(page.getByText(secretText, { exact: true })).toBeVisible();
       await expect(

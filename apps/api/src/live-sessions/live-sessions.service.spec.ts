@@ -46,7 +46,12 @@ describe('LiveSessionsService', () => {
   const domainEvents = {
     record: domainEventRecord,
   } as unknown as DomainEventsService;
-  const service = new LiveSessionsService(prisma, audit, domainEvents, {} as StaffAuthorityService);
+  const service = new LiveSessionsService(
+    prisma,
+    audit,
+    domainEvents,
+    {} as StaffAuthorityService,
+  );
   const user: AuthenticatedUser = {
     id: 'user-id',
     email: 'manager@example.com',
