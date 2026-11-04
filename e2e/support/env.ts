@@ -15,7 +15,12 @@ export const MAILPIT_URL = trim(
   process.env.MAILPIT_URL ??
     `http://localhost:${process.env.OPSPILOT_TEST_MAILPIT_PORT ?? "8025"}`,
 );
-export const MINIO_PORT = process.env.OPSPILOT_TEST_MINIO_PORT ?? "9002";
+// Port the browser uses for presigned object-storage requests. CI points the API at
+// the main Compose MinIO (9000) through S3_PUBLIC_ENDPOINT; wrappers use the test one.
+export const MINIO_PORT = new URL(
+  process.env.S3_PUBLIC_ENDPOINT ??
+    `http://localhost:${process.env.OPSPILOT_TEST_MINIO_PORT ?? "9002"}`,
+).port;
 export const MEDIAMTX_CONTAINER =
   process.env.OPSPILOT_TEST_MEDIAMTX_CONTAINER ??
   "opspilot-broadcast-test-mediamtx-1";
