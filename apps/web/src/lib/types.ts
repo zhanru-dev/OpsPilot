@@ -354,6 +354,7 @@ export type LiveSessionEvent = {
 };
 
 export type LiveSessionSnapshot = {
+  viewerRole?: WorkspaceRole;
   serverTime: string;
   event: LiveSessionEvent;
   session: LiveSession | null;

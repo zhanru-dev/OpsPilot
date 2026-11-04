@@ -196,9 +196,10 @@ export class StorageService implements OnModuleInit {
     }
   }
 
-  async checkHealth() {
+  async checkHealth(abortSignal?: AbortSignal) {
     await this.internalClient.send(
       new HeadBucketCommand({ Bucket: this.bucket }),
+      { abortSignal },
     );
   }
 

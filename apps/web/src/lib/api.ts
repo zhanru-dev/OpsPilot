@@ -5,15 +5,25 @@ let refreshPromise: Promise<boolean> | null = null;
 
 function refreshSession() {
   if (!refreshPromise) {
-    refreshPromise = fetch(`${API_URL}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-    })
-      .then((response) => response.ok)
-      .catch(() => false)
-      .finally(() => {
-        refreshPromise = null;
-      });
+    const rotate = () =>
+      fetch(`${API_URL}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      })
+        .then((response) => response.ok)
+        .catch(() => false);
+    // Same-origin tabs share cookies; serialize strict server-side rotation where
+    // Web Locks is available. Per-tab promise coalescing remains the fallback.
+    refreshPromise = (async () => {
+      if (typeof navigator !== "undefined" && navigator.locks)
+        return await navigator.locks.request(
+          "opspilot-session-refresh",
+          rotate,
+        );
+      return await rotate();
+    })().finally(() => {
+      refreshPromise = null;
+    });
   }
   return refreshPromise;
 }

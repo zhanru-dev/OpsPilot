@@ -3,6 +3,8 @@ import {
   Injectable,
   MessageEvent,
   NotFoundException,
+  ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   EventStatus,
@@ -11,7 +13,8 @@ import {
   LiveSessionUpdateSeverity,
   Prisma,
 } from '@prisma/client';
-import { Observable, exhaustMap, from, map, timer } from 'rxjs';
+import { Observable, exhaustMap, from, timer } from 'rxjs';
+import { StaffAuthorityService } from '../auth/staff-authority.service';
 import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../common/request-context';
 import { DomainEventsService } from '../domain-events/domain-events.service';
@@ -31,6 +34,7 @@ export class LiveSessionsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly domainEvents: DomainEventsService,
+    private readonly authority: StaffAuthorityService,
   ) {}
 
   async list(user: AuthenticatedUser) {
@@ -63,8 +67,12 @@ export class LiveSessionsService {
     return { serverTime: new Date().toISOString(), items };
   }
 
-  async getForEvent(eventId: string, user: AuthenticatedUser) {
-    const event = await this.prisma.streamEvent.findFirst({
+  async getForEvent(
+    eventId: string,
+    user: AuthenticatedUser,
+    tx: Prisma.TransactionClient = this.prisma,
+  ) {
+    const event = await tx.streamEvent.findFirst({
       where: { id: eventId, workspaceId: user.workspaceId },
       select: {
         id: true,
@@ -127,6 +135,7 @@ export class LiveSessionsService {
 
     return {
       serverTime: new Date().toISOString(),
+      viewerRole: user.role,
       event: eventDetail,
       session,
     };
@@ -136,10 +145,42 @@ export class LiveSessionsService {
     eventId: string,
     user: AuthenticatedUser,
   ): Observable<MessageEvent> {
-    return timer(0, 3_000).pipe(
-      exhaustMap(() => from(this.getForEvent(eventId, user))),
-      map((snapshot) => ({ data: snapshot })),
-    );
+    return new Observable((subscriber) => {
+      const polling = timer(0, 3_000)
+        .pipe(
+          exhaustMap(() =>
+            from(
+              this.prisma.$transaction(async (tx) => {
+                const current = await this.authority.current(user, tx, true);
+                const snapshot = await this.getForEvent(eventId, current, tx);
+                this.authority.assertUnexpired(current);
+                // Emit while authority rows are locked. A committed revocation cannot
+                // race a later emission of data read with the old membership.
+                if (!subscriber.closed) subscriber.next({ data: snapshot });
+              }),
+            ),
+          ),
+        )
+        .subscribe({
+          error: (cause: unknown) => {
+            if (subscriber.closed) return;
+            subscriber.next({
+              type: 'access-changed',
+              data: {
+                reason:
+                  cause instanceof UnauthorizedException
+                    ? 'expired'
+                    : cause instanceof ForbiddenException ||
+                        cause instanceof NotFoundException
+                      ? 'denied'
+                      : 'unavailable',
+              },
+            });
+            subscriber.complete();
+          },
+        });
+      return () => polling.unsubscribe();
+    });
   }
 
   async addUpdate(

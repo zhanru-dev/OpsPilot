@@ -8,4 +8,6 @@ export type AuthenticatedUser = {
   workspaceName: string;
   role: WorkspaceRole;
   sessionId: string;
+  /** Verified access/Session expiry, retained for long-lived SSE authorization. */
+  accessExpiresAt?: number;
 };
