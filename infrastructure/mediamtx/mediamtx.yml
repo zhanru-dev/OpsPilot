@@ -1,0 +1,31 @@
+# Verified against pinned MediaMTX 1.21.3. No anonymous read/publish/control.
+logLevel: warn
+readTimeout: 5s
+writeTimeout: 5s
+authMethod: http
+authHTTPExclude: []
+api: true
+apiAddress: :9997
+metrics: false
+pprof: false
+playback: false
+rtsp: false
+rtmp: true
+rtmpAddress: :1935
+hls: true
+hlsAddress: :8888
+hlsVariant: fmp4
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsSegmentMaxSize: 10M
+hlsMuxerCloseAfter: 10s
+hlsAllowOrigins: []
+webrtc: false
+srt: false
+moq: false
+pathDefaults:
+  source: publisher
+  overridePublisher: false
+  record: false
+paths:
+  '~^live/[0-9a-f-]{36}$': {}

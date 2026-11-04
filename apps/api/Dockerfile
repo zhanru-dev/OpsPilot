@@ -9,6 +9,12 @@ RUN apt-get update \
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
+COPY packages/chat-contracts/package.json packages/chat-contracts/package.json
+COPY packages/topics-contracts/package.json packages/topics-contracts/package.json
+COPY packages/broadcast-contracts/package.json packages/broadcast-contracts/package.json
+COPY packages/media-contracts/package.json packages/media-contracts/package.json
+COPY scripts/apply-development-patches.cjs scripts/apply-development-patches.cjs
+COPY patches ./patches
 RUN npm ci
 
 FROM dependencies AS builder
@@ -16,10 +22,15 @@ ENV DATABASE_URL=postgresql://build:build@localhost:5432/opspilot
 COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY apps/api ./apps/api
+COPY packages/chat-contracts ./packages/chat-contracts
+COPY packages/topics-contracts ./packages/topics-contracts
+COPY packages/broadcast-contracts ./packages/broadcast-contracts
+COPY packages/media-contracts ./packages/media-contracts
 RUN npm run db:generate && npm run build --workspace=@opspilot/api
 
 FROM dependencies AS production-dependencies
 RUN npm prune --omit=dev --workspace=@opspilot/api --include-workspace-root \
+  && mkdir -p apps/api/node_modules \
   && npm cache clean --force
 
 FROM node:22-bookworm-slim AS runtime
@@ -31,6 +42,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=production-dependencies --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=node:node /app/package.json /app/package-lock.json ./
 COPY --from=builder --chown=node:node /app/prisma.config.ts ./

@@ -1,0 +1,8 @@
+{
+  "compiledApiExistsBeforeTest": false,
+  "requireResolution": "MODULE_NOT_FOUND",
+  "integrationExitCode": 1,
+  "workflow": ".github/workflows/ci.yml quality: test:e2e before build",
+  "applicationUnchanged": true,
+  "method": "Only generated API dist temporarily moved in ignored audit copy; original test and assertions unchanged; compiled files restored in finally."
+}

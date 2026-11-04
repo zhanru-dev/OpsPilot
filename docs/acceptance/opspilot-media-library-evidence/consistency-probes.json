@@ -1,0 +1,28 @@
+[
+  {
+    "scenario": "attach-wins-delete-race",
+    "status": "PASS",
+    "lockWaitObserved": true,
+    "firstHttp": 201,
+    "secondHttp": 409,
+    "assetStatus": "READY",
+    "eventReferences": 1
+  },
+  {
+    "scenario": "delete-wins-attach-race",
+    "status": "PASS",
+    "lockWaitObserved": true,
+    "firstHttp": 200,
+    "secondHttp": 409,
+    "assetStatus": "DELETED",
+    "eventReferences": 0
+  },
+  {
+    "scenario": "cleanup-fairness-over-100",
+    "status": "PASS",
+    "fixtures": 101,
+    "first100StorageFailures": true,
+    "lastAssetCleanedOnSecondCycle": true,
+    "allFixturesEventuallyCleaned": true
+  }
+]

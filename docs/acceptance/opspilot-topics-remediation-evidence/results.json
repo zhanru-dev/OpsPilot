@@ -1,0 +1,188 @@
+{
+  "date": "2026-10-29",
+  "applicationBaseline": "a5bb2caf8041f9404cbdb6946ae42033f0417fb9",
+  "auditCheckpoint": "26c0934",
+  "fixCheckpoint": "349ea30119bcb6e3f25e523f6a035b10e66775c9",
+  "branch": "feat/streamops-chat-integration",
+  "environment": {
+    "os": "Darwin x86_64",
+    "node": "22.20.0",
+    "npm": "10.9.3",
+    "database": "opspilot_topics_remediation_20261029_test",
+    "databasePort": 5546,
+    "redisContainer": "opspilot-topics-remediation-redis-20261029",
+    "redisPort": 6393,
+    "bucket": "opspilot-topics-remediation-20261029",
+    "web": "http://localhost:3000",
+    "api": "http://localhost:4100/api/v1",
+    "developmentRestoredPid": 70770
+  },
+  "commands": [
+    {
+      "label": "deploy",
+      "command": "npm run db:deploy",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2727,
+      "log": ".runtime/topics-remediation/deploy.log"
+    },
+    {
+      "label": "seed",
+      "command": "npm run db:seed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2397,
+      "log": ".runtime/topics-remediation/seed.log"
+    },
+    {
+      "label": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 16010,
+      "log": ".runtime/topics-remediation/typecheck.log"
+    },
+    {
+      "label": "lint",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 25841,
+      "log": ".runtime/topics-remediation/lint.log"
+    },
+    {
+      "label": "unit",
+      "command": "npm test -- --runInBand",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4648,
+      "log": ".runtime/topics-remediation/unit.log"
+    },
+    {
+      "label": "build",
+      "command": "npm run build",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 24083,
+      "log": ".runtime/topics-remediation/build.log"
+    },
+    {
+      "label": "api",
+      "command": "npm run test:e2e --workspace=@opspilot/api -- --runInBand",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 41726,
+      "log": ".runtime/topics-remediation/api.log"
+    },
+    {
+      "label": "state",
+      "command": "node --import tsx --test tests/chat-state.test.ts tests/topics-state.test.ts tests/topics-drafts.test.ts",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 572,
+      "log": ".runtime/topics-remediation/state.log"
+    },
+    {
+      "label": "browser",
+      "command": "env E2E_PRODUCTION_WEB=1 npm run test:ui",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 428910,
+      "log": ".runtime/topics-remediation/browser.log"
+    },
+    {
+      "label": "chat-recovery",
+      "command": "env CHAT_RECOVERY_PRODUCTION_WEB=1 npm run test:chat:recovery",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 90504,
+      "log": ".runtime/topics-remediation/chat-recovery.log"
+    },
+    {
+      "label": "isolated-ui",
+      "command": "npm run test:ui:isolated",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 29245,
+      "log": ".runtime/topics-remediation/isolated-ui.log"
+    }
+  ],
+  "counts": {
+    "unit": 94,
+    "state": 15,
+    "realApi": 60,
+    "realBrowser": 22,
+    "chatRecovery": 12,
+    "mockedUiSupplement": 12
+  },
+  "rateLimitAssertions": [
+    {
+      "actor": "staff",
+      "kind": "question",
+      "transportResponses": [
+        201,
+        429,
+        201
+      ],
+      "firstResponseDroppedAfterRealCommit": true,
+      "distinctOperationIds": 1,
+      "databaseRowsForIntent": 1,
+      "result": "PASS"
+    },
+    {
+      "actor": "staff",
+      "kind": "reply",
+      "transportResponses": [
+        201,
+        429,
+        201
+      ],
+      "firstResponseDroppedAfterRealCommit": true,
+      "distinctOperationIds": 1,
+      "databaseRowsForIntent": 1,
+      "result": "PASS"
+    },
+    {
+      "actor": "attendee",
+      "kind": "question",
+      "transportResponses": [
+        201,
+        429,
+        201
+      ],
+      "firstResponseDroppedAfterRealCommit": true,
+      "distinctOperationIds": 1,
+      "databaseRowsForIntent": 1,
+      "result": "PASS"
+    },
+    {
+      "actor": "attendee",
+      "kind": "reply",
+      "transportResponses": [
+        201,
+        429,
+        201
+      ],
+      "firstResponseDroppedAfterRealCommit": true,
+      "distinctOperationIds": 1,
+      "databaseRowsForIntent": 1,
+      "result": "PASS"
+    }
+  ],
+  "draftAssertions": [
+    "Independent staff reply retains draft and original version",
+    "Stale direct PATCH returns 409 without overwrite",
+    "Explicit version review permits save",
+    "Remote edit retains local draft and shows current text",
+    "Deleted parent removes editor and active replies",
+    "Approval preserves author draft requiring review",
+    "Publishing permission change discards edit",
+    "Revoked session and changed identity do not recover private edit"
+  ],
+  "remainingLimitations": [
+    "In-memory drafts do not survive full reload",
+    "Edit drafts are conservatively dropped outside current verified view or after authority change",
+    "No deployment/multi-replica/load acceptance claim"
+  ],
+  "result": "PASS for P1-01 and P2-01 remediation; original audit remains historical FAIL"
+}

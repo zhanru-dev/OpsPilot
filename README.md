@@ -20,6 +20,8 @@ The centrepiece is **Launch Control**. A versioned rules engine converts operati
 - Workspace-scoped RBAC for operations managers and read-only analysts.
 - Guarded `DRAFT -> CONFIGURING -> READY -> LIVE -> COMPLETED -> ARCHIVED` lifecycle.
 - Event-scoped live operations room with durable updates and realtime refresh.
+- Persistent event Chat for workspace staff and admitted attendees, with current-permission moderation, WebSocket delivery and missed-message recovery.
+- Event Q&A with private review queues, replies, versioned edits, seven-pin moderation, audience settings and authenticated snapshot recovery.
 - Draft, open and closed live polls with serialised lifecycle controls.
 - Public registration with single-use email verification and scoped HttpOnly attendee sessions.
 - Invitation-only and exact email-domain access with immediate session revocation.
@@ -34,7 +36,7 @@ The centrepiece is **Launch Control**. A versioned rules engine converts operati
 - Direct browser uploads through short-lived presigned URLs into private S3-compatible storage.
 - ffprobe validation and FFmpeg video/audio derivatives in an independent BullMQ worker.
 - Persisted processing jobs, progress, attempts, failure evidence and controlled retries.
-- Short-lived private playback URLs plus scheduled demo-media retention cleanup.
+- Short-lived private playback URLs, resumable multipart uploads and durable cancellation/deletion cleanup.
 - Transactional domain-event outbox with signed `event.ready` and `event.started` webhooks.
 - Bounded webhook retries, duplicate suppression, attempt history, manual recovery and trace IDs.
 - Integration Centre for endpoint subscriptions, delivery health and retry evidence.
@@ -106,6 +108,81 @@ npm run dev
 
 The API uses `4100` by default and remains configurable through the environment.
 
+## Chat and Topics integration: isolated local environment
+
+The first Mudu integration slice adds Chat to existing StreamOps Live Operations and
+the admitted attendee page. See the [foundation contract](docs/integration/mudu-integration-foundation.md)
+and [migration report, verification and limitations](docs/integration/chat-migration-report.md).
+Topics/Q&A is now integrated on the same surfaces. See its [migration report](docs/integration/topics-migration-report.md).
+These commands describe the original Chat/Topics slice; the later streaming and media sections below cover their separate integrations.
+
+From the repository root, use the separate services below to avoid the ordinary development database:
+
+```sh
+npm ci
+docker compose -f docker-compose.chat-test.yml up -d --wait
+node scripts/with-chat-test-env.mjs npm run db:generate
+node scripts/with-chat-test-env.mjs npm run db:deploy
+# First use of this disposable database ONLY. The existing seed replaces demo data.
+node scripts/with-chat-test-env.mjs npm run db:seed
+node scripts/with-chat-test-env.mjs npm run dev
+```
+
+On subsequent starts, run Compose, `db:generate`, `db:deploy` and `dev`; do not reseed. Secrets are
+generated locally in ignored `.runtime/chat-test-secrets.json` with mode 0600. By default the wrapper
+targets `opspilot_chat_test` on port 5546, Redis 6381 and isolated object storage 9002, with
+Web/API on 3000/4100. Use `localhost` consistently for browser cookies.
+
+### Running tests beside a developer environment
+
+All disposable test addresses come from [`scripts/test-env.mjs`](scripts/test-env.mjs); the
+wrappers, Compose files, Playwright configurations and specs read the same values. Override
+them to run a second fully isolated stack while ordinary development servers keep running:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `OPSPILOT_TEST_WEB_PORT` / `OPSPILOT_TEST_API_PORT` | 3000 / 4100 | Test web and API processes |
+| `OPSPILOT_TEST_POSTGRES_PORT` / `_CONTAINER` | 5546 / `opspilot-chat-test-postgres-1` | Disposable PostgreSQL |
+| `OPSPILOT_TEST_REDIS_PORT`, `_BROADCAST_REDIS_PORT`, `_MEDIA_REDIS_PORT` | 6381, 6394, 6402 | Redis per suite |
+| `OPSPILOT_TEST_MINIO_PORT`, `_SMTP_PORT`, `_MAILPIT_PORT` | 9002, 1026, 8025 | Object storage and mail |
+| `OPSPILOT_TEST_RTMP_PORT`, `_HLS_PORT`, `_MEDIA_CONTROL_PORT` | 1937, 8890, 9999 | MediaMTX |
+| `OPSPILOT_TEST_MEDIAMTX_CONTAINER` | `opspilot-broadcast-test-mediamtx-1` | MediaMTX container used by restart tests |
+
+Use `COMPOSE_PROJECT_NAME=<name>` with `docker-compose.chat-test.yml` to create separately named
+containers, and set the matching `*_CONTAINER` variables. Browser suites refuse any
+`DATABASE_URL` that is not a `*_test` database and never reuse an already running server
+unless `E2E_REUSE_SERVER=1` is set.
+
+1. Sign in at `http://localhost:3000/login` with the seeded Alex account below.
+2. Open **Product Operations Forum → Live Operations**, or
+   `http://localhost:3000/streamops/events/33333333-3333-4333-8333-333333333335/live`.
+3. In a separate browser profile/private window, open
+   `http://localhost:3000/events/33333333-3333-4333-8333-333333333335/register`.
+4. Register a local test email, open its message in Mailpit at `http://localhost:8025`,
+   and open/confirm the verification link in that attendee window. Chat and Questions & answers appear after admission.
+5. Send in either window, remove a message as Alex, and reload to verify persistence.
+6. Submit an attendee question. Alex can open **Pending**, approve it, reply, pin/unpin,
+   edit or delete it. **Question settings** controls audience publishing/replies/review.
+   Other attendees see the question only after approval. Topics and Polls remain separate.
+
+Topics tests are available as `test:topics:state`, `test:topics:api` and
+`test:topics:browser`. Backend/browser tests require an isolated database ending `_test`,
+with migrations and demo fixtures installed once. Stop local Web/API/worker processes before
+browser suites. For production-web verification, run `npm run build` under the test environment,
+then `E2E_PRODUCTION_WEB=1 npm run test:topics:browser` (or `test:ui` for all integration flows).
+The [Topics report](docs/integration/topics-migration-report.md) records the exact isolated
+environment and commands used during this integration.
+
+Run Chat fault recovery tests with
+`node scripts/with-chat-test-env.mjs npm run test:chat:recovery` after stopping the local
+Web/API/worker processes. The suite starts its own isolated test API and browsers; it verifies
+real database timeouts for both staff and attendees. See the
+[reconnection repair report](docs/acceptance/opspilot-chat-reconnection-remediation.md)
+for production-build mode, regression results and environment requirements.
+
+For an existing populated OpsPilot database, use its normal configuration and apply only
+`npm run db:generate` and `npm run db:deploy`. Do not reset or seed it for this migration.
+
 ## Production Images
 
 The v1.5 release candidate packages each long-running process independently from the monorepo root:
@@ -154,6 +231,10 @@ npm run build
 npm audit --omit=dev
 ```
 
+`test:ui` refuses to run against a database that is not `*_test`. CI provides one; locally run it
+through the isolated wrapper, for example `node scripts/with-media-test-env.mjs env E2E_PRODUCTION_WEB=1 npm run test:ui`
+after `npm run build` under the same wrapper.
+
 The Playwright suite exercises the complete manager lifecycle through Archive, verifies analyst read-only boundaries, checks AI/analytics evidence, protects core pages from mobile overflow, and runs axe checks on key product surfaces.
 
 ## Readiness Model
@@ -195,3 +276,78 @@ docs/
 e2e/                   Playwright golden flow
 prisma/                Schema, migration and deterministic seed
 ```
+
+## Integrated live broadcasting (local opt-in)
+
+Live video uses the existing StreamEvent and admission flow. It has its own
+BroadcastSession; ending video does not complete the event or close Chat, Topics
+or Polls. Ordinary startup remains streaming-disabled.
+
+For this existing integration workspace (preserves the current local database):
+
+```sh
+npm run broadcast:setup
+npm run broadcast:dev
+```
+
+Stop the existing development process before starting another one on ports
+3000/4100. Setup only deploys additive migrations; it never resets or reseeds the
+existing database. For a fresh, disposable demonstration environment instead:
+
+```sh
+npm run broadcast:test:setup
+node scripts/with-broadcast-env.mjs npm run dev
+```
+
+Open `http://localhost:3000`, sign in with a local demo account, open an event's
+Live Operations, and prepare a broadcast. Expand **Publisher connection** and
+generate a key. Use OBS with H.264/AAC, server `rtmp://127.0.0.1:1937/live`, and
+the generated stream key. An attendee registers and verifies the existing email
+link, then follows **Enter Watch Room** (`/events/<event-id>/watch`). Separate
+browser profiles are independent participants. PUBLIC registration still requires
+admission before protected video access.
+
+Docker Desktop and FFmpeg (for automated stream fixtures) are required. Local
+MediaMTX ports 1937/8890/9999 avoid the Mudu source environment. Development and
+isolated broadcast tests share those ports and must run sequentially. Re-run the
+appropriate setup when switching between their generated secrets.
+
+```sh
+npm run broadcast:test:setup
+npm run build
+npm run test:broadcast:migration
+npm run test:broadcast:api
+npm run test:broadcast:browser
+```
+
+These tests use `opspilot_broadcast_test`, separate Redis6394 and an isolated media
+namespace. See the [migration report](docs/integration/live-streaming-migration-report.md)
+for the contracts, measured recovery, fault tests, production limitations and
+credential-safe FFmpeg example. No Live Streaming or Media Library assets are
+copied from captured historical Mudu material.
+
+
+## Integrated Media Library
+
+Staff can upload multiple MP4/MOV/MP3/WAV/M4A files (100 MiB / 5 minutes), pause,
+retry, cancel and resume after reload by reselecting the original file. Three
+file workers transfer sequential 5 MiB parts. The existing BullMQ/FFmpeg pipeline
+produces private previews and video thumbnails; READY means processing succeeded.
+Unreferenced terminal assets may be deleted, with durable storage cleanup.
+Existing ready assets are retained until explicit deletion.
+
+Use the existing `npm run broadcast:setup` / `npm run broadcast:dev` environment
+and open `/streamops/media`. Setup applies additive migrations without reseeding
+existing development data. For disposable verification:
+
+```sh
+npm run media:test:setup
+node scripts/with-media-test-env.mjs npm run build
+npm run test:media:state
+npm run test:media:api
+npm run test:media:browser
+```
+
+See [Media integration, recovery contracts and evidence](docs/integration/media-library-migration-report.md).
+Do not run test suites against shared data. Already issued private URLs retain
+their documented TTL; new operations use current server-side permissions.

@@ -1,0 +1,53 @@
+
+> opspilot-platform@2.0.0 build
+> npm run build --workspace=@opspilot/api && npm run build --workspace=@opspilot/web
+
+
+> @opspilot/api@2.0.0 build
+> nest build
+
+
+> @opspilot/web@2.0.0 build
+> next build
+
+▲ Next.js 16.4.3 (Turbopack)
+✓ Running next.config.ts took 1790ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 6.9s
+  Running TypeScript ...
+  Finished TypeScript in 6.9s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/15) ...
+  Generating static pages using 15 workers (3/15)
+  Generating static pages using 15 workers (7/15)
+  Generating static pages using 15 workers (11/15)
+✓ Generating static pages using 15 workers (15/15) in 551ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /analytics
+├ ○ /audit-logs
+├ ○ /case-study
+├ ○ /dashboard
+├ ƒ /events/[id]/confirm
+├ ƒ /events/[id]/register
+├ ƒ /events/[id]/watch
+├ ○ /icon.svg
+├ ○ /integrations
+├ ○ /login
+├ ○ /settings
+├ ○ /streamops/events
+├ ƒ /streamops/events/[id]
+├ ƒ /streamops/events/[id]/invitations
+├ ƒ /streamops/events/[id]/live
+├ ƒ /streamops/events/[id]/registrations
+├ ○ /streamops/events/new
+├ ○ /streamops/live
+└ ○ /streamops/media
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

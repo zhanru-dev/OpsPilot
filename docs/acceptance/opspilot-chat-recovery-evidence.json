@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-29",
+  "fixRevision": "1ac03b451d49b5f024382987c4c7983548b10431",
+  "auditedBaseline": "cdd924236abc952e7a51e53663491208274dabf4",
+  "auditEvidenceCheckpoint": "07705e9",
+  "scope": "Chat P1-01 transient subscription recovery only",
+  "decision": "PASS for remediation verification; original independent FAIL report preserved",
+  "environment": {
+    "node": "v22.20.0",
+    "npm": "10.9.3",
+    "chrome": "156.0.8078.48",
+    "database": "opspilot_chat_recovery_20261029_test",
+    "postgresPort": 5546,
+    "redisDatabase": 10,
+    "storageBucket": "opspilot-chat-recovery-20261029",
+    "web": "Next standalone production build for final recovery suite; Next dev for normal browser regression",
+    "api": "Real Nest modules; dedicated test-only bootstrap for fault injection"
+  },
+  "beforeFix": {
+    "command": "A npm run test:chat:recovery -- --grep 'staff recovers.*initial subscription'",
+    "exitCode": 1,
+    "failed": 1,
+    "failure": "Real PostgreSQL row lock timeout produces 503; UI remains Access unavailable for 20 seconds"
+  },
+  "initialRegressionEnvironmentFailure": {
+    "command": "A npm run test:e2e --workspace=@opspilot/api -- --runInBand",
+    "passed": 43,
+    "failed": 1,
+    "exitCode": 1,
+    "reason": "Previous-day seed has only 13 records inside current rolling 14-day analytics window",
+    "resolution": "Created separate new isolated database and seeded once; no assertions or production analytics code changed"
+  },
+  "finalChecks": [
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "npx tsc --noEmit --skipLibCheck --moduleResolution bundler --module esnext --target es2022 e2e/chat-recovery.spec.ts playwright.chat-recovery.config.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0
+    },
+    {
+      "command": "npm test -- --runInBand",
+      "exitCode": 0,
+      "passed": 91,
+      "suites": 14
+    },
+    {
+      "command": "npm run test:chat:state",
+      "exitCode": 0,
+      "passed": 5
+    },
+    {
+      "command": "R npm run test:e2e --workspace=@opspilot/api -- --runInBand",
+      "exitCode": 0,
+      "passed": 44,
+      "suites": 4,
+      "chatCases": 16,
+      "existingOtherCases": 28
+    },
+    {
+      "command": "node scripts/with-chat-test-env.mjs npm run build",
+      "exitCode": 0,
+      "targets": [
+        "Nest API",
+        "Next production"
+      ]
+    },
+    {
+      "command": "R env CHAT_RECOVERY_PRODUCTION_WEB=1 npm run test:chat:recovery",
+      "exitCode": 0,
+      "passed": 12,
+      "elapsed": "1.5m",
+      "webStartup": "scripts/start-chat-recovery-web.mjs"
+    },
+    {
+      "command": "R npm run test:ui",
+      "exitCode": 0,
+      "passed": 11,
+      "elapsed": "1.9m",
+      "chatCases": 2,
+      "existingOtherCases": 9
+    },
+    {
+      "command": "R npm run test:ui:isolated",
+      "exitCode": 0,
+      "passed": 12,
+      "elapsed": "24.6s",
+      "usesResponseMocks": true
+    }
+  ],
+  "recoveryScenariosPerActor": [
+    "initial subscription: real PostgreSQL row lock timeout",
+    "reconnection: real PostgreSQL row lock timeout, missed history and manual retry",
+    "transient gateway replay 503",
+    "rejected single-use ticket replaced by fresh authenticated ticket",
+    "legacy denied(503) compatibility",
+    "revoked staff session or expired attendee session remains denied with hidden history"
+  ],
+  "actors": [
+    "staff",
+    "attendee"
+  ],
+  "cleanup": {
+    "remainingRecoveryFixtures": 0,
+    "remainingRecoveryMessages": 0,
+    "seedAnalyticsSnapshots": 14
+  },
+  "notReverified": [
+    "production Docker application image rebuild/restart",
+    "hosted HTTPS/proxy/multi-node deployment",
+    "real Redis outage",
+    "production-scale load",
+    "complete media upload/transcode workflow"
+  ]
+}

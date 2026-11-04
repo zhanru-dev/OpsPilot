@@ -1,0 +1,551 @@
+[
+  {
+    "label": "db-deploy",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "db:deploy"
+    ],
+    "start": "2026-11-02T17:40:01.094Z",
+    "log": "logs/db-deploy.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 3.455,
+    "logSha256": "31ffc5a4a55bb2d5b743bd44de2203cf4448c218adfe8769afa7fe22f8da0b56"
+  },
+  {
+    "label": "seed",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "db:seed"
+    ],
+    "start": "2026-11-02T17:40:09.296Z",
+    "log": "logs/seed.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 3.921,
+    "logSha256": "08e570efcff685915b5f614bc7e89a7247e205925b36aa919f6d229d06745829"
+  },
+  {
+    "label": "api-build",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "build",
+      "--workspace=@opspilot/api"
+    ],
+    "start": "2026-11-02T17:41:54.812Z",
+    "log": "logs/api-build.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 9.389,
+    "logSha256": "55a51e2a77e0c77387e3e32f93ffdef7182cee611aa74cfba308f6ff4688ba37"
+  },
+  {
+    "label": "api-remediation",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "test:e2e",
+      "--workspace=@opspilot/api",
+      "--",
+      "--runInBand",
+      "media-remediation.e2e-spec"
+    ],
+    "start": "2026-11-02T17:42:11.095Z",
+    "log": "logs/api-remediation.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 33.633,
+    "logSha256": "579edf5c47e8d8b9888ff9666223e28183beeff267e8faa8d7090c96bce884b4"
+  },
+  {
+    "label": "lint",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "lint"
+    ],
+    "start": "2026-11-02T17:42:12.254Z",
+    "log": "logs/lint.log",
+    "cwd": "checkout",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 16.059,
+    "logSha256": "e8e91f187bbd88aa19c3d66cf906d5acfffa763b9c55ab95b5113508fe9f3c51"
+  },
+  {
+    "label": "db-deploy-snapshot",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "db:deploy"
+    ],
+    "start": "2026-11-02T17:43:30.574Z",
+    "log": "logs/db-deploy-snapshot.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 1.365,
+    "logSha256": "75b83d61ef54f96fa819fc0c9fcc613248b7caace894724a42c3ce6517e72cc2"
+  },
+  {
+    "label": "api-build-final",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "build",
+      "--workspace=@opspilot/api"
+    ],
+    "start": "2026-11-02T17:44:27.620Z",
+    "log": "logs/api-build-final.log",
+    "cwd": "checkout",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 8.087,
+    "logSha256": "ff61fdadf28301a2fff049594dc116b07fc92a6bd8d400c957739d67b915e06b"
+  },
+  {
+    "label": "api-remediation-final",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "test:e2e",
+      "--workspace=@opspilot/api",
+      "--",
+      "--runInBand",
+      "media-remediation.e2e-spec"
+    ],
+    "start": "2026-11-02T17:44:35.777Z",
+    "log": "logs/api-remediation-final.log",
+    "cwd": "checkout",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 67.476,
+    "logSha256": "1c29ba301d6d6865cc676be79cb0c7752c91eeb30bf91d9e42a09153eca71b7d"
+  },
+  {
+    "label": "db-generate",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "db:generate"
+    ],
+    "start": "2026-11-02T17:44:36.756Z",
+    "log": "logs/db-generate.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 2.168,
+    "logSha256": "08fb2347a8a6a5274ce169b78f90fc5a713234afe0617ba821d59b17d55a2902"
+  },
+  {
+    "label": "api-build-generated",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "build",
+      "--workspace=@opspilot/api"
+    ],
+    "start": "2026-11-02T19:46:01.611Z",
+    "log": "logs/api-build-generated.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 11.672,
+    "logSha256": "55a51e2a77e0c77387e3e32f93ffdef7182cee611aa74cfba308f6ff4688ba37"
+  },
+  {
+    "label": "lint-recheck",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "lint"
+    ],
+    "start": "2026-11-02T19:46:02.765Z",
+    "log": "logs/lint-recheck.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 26.929,
+    "logSha256": "fa996bb5dd469221e1594feba7e45bcf3e4eb136689f7cc32badcefc653cf689"
+  },
+  {
+    "label": "api-remediation-generated",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "test:e2e",
+      "--workspace=@opspilot/api",
+      "--",
+      "--runInBand",
+      "media-remediation.e2e-spec"
+    ],
+    "start": "2026-11-02T19:46:40.043Z",
+    "log": "logs/api-remediation-generated.log",
+    "cwd": "checkout",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 94.738,
+    "logSha256": "362258d8dc96369d4fe6bc39fd4df05164906d1747f9b8db6b1e32b386d19353"
+  },
+  {
+    "label": "unit",
+    "cmd": "npm",
+    "args": [
+      "test",
+      "--",
+      "--runInBand"
+    ],
+    "start": "2026-11-02T19:47:11.309Z",
+    "log": "logs/unit.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 4.979,
+    "logSha256": "e76c626ac4af852a51f51a3b5cc808c4d0dd4057d2fd75551c8a66de850ec933"
+  },
+  {
+    "label": "state",
+    "cmd": "node",
+    "args": [
+      "--import",
+      "tsx",
+      "--test",
+      "tests/chat-state.test.ts",
+      "tests/topics-state.test.ts",
+      "tests/topics-drafts.test.ts",
+      "tests/media-queue.test.ts"
+    ],
+    "start": "2026-11-02T19:47:11.309Z",
+    "log": "logs/state.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 0.687,
+    "logSha256": "d8478fe3b4710129a822f8d88d99dd4c7ca90f2dfe6a8547dbf61728723c68cd"
+  },
+  {
+    "label": "migration",
+    "cmd": "node",
+    "args": [
+      "scripts/check-media-migration.mjs"
+    ],
+    "start": "2026-11-02T19:47:12.146Z",
+    "log": "logs/migration.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 4.733,
+    "logSha256": "ac7905b5007fa4ecc05eec3f256efe227839c12970a96b3042bc3c6b5fb83843"
+  },
+  {
+    "label": "verify-build",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "build"
+    ],
+    "start": "2026-11-02T19:48:20.562Z",
+    "log": "logs/verify-build.log",
+    "cwd": "verify",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 30.321,
+    "logSha256": "dfae26b673721cff873198d40ed5f1ba57a1c79cfdc55c262cff89152bc27bf3"
+  },
+  {
+    "label": "api-regression",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "test:e2e",
+      "--workspace=@opspilot/api",
+      "--",
+      "--runInBand",
+      "--testPathIgnorePatterns",
+      "broadcast.e2e-spec"
+    ],
+    "start": "2026-11-02T19:48:42.110Z",
+    "log": "logs/api-regression.log",
+    "cwd": "checkout",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 347.807,
+    "logSha256": "1aff45b443bc2e517c7de30f1ab2e08bfd0277026c82c97115c6cbd829480e09"
+  },
+  {
+    "label": "image-web",
+    "cmd": "docker",
+    "args": [
+      "build",
+      "--build-arg",
+      "NEXT_PUBLIC_API_URL=http://localhost:4112/api/v1",
+      "-f",
+      "apps/web/Dockerfile",
+      "-t",
+      "opspilot-media-fix-web:20261102",
+      "."
+    ],
+    "start": "2026-11-02T19:50:52.230Z",
+    "log": "logs/image-web.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 140.033,
+    "logSha256": "1a657049d993f4180b096b895472d929fb8bb90ea9a8088a43d620740c9d4581"
+  },
+  {
+    "label": "image-api",
+    "cmd": "docker",
+    "args": [
+      "build",
+      "--target",
+      "api",
+      "-f",
+      "apps/api/Dockerfile",
+      "-t",
+      "opspilot-media-fix-api:20261102",
+      "."
+    ],
+    "start": "2026-11-02T19:50:52.230Z",
+    "log": "logs/image-api.log",
+    "cwd": "checkout",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 138.019,
+    "logSha256": "6f97f591452f0d48056c7dbc290e68688756f0f35058b60ed5d4c6c88066ca93"
+  },
+  {
+    "label": "verify-typecheck",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "typecheck"
+    ],
+    "start": "2026-11-02T19:51:09.875Z",
+    "log": "logs/verify-typecheck.log",
+    "cwd": "verify",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 20.591,
+    "logSha256": "34e74c72fe19f5f80b57fdabf67fd7482366c625606bc21636ed4fd8ee123d71"
+  },
+  {
+    "label": "lint-final",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "lint"
+    ],
+    "start": "2026-11-02T19:51:30.550Z",
+    "log": "logs/lint-final.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 29.341,
+    "logSha256": "fa996bb5dd469221e1594feba7e45bcf3e4eb136689f7cc32badcefc653cf689"
+  },
+  {
+    "label": "image-api-retry",
+    "cmd": "docker",
+    "args": [
+      "build",
+      "--target",
+      "api",
+      "-f",
+      "apps/api/Dockerfile",
+      "-t",
+      "opspilot-media-fix-api:20261102",
+      "."
+    ],
+    "start": "2026-11-02T19:54:14.744Z",
+    "log": "logs/image-api-retry.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 142.663,
+    "logSha256": "771b4db05f38061d7f431706d245e142a557a73e9c79c5d5b7c0a08463c79ea6"
+  },
+  {
+    "label": "api-processing-and-replay",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "test:e2e",
+      "--workspace=@opspilot/api",
+      "--",
+      "--runInBand",
+      "media-processing.e2e-spec",
+      "media-remediation.e2e-spec",
+      "--testNamePattern=Real media processing|freezes legacy"
+    ],
+    "start": "2026-11-02T19:55:05.371Z",
+    "log": "logs/api-processing-and-replay.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 38.963,
+    "logSha256": "4939d16506e9884223fd77af2a4fc9fb5943bc05db14255442fb9987d46a367b"
+  },
+  {
+    "label": "verify-broadcast-api",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "test:e2e",
+      "--workspace=@opspilot/api",
+      "--",
+      "--runInBand",
+      "broadcast.e2e-spec"
+    ],
+    "start": "2026-11-02T19:56:15.845Z",
+    "log": "logs/verify-broadcast-api.log",
+    "cwd": "verify",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 42.081,
+    "logSha256": "50d070a73e848c018cd769a9f8f47899343b3de73295355f8c02c7835eb4e941"
+  },
+  {
+    "label": "lint-tests-final",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "lint",
+      "--workspace=@opspilot/api"
+    ],
+    "start": "2026-11-02T19:56:17.019Z",
+    "log": "logs/lint-tests-final.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 20.179,
+    "logSha256": "43ab8a0518b94d0213b15276fc98f278b4dfb00814fdf4633a25fac0512b0ca0"
+  },
+  {
+    "label": "image-worker",
+    "cmd": "docker",
+    "args": [
+      "build",
+      "--target",
+      "worker",
+      "-f",
+      "apps/api/Dockerfile",
+      "-t",
+      "opspilot-media-fix-worker:20261102",
+      "."
+    ],
+    "start": "2026-11-02T19:57:03.654Z",
+    "log": "logs/image-worker.log",
+    "cwd": "checkout",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 1.904,
+    "logSha256": "faab41c5f0e86f5570f75f9ae5a10fb9188fcb8ebc64c5bfabf2bd2c9128b3cc"
+  },
+  {
+    "label": "verify-container-smoke",
+    "cmd": "node",
+    "args": [
+      "scripts/check-media-containers.mjs"
+    ],
+    "start": "2026-11-02T19:57:39.006Z",
+    "log": "logs/verify-container-smoke.log",
+    "cwd": "verify",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 11.14,
+    "logSha256": "4d4e7df48bd1202eb64636ec8b8ad721a8392457779d9e4bada8641a04f36f7c"
+  },
+  {
+    "label": "verify-browser",
+    "cmd": "npx",
+    "args": [
+      "playwright",
+      "test",
+      "--trace=off",
+      "--output=.runtime/media-fix-browser"
+    ],
+    "start": "2026-11-02T19:57:59.547Z",
+    "log": "logs/verify-browser.log",
+    "cwd": "verify",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 451.272,
+    "logSha256": "030d2faee8600c888e3426a8fb423a029562bbaa46d0b013c7ffe052cf38b048"
+  },
+  {
+    "label": "verify-typecheck-final",
+    "cmd": "npm",
+    "args": [
+      "run",
+      "typecheck"
+    ],
+    "start": "2026-11-02T20:02:06.319Z",
+    "log": "logs/verify-typecheck-final.log",
+    "cwd": "verify",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 11.044,
+    "logSha256": "34e74c72fe19f5f80b57fdabf67fd7482366c625606bc21636ed4fd8ee123d71"
+  },
+  {
+    "label": "verify-chat-recovery",
+    "cmd": "npx",
+    "args": [
+      "playwright",
+      "test",
+      "--config=playwright.chat-recovery.config.ts",
+      "--trace=off",
+      "--output=.runtime/media-fix-chat-recovery"
+    ],
+    "start": "2026-11-02T20:05:45.227Z",
+    "log": "logs/verify-chat-recovery.log",
+    "cwd": "verify",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 84.499,
+    "logSha256": "5988fd28874fe1677c419d1adf148f6817ec64b2a2a1024394bf431c4237ad51"
+  },
+  {
+    "label": "verify-broadcast-browser",
+    "cmd": "npx",
+    "args": [
+      "playwright",
+      "test",
+      "--config=playwright.broadcast.config.ts",
+      "--output=.runtime/media-fix-broadcast"
+    ],
+    "start": "2026-11-02T20:07:13.256Z",
+    "log": "logs/verify-broadcast-browser.log",
+    "cwd": "verify",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 131.231,
+    "logSha256": "0baef4f0119d3cb9f949a002f01f5eed497287608515f21f4ee96995c5f5b966"
+  },
+  {
+    "label": "verify-ui",
+    "cmd": "npx",
+    "args": [
+      "playwright",
+      "test",
+      "--config=playwright.ui.config.ts",
+      "--trace=off",
+      "--output=.runtime/media-fix-ui"
+    ],
+    "start": "2026-11-02T20:09:29.304Z",
+    "log": "logs/verify-ui.log",
+    "cwd": "verify",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 16.369,
+    "logSha256": "c2a83feca6d737d6e98677759ba8802a88d47f187f1d50c024efe45740f85fd5"
+  }
+]

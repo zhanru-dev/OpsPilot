@@ -1,0 +1,12 @@
+{
+  "apiReady": true,
+  "workerReady": true,
+  "webLogin": 200,
+  "realMultipart": true,
+  "legacyFrozenAfterReplay": true,
+  "realLinuxFfmpeg": true,
+  "variants": 2,
+  "sourceHashMatch": true,
+  "persistenceAndPreviewAfterApiRestart": true,
+  "configuration": "production-built images; isolated local test settings, not a TLS deployment certification"
+}

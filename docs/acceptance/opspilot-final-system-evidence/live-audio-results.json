@@ -1,0 +1,8 @@
+{
+  "source": "Real FFmpeg sine 440 Hz -> AAC -> RTMP -> MediaMTX HLS -> hls.js -> Chromium AudioContext",
+  "contextState": "running",
+  "sampleRate": 48000,
+  "maximumRms": 0.08967383314472206,
+  "decodedVideoFrames": 84,
+  "speakerOutputGain": 0
+}

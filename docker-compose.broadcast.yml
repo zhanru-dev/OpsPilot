@@ -1,0 +1,17 @@
+# Opt-in service; ordinary OpsPilot startup does not require a media server.
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.3
+    restart: unless-stopped
+    volumes:
+      - ./infrastructure/mediamtx/mediamtx.yml:/mediamtx.yml:ro
+    environment:
+      # Go HTTP sends this as Basic authorization and masks the password in errors.
+      # Do not print rendered Compose configuration or container environments.
+      MTX_AUTHHTTPADDRESS: http://mediamtx:${BROADCAST_INTERNAL_SECRET:?Use the broadcast environment wrapper}@host.docker.internal:${API_PORT:-4100}/api/v1/internal/broadcast/auth
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - '127.0.0.1:${OPSPILOT_TEST_RTMP_PORT:-1937}:1935'
+      - '127.0.0.1:${OPSPILOT_TEST_HLS_PORT:-8890}:8888'
+      - '127.0.0.1:${OPSPILOT_TEST_MEDIA_CONTROL_PORT:-9999}:9997'

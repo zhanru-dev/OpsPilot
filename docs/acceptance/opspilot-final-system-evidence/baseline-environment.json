@@ -1,0 +1,67 @@
+{
+  "reviewedCommit": "516f2a31242c615ab6858dc6472438aa38f13e00",
+  "sourceBranch": "feat/streamops-chat-integration",
+  "auditBranch": "audit/final-system-20261103",
+  "initialWorkingTree": "clean",
+  "host": {
+    "os": "26.6.2",
+    "architecture": "x86_64",
+    "memoryGiB": 64,
+    "logicalCPUs": 16,
+    "node": "v22.20.0",
+    "npm": "10.9.3",
+    "dockerEngine": "29.2.1",
+    "browser": "Chrome 156.0.8078.74"
+  },
+  "database": "opspilot_final_audit_20261103_test",
+  "bucket": "opspilot-final-audit-20261103",
+  "services": {
+    "postgres": {
+      "container": "opspilot-final-audit-20261103-postgres",
+      "running": true,
+      "paused": false,
+      "startedAt": "2026-11-03T10:24:26.779767245Z"
+    },
+    "redis": {
+      "container": "opspilot-final-audit-20261103-redis",
+      "running": true,
+      "paused": false,
+      "startedAt": "2026-11-03T10:24:35.135619334Z"
+    },
+    "minio": {
+      "container": "opspilot-final-audit-20261103-minio",
+      "running": true,
+      "paused": false,
+      "startedAt": "2026-11-03T10:24:38.547279117Z"
+    },
+    "mailpit": {
+      "container": "opspilot-final-audit-20261103-mailpit",
+      "running": true,
+      "paused": false,
+      "startedAt": "2026-11-03T01:08:00.929715577Z"
+    },
+    "mediamtx": {
+      "container": "opspilot-final-audit-20261103-mediamtx",
+      "running": true,
+      "paused": false,
+      "startedAt": "2026-11-03T10:13:03.225930807Z"
+    }
+  },
+  "serviceVersions": {
+    "postgres": "17.11",
+    "redis": "Redis server v=7.4.12 sha=00000000:0 malloc=jemalloc-5.3.0 bits=64 build=a3bb3c7b72c4210a"
+  },
+  "applicationVersions": {
+    "@nestjs/core": "11.2.8",
+    "@prisma/client": "6.19.3",
+    "bullmq": "6.1.1",
+    "socket.io": "4.8.3",
+    "ffmpeg-static": "5.3.0",
+    "ffprobe-static": "3.1.0",
+    "next": "16.4.3",
+    "react": "19.2.4",
+    "@tanstack/react-query": "5.101.4",
+    "hls.js": "1.7.3"
+  },
+  "isolation": "Separate worktree, ignored verification copy with independent dependency copies, dedicated loopback ports, owned Docker services and volumes. No shared reset. Passwords and raw credentials omitted."
+}

@@ -1,0 +1,34 @@
+{
+  "reviewedCommit": "516f2a31242c615ab6858dc6472438aa38f13e00",
+  "checkedFiles": 278,
+  "applicationChanges": [],
+  "sourceUnchanged": true,
+  "allTrackedVerificationDifferences": [
+    "apps/api/test/broadcast.e2e-spec.ts",
+    "apps/api/test/chat.e2e-spec.ts",
+    "apps/api/test/topics.e2e-spec.ts",
+    "e2e/attendee-access.ui.spec.ts",
+    "e2e/broadcast.spec.ts",
+    "e2e/chat-recovery.spec.ts",
+    "e2e/chat.spec.ts",
+    "e2e/launch-control.spec.ts",
+    "e2e/media-multipart.spec.ts",
+    "e2e/media-performance.spec.ts",
+    "e2e/registration.spec.ts",
+    "e2e/restricted-registration.spec.ts",
+    "e2e/topics.spec.ts",
+    "playwright.broadcast.config.ts",
+    "playwright.config.ts",
+    "playwright.ui.config.ts",
+    "scripts/check-broadcast-containers.mjs",
+    "scripts/check-broadcast-logs.mjs",
+    "scripts/check-broadcast-migration.mjs",
+    "scripts/check-media-containers.mjs",
+    "scripts/check-media-migration.mjs",
+    "scripts/start-chat-recovery-web.mjs"
+  ],
+  "primaryWorkingTree": "",
+  "auditTrackedDifferences": [
+    "docs/acceptance/opspilot-final-system-acceptance-task.md"
+  ]
+}

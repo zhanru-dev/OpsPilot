@@ -1,0 +1,51 @@
+[WebServer] (node:64435) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:64436) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:64437) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:64444) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:64446) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 .runtime/topics-acceptance/audit.spec.ts:238:5 › lost completion followed by real rate limit preserves original operation identity (1.1m)
+
+
+  1) .runtime/topics-acceptance/audit.spec.ts:238:5 › lost completion followed by real rate limit preserves original operation identity 
+
+    Error: Retry after rate limiting must keep the original uncertain operation ID
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "cdbe2bf3-a880-469a-9ec4-d7977ec80081"
+    Received: "69c00e34-ae6b-4aec-8cdd-3f797c34e636"
+
+      246 |  await page.getByRole('button',{name:retryRetained?'Retry question':'Submit question',exact:true}).click();await expect(page.getByLabel('Question text',{exact:true})).toHaveValue('');
+      247 |  const rows=await db.eventTopic.count({where:{eventId:event.id,text}});await record({scenario:'lost-receipt-rate-limit-after-reset',retryRetained,operationIdPreserved:sent.at(-1)===sent[0],confirmedRows:rows,requests:sent.length});await page.getByTestId('topics-panel').screenshot({path:auditDir+'duplicate-after-rate-limit.png'});
+    > 248 |  expect(sent.at(-1),'Retry after rate limiting must keep the original uncertain operation ID').toBe(sent[0]);expect(rows,'Only one canonical topic may be persisted for this user intent').toBe(1);
+          |                                                                                                ^
+      249 | });
+      250 |
+        at /Users/ruzhan/computer_science/projects/OpsPilot/.runtime/topics-acceptance/audit.spec.ts:248:96
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .runtime/topics-acceptance/browser-results/audit-lost-completion-foll-df8b2-original-operation-identity/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .runtime/topics-acceptance/browser-results/audit-lost-completion-foll-df8b2-original-operation-identity/error-context.md
+
+    Error Context: .runtime/topics-acceptance/browser-results/audit-lost-completion-foll-df8b2-original-operation-identity/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .runtime/topics-acceptance/browser-results/audit-lost-completion-foll-df8b2-original-operation-identity/trace.zip
+    Usage:
+
+        npx playwright show-trace .runtime/topics-acceptance/browser-results/audit-lost-completion-foll-df8b2-original-operation-identity/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    .runtime/topics-acceptance/audit.spec.ts:238:5 › lost completion followed by real rate limit preserves original operation identity 

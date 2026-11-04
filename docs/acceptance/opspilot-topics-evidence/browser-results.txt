@@ -1,0 +1,37 @@
+
+> opspilot-platform@2.0.0 test:ui
+> playwright test --output=.runtime/topics-acceptance/regression-browser-results
+
+[WebServer] (node:61996) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:61997) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:62046) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:62102) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:62104) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 16 tests using 1 worker
+
+(node:62105) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 e2e/chat.spec.ts:163:5 › staff and email-admitted attendee chat, paginate, moderate, retry and reload (24.4s)
+  ✓   2 e2e/chat.spec.ts:360:5 › disconnect replay retains an older reading anchor across multiple pages and bounds a live burst (9.8s)
+  ✓   3 e2e/launch-control.spec.ts:32:5 › live poll responses update across manager and analyst sessions (12.4s)
+  ✓   4 e2e/launch-control.spec.ts:178:5 › operations manager completes the launch-readiness golden flow (7.0s)
+  ✓   5 e2e/launch-control.spec.ts:302:5 › analyst receives a read-only product surface (1.7s)
+  ✓   6 e2e/launch-control.spec.ts:348:5 › v1.1 reliability surfaces expose bounded media and webhook evidence (2.7s)
+  ✓   7 e2e/launch-control.spec.ts:406:5 › v1.2 analytics and AI assurance expose inspectable evidence (2.6s)
+  ✓   8 e2e/launch-control.spec.ts:442:5 › analyst can inspect analytics without operational controls (1.2s)
+  ✓   9 e2e/launch-control.spec.ts:464:5 › core operations pages do not overflow a mobile viewport (1.4s)
+  ✓  10 e2e/registration.spec.ts:5:5 › a guest registers, verifies an email, and signs out without workspace access (8.0s)
+  ✓  11 e2e/restricted-registration.spec.ts:30:5 › a manager invites a guest, verifies private access, and revokes the attendee session (16.6s)
+  ✓  12 e2e/topics.spec.ts:121:5 › admitted attendees and moderators submit, approve, reply, pin, edit, delete and configure real event questions (15.6s)
+  ✓  13 e2e/topics.spec.ts:316:7 › staff recovers real socket interruption and lost create response without duplicates (5.1s)
+  ✓  14 e2e/topics.spec.ts:316:7 › attendee recovers real socket interruption and lost create response without duplicates (9.7s)
+  ✓  15 e2e/topics.spec.ts:427:5 › lost reply receipts survive snapshot invalidation; delayed snapshots cannot resurrect deleted parents (5.8s)
+  ✓  16 e2e/topics.spec.ts:516:5 › keyset pagination and event switching discard stale responses and old private questions (2.3s)
+
+  16 passed (2.6m)

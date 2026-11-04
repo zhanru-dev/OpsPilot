@@ -18,6 +18,10 @@
     "test": "npm run test --workspace=@opspilot/api",
     "test:e2e": "npm run test:e2e --workspace=@opspilot/api",
     "test:ui": "playwright test",
+    "test:chat:state": "node --import tsx --test tests/chat-state.test.ts",
+    "test:chat:api": "npm run test:e2e --workspace=@opspilot/api -- --runInBand chat.e2e-spec",
+    "test:chat:browser": "playwright test e2e/chat.spec.ts",
+    "test:chat:recovery": "playwright test --config=playwright.chat-recovery.config.ts",
     "test:ui:isolated": "playwright test --config=playwright.ui.config.ts",
     "test:ui:headed": "playwright test --headed",
     "test:deployment": "playwright test --config=playwright.deployment.config.ts",
@@ -30,21 +34,41 @@
     "services:up": "docker compose up -d postgres redis minio mailpit",
     "services:down": "docker compose down",
     "services:status": "docker compose ps",
-    "containers:build": "docker build --target api -f apps/api/Dockerfile -t opspilot-api:local . && docker build --target worker -f apps/api/Dockerfile -t opspilot-worker:local . && docker build -f apps/web/Dockerfile -t opspilot-web:local ."
+    "containers:build": "docker build --target api -f apps/api/Dockerfile -t opspilot-api:local . && docker build --target worker -f apps/api/Dockerfile -t opspilot-worker:local . && docker build -f apps/web/Dockerfile -t opspilot-web:local .",
+    "test:topics:state": "node --import tsx --test tests/topics-state.test.ts tests/topics-drafts.test.ts",
+    "test:topics:api": "npm run test:e2e --workspace=@opspilot/api -- --runInBand topics.e2e-spec",
+    "test:topics:browser": "playwright test e2e/topics.spec.ts",
+    "broadcast:setup": "node scripts/setup-broadcast-development.mjs",
+    "broadcast:dev": "node scripts/with-broadcast-env.mjs --development npm run dev",
+    "broadcast:test:setup": "node scripts/setup-broadcast-test.mjs",
+    "test:broadcast:api": "node scripts/with-broadcast-env.mjs npm run test:e2e --workspace=@opspilot/api -- --runInBand broadcast.e2e-spec",
+    "test:broadcast:browser": "node scripts/with-broadcast-env.mjs playwright test --config=playwright.broadcast.config.ts",
+    "test:broadcast:migration": "node scripts/with-broadcast-env.mjs node scripts/check-broadcast-migration.mjs",
+    "test:media:state": "node --import tsx --test tests/media-queue.test.ts",
+    "test:media:api": "npm run build --workspace=@opspilot/api && node scripts/with-media-test-env.mjs npm run test:e2e --workspace=@opspilot/api -- --runInBand media-multipart.e2e-spec media-processing.e2e-spec media-boundaries.e2e-spec media-restart.e2e-spec media-remediation.e2e-spec",
+    "test:media:browser": "node scripts/with-media-test-env.mjs env E2E_PRODUCTION_WEB=1 playwright test e2e/media-processing.spec.ts e2e/media-multipart.spec.ts e2e/media-performance.spec.ts",
+    "media:test:setup": "node scripts/setup-media-test.mjs",
+    "postinstall": "node scripts/apply-development-patches.cjs",
+    "test:dependency-security": "node --test tests/dependency-security.test.cjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.62.1",
     "concurrently": "^9.2.1",
+    "patch-package": "8.0.1",
     "prisma": "6.19.3",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@nestjs/cli": "11.0.24"
   },
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.0.0"
   },
   "overrides": {
-    "deepmerge-ts": "8.0.2"
+    "deepmerge-ts": "8.0.2",
+    "multer": "2.5.0",
+    "minimatch@>=9": "11.0.4",
+    "glob@>=9": "14.0.3"
   }
 }

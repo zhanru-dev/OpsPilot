@@ -1,0 +1,10 @@
+[
+  {
+    "scenario": "media identity switch",
+    "realLogins": 2,
+    "oldResponseContainsPrivateAsset": true,
+    "oldResponseFulfillCompleted": true,
+    "oldAssetRenderedAfterSwitch": false,
+    "newWorkspaceVisible": true
+  }
+]

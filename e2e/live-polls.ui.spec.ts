@@ -100,6 +100,20 @@ async function mockLiveApi(
       await route.fulfill({ json: { user: { ...user, role } } });
     } else if (path.endsWith("/health/ready")) {
       await route.fulfill({ json: { status: "ready" } });
+    } else if (
+      path.endsWith("/chat/ticket") ||
+      path.endsWith("/topics/ticket") ||
+      path.endsWith("/broadcast/ticket")
+    ) {
+      // Connection tickets are separate features, not poll mutations. Keep this
+      // isolated fixture explicit; real Chat, Topics and Broadcast have integration suites.
+      await route.fulfill({
+        status: 403,
+        json: {
+          message:
+            "Interaction connection unavailable in this polling fixture.",
+        },
+      });
     } else if (request.method() === "GET" && path.endsWith("/live-session")) {
       state.reads++;
       await route.fulfill({ json: state.snapshot });

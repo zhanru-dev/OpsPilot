@@ -1,0 +1,61 @@
+[
+  {
+    "id": "deterministic-cancel-wins",
+    "completed": true,
+    "ms": 271,
+    "status": "PASS",
+    "cancelHttp": 201,
+    "completeHttp": 409,
+    "upload": "CANCELLED",
+    "asset": "DELETED",
+    "processingJobs": 0
+  },
+  {
+    "id": "deterministic-complete-wins",
+    "completed": true,
+    "ms": 295,
+    "status": "PASS",
+    "lockWaitObserved": true,
+    "completeHttp": 201,
+    "cancelHttp": 201,
+    "cancelReceipt": "UPLOADED",
+    "processingJobs": 1
+  },
+  {
+    "id": "lost-multipart-initialization-receipt",
+    "completed": true,
+    "ms": 131,
+    "status": "PASS",
+    "originalInitHttp": 503,
+    "resumeGrantHttp": 201,
+    "sessions": 1,
+    "storageMultipartSessions": 1
+  },
+  {
+    "id": "recovery-backlog-fairness",
+    "completed": true,
+    "ms": 32082,
+    "status": "FAIL",
+    "olderHealthyDelayedJobs": 100,
+    "missingJobPosition": 101,
+    "startupAndTimedCycle": true,
+    "elapsedSeconds": 31,
+    "lastQueueJobExists": false,
+    "lastDatabaseStatus": "QUEUED",
+    "explanation": "First 100 delayed jobs keep their old updatedAt; later missing job is never visited while they remain queued."
+  },
+  {
+    "id": "legacy-original-replay-after-ready",
+    "completed": true,
+    "ms": 1148,
+    "status": "FAIL",
+    "replayHttp": 200,
+    "originalBytes": 146837,
+    "initialOriginalSha256": "272d394bacb30c063fcd653dddcbd115a3d8a048a88112b415c796d30adc4907",
+    "replacedOriginalSha256": "17c1b3c1e64c9e863b35c8ca09a65496aaf0893d0cefbfd4e6cd9fd28134d8cd",
+    "sourceSha256Recorded": null,
+    "afterReconcileStatus": "READY",
+    "previewUnchanged": true,
+    "validBearerSeconds": 600
+  }
+]

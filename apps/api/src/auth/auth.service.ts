@@ -53,6 +53,7 @@ export class AuthService {
 
     if (
       !session ||
+      session.userId !== payload.sub ||
       session.revokedAt ||
       session.expiresAt <= new Date() ||
       !(await argon2.verify(session.refreshTokenHash, rawToken))
@@ -60,13 +61,34 @@ export class AuthService {
       throw new UnauthorizedException('Session is no longer active.');
     }
 
-    return this.rotateSession(session.user, session.id);
+    return this.rotateSession(
+      session.user,
+      session.id,
+      false,
+      session.refreshTokenHash,
+    );
   }
 
-  async logout(sessionId?: string) {
-    if (sessionId) {
+  async logout(rawAccessToken?: string) {
+    if (rawAccessToken) {
+      let identity: AccessTokenPayload;
+      try {
+        // A removed member or expired access token can still end its own signed
+        // session. This route grants no resource access and still checks Origin.
+        identity = await this.jwt.verifyAsync<AccessTokenPayload>(
+          rawAccessToken,
+          { secret: this.accessSecret, ignoreExpiration: true },
+        );
+        if (!identity.sessionId || !identity.sub) return;
+      } catch {
+        return;
+      }
       await this.prisma.session.updateMany({
-        where: { id: sessionId, revokedAt: null },
+        where: {
+          id: identity.sessionId,
+          userId: identity.sub,
+          revokedAt: null,
+        },
         data: { revokedAt: new Date() },
       });
     }
@@ -81,6 +103,7 @@ export class AuthService {
     user: UserWithMembership,
     sessionId: string,
     create = false,
+    consumedHash?: string,
   ) {
     const membership = user.memberships[0];
     if (!membership) {
@@ -109,6 +132,7 @@ export class AuthService {
       this.jwt.signAsync(refreshPayload, {
         secret: this.refreshSecret,
         expiresIn: '7d',
+        jwtid: randomUUID(),
       }),
     ]);
     const refreshTokenHash = await argon2.hash(refreshToken);
@@ -119,10 +143,22 @@ export class AuthService {
         data: { id: sessionId, userId: user.id, refreshTokenHash, expiresAt },
       });
     } else {
-      await this.prisma.session.update({
-        where: { id: sessionId },
+      // Strict single consumption, including concurrent refresh/logout. A lost
+      // rotation response requires a fresh login; never revive a revoked session.
+      const consumed = await this.prisma.session.updateMany({
+        where: {
+          id: sessionId,
+          userId: user.id,
+          refreshTokenHash: consumedHash,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
         data: { refreshTokenHash, expiresAt },
       });
+      if (consumed.count !== 1)
+        throw new UnauthorizedException(
+          'Refresh token was consumed or the session ended.',
+        );
     }
 
     return {

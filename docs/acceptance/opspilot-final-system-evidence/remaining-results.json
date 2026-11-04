@@ -1,0 +1,22 @@
+[
+  {
+    "label": "chat-recovery",
+    "exitCode": 0
+  },
+  {
+    "label": "isolated-ui",
+    "exitCode": 0
+  },
+  {
+    "label": "container-media",
+    "exitCode": 0
+  },
+  {
+    "label": "container-broadcast",
+    "exitCode": 0
+  },
+  {
+    "label": "hygiene-broadcast",
+    "exitCode": 0
+  }
+]

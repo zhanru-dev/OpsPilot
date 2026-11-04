@@ -1,0 +1,115 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.72kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 DONE 0.5s
+
+#3 docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#3 CACHED
+
+#4 [internal] load metadata for docker.io/library/node:22-bookworm-slim
+#4 DONE 0.4s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 216B done
+#5 DONE 0.0s
+
+#6 [runtime  1/11] FROM docker.io/library/node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 929.32kB 0.1s done
+#7 DONE 0.1s
+
+#8 [dependencies  6/11] COPY apps/web/package.json apps/web/package.json
+#8 CACHED
+
+#9 [builder 2/8] COPY prisma ./prisma
+#9 CACHED
+
+#10 [runtime  3/11] RUN apt-get update   && apt-get install -y --no-install-recommends ca-certificates openssl   && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [dependencies  5/11] COPY apps/api/package.json apps/api/package.json
+#11 CACHED
+
+#12 [dependencies  7/11] COPY packages/chat-contracts/package.json packages/chat-contracts/package.json
+#12 CACHED
+
+#13 [runtime 10/11] COPY --from=builder --chown=node:node /app/apps/api/package.json ./apps/api/package.json
+#13 CACHED
+
+#14 [runtime  6/11] COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
+#14 CACHED
+
+#15 [runtime  2/11] WORKDIR /app
+#15 CACHED
+
+#16 [dependencies 10/11] COPY packages/media-contracts/package.json packages/media-contracts/package.json
+#16 CACHED
+
+#17 [runtime  5/11] COPY --from=production-dependencies --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
+#17 CACHED
+
+#18 [dependencies  8/11] COPY packages/topics-contracts/package.json packages/topics-contracts/package.json
+#18 CACHED
+
+#19 [builder 1/8] COPY prisma.config.ts ./
+#19 CACHED
+
+#20 [dependencies  3/11] RUN apt-get update   && apt-get install -y --no-install-recommends ca-certificates openssl   && rm -rf /var/lib/apt/lists/*
+#20 CACHED
+
+#21 [dependencies 11/11] RUN npm ci
+#21 CACHED
+
+#22 [builder 8/8] RUN npm run db:generate && npm run build --workspace=@opspilot/api
+#22 CACHED
+
+#23 [production-dependencies 1/1] RUN npm prune --omit=dev --workspace=@opspilot/api --include-workspace-root   && mkdir -p apps/api/node_modules   && npm cache clean --force
+#23 CACHED
+
+#24 [builder 4/8] COPY packages/chat-contracts ./packages/chat-contracts
+#24 CACHED
+
+#25 [runtime  8/11] COPY --from=builder --chown=node:node /app/prisma.config.ts ./
+#25 CACHED
+
+#26 [builder 5/8] COPY packages/topics-contracts ./packages/topics-contracts
+#26 CACHED
+
+#27 [dependencies  9/11] COPY packages/broadcast-contracts/package.json packages/broadcast-contracts/package.json
+#27 CACHED
+
+#28 [builder 6/8] COPY packages/broadcast-contracts ./packages/broadcast-contracts
+#28 CACHED
+
+#29 [runtime  7/11] COPY --from=builder --chown=node:node /app/package.json /app/package-lock.json ./
+#29 CACHED
+
+#30 [dependencies  4/11] COPY package.json package-lock.json ./
+#30 CACHED
+
+#31 [builder 3/8] COPY apps/api ./apps/api
+#31 CACHED
+
+#32 [builder 7/8] COPY packages/media-contracts ./packages/media-contracts
+#32 CACHED
+
+#33 [runtime  4/11] COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
+#33 CACHED
+
+#34 [runtime  9/11] COPY --from=builder --chown=node:node /app/prisma ./prisma
+#34 CACHED
+
+#35 [runtime 11/11] COPY --from=builder --chown=node:node /app/apps/api/dist ./apps/api/dist
+#35 CACHED
+
+#36 exporting to image
+#36 exporting layers done
+#36 writing image sha256:3fa5a7021ed32883f1c54af2d09c781c2b13597bfdeb7da14f65564af89c9d36 done
+#36 naming to docker.io/library/opspilot-final-audit-worker:20261103 done
+#36 DONE 0.0s

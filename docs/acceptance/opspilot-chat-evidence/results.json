@@ -1,0 +1,173 @@
+{
+  "date": "2026-10-28",
+  "reviewedRevision": "cdd924236abc952e7a51e53663491208274dabf4",
+  "decision": "FAIL",
+  "issues": {
+    "P0": 0,
+    "P1": 1
+  },
+  "repository": "/Users/ruzhan/computer_science/projects/OpsPilot",
+  "originalTrackedFilesUnmodified": true,
+  "environment": {
+    "database": "opspilot_chat_acceptance_test",
+    "postgresPort": 5546,
+    "redisDatabase": 9,
+    "storageBucket": "opspilot-chat-acceptance",
+    "mailpit": "existing isolated local SMTP with unique audit recipients; no mailbox reset",
+    "node": "v22.20.0",
+    "web": "Next production build for supplemental probes; Next dev for original Playwright suites"
+  },
+  "originalSuites": {
+    "unit": [
+      "Test Suites: 14 passed, 14 total",
+      "Tests:       91 passed, 91 total",
+      "Time:        2.349 s, estimated 3 s"
+    ],
+    "state": [
+      "# tests 5",
+      "# pass 5",
+      "# fail 0"
+    ],
+    "api": [
+      "Test Suites: 4 passed, 4 total",
+      "Tests:       40 passed, 40 total",
+      "Time:        26.856 s, estimated 29 s"
+    ],
+    "browser": [
+      "  11 passed (2.0m)"
+    ],
+    "ui": [
+      "  12 passed (26.6s)"
+    ],
+    "types": "PASS",
+    "lint": "PASS",
+    "build": "PASS"
+  },
+  "supplemental": [
+    {
+      "name": "all current roles and foreign workspace isolation",
+      "result": "PASS",
+      "evidence": [
+        {
+          "role": "ADMIN",
+          "read": 200,
+          "send": 201,
+          "remove": 200
+        },
+        {
+          "role": "OPERATIONS_MANAGER",
+          "read": 200,
+          "send": 201,
+          "remove": 200
+        },
+        {
+          "role": "CONTENT_OPERATOR",
+          "read": 200,
+          "send": 201,
+          "remove": 403
+        },
+        {
+          "role": "ANALYST",
+          "read": 200,
+          "send": 403,
+          "remove": 403
+        },
+        {
+          "role": "VIEWER",
+          "read": 200,
+          "send": 403,
+          "remove": 403
+        }
+      ]
+    },
+    {
+      "name": "staff to attendee and attendee to staff over separate browsers",
+      "result": "PASS",
+      "evidence": {
+        "twoWay": true,
+        "attendeeCrossEvent": 401,
+        "attendeeModeration": 403,
+        "foreignMessageDelete": 404,
+        "crossEventPackets": 0
+      }
+    },
+    {
+      "name": "revocation wins a blocked mutation under database lock",
+      "result": "PASS",
+      "evidence": {
+        "status": 403,
+        "persistedMessages": 0,
+        "uiDowngradeAndRestore": true
+      }
+    },
+    {
+      "name": "ordinary offline recovery and missed moderation",
+      "result": "PASS",
+      "evidence": {
+        "missedDeletionRecovered": true,
+        "missedCreationRecovered": true
+      }
+    },
+    {
+      "name": "more than 2000 missed events snapshot fallback",
+      "result": "PASS",
+      "evidence": {
+        "missed": 2105,
+        "renderedRows": 30,
+        "notice": true
+      }
+    },
+    {
+      "name": "stale history response after event navigation",
+      "result": "PASS",
+      "evidence": {
+        "oldResponseReleased": true,
+        "crossEventContentVisible": false
+      }
+    },
+    {
+      "name": "transient gateway subscription error automatically recovers",
+      "result": "FAIL",
+      "error": "A single transient 503 must not leave valid access permanently denied\n\nexpect(received).toBe(expected) // Object.is equality\n\nExpected: \"Connected\"\nReceived: \"Access unavailable\""
+    }
+  ],
+  "realPostgresLockReproduction": {
+    "lockMilliseconds": 6500,
+    "status": 503,
+    "contextStatus": 200,
+    "ui": "Access unavailable",
+    "refreshDisabled": true,
+    "composerDisabled": true,
+    "reloadRecovers": true,
+    "scope": "existing history method called after acquiring a real event row lock in a separate database transaction; no application source changes"
+  },
+  "faultLog": [
+    "Injected one 503 in gateway initial history",
+    "Real PostgreSQL lock contention returned 503"
+  ],
+  "localPerformance": {
+    "replayMessages": 430,
+    "replayMs": 1477,
+    "liveMessages": 450,
+    "liveDeliveryMs": 3920,
+    "renderedRows": 300,
+    "fixture": "direct committed journal; actual REST and WebSocket recovery"
+  },
+  "dependencyAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "notVerified": [
+    "Hosted HTTPS/proxy deployment",
+    "Fresh production image rebuild/restart in this audit",
+    "Multi-instance/distributed limits",
+    "500 simultaneous clients and long-duration memory behavior",
+    "New end-to-end media upload/transcode run"
+  ],
+  "harnessCorrection": "Initial browser offline emulation did not close the existing WebSocket; discarded those attempted disconnect results and reran with explicit socket closure and ticket transport interruption. No application or existing assertions changed.",
+  "originalEnvironmentRestored": true
+}

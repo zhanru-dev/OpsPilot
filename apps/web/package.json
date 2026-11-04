@@ -11,18 +11,24 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@opspilot/broadcast-contracts": "^1.0.0",
+    "@opspilot/chat-contracts": "^1.0.0",
+    "@opspilot/topics-contracts": "^1.0.0",
     "@tanstack/react-query": "^5.90.20",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "hls.js": "1.7.3",
     "lucide-react": "^0.545.0",
-    "next": "16.3.0",
+    "next": "^16.4.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.62.0",
     "recharts": "^3.2.1",
+    "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.3.1",
-    "zod": "^4.1.5"
+    "zod": "^4.6.7",
+    "@opspilot/media-contracts": "^1.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -30,7 +36,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.0",
+    "eslint-config-next": "^16.4.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -1,0 +1,20 @@
+{
+  "preservation": {
+    "unchangedOriginalColumns": true,
+    "tables": 43,
+    "rows": 174
+  },
+  "runtime": {
+    "apiReady": true,
+    "webLogin": true,
+    "staffAuthentication": true,
+    "currentMediaAuthority": true,
+    "mediaAssets": 3,
+    "resumableList": true,
+    "eventList": true,
+    "broadcastEnabled": true,
+    "workerReady": true,
+    "controlStatus": 200
+  },
+  "seedOrReset": false
+}

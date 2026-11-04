@@ -1,0 +1,1 @@
+{"result":"PASS","originalTables":36,"fixtureRows":5,"originalColumnCountsAndDigestsUnchanged":true,"newRevisionDefault":0,"migrationsApplied":16,"scope":"pre-Chat original product to final baseline"}

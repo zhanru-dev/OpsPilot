@@ -1,0 +1,19 @@
+PASS src/event-topics/topics.spec.ts
+PASS src/event-chat/chat.spec.ts
+PASS src/live-polls/live-polls.service.spec.ts
+PASS src/attendee-access/attendee-token.service.spec.ts
+PASS src/event-registrations/event-registrations.service.spec.ts
+PASS src/attendee-access/attendee-mail.service.spec.ts
+PASS src/live-sessions/live-sessions.service.spec.ts
+PASS src/attendee-access/attendee-eligibility.spec.ts
+PASS src/config/environment.spec.ts
+PASS src/media/media-validation.spec.ts
+PASS src/readiness/readiness.service.spec.ts
+PASS src/domain-events/domain-events.service.spec.ts
+PASS src/recommendations/recommendation-output.spec.ts
+PASS src/integrations/webhook-signature.spec.ts
+PASS src/config/request-origin.spec.ts
+Test Suites: 15 passed, 15 total
+Tests:       94 passed, 94 total
+Time:        2.689 s
+Ran all test suites.

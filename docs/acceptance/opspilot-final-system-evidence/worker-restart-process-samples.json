@@ -1,0 +1,1325 @@
+{
+  "method": "40 one-second ps samples of media-restart Jest process tree, including actual forked API/worker/FFmpeg when present. Point samples, no native-memory attribution and no steady-state capacity claim.",
+  "samples": [
+    {
+      "time": 1793701359.751106,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 190216,
+          "cpuPercent": 0.6,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 153012,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 145692,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701360.851978,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 190408,
+          "cpuPercent": 0.1,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116676,
+          "cpuPercent": 10.1,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 145692,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701361.957162,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 190712,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116676,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 145692,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701363.055568,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 190944,
+          "cpuPercent": 0.4,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116676,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 107832,
+          "cpuPercent": 27.6,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701364.132166,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191144,
+          "cpuPercent": 0.7,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116676,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 108316,
+          "cpuPercent": 0.8,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701365.231862,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191356,
+          "cpuPercent": 1.0,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116676,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 108316,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701366.3277519,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191356,
+          "cpuPercent": 0.3,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116676,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 108340,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701367.419322,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191356,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116676,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 108396,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701368.5157518,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191376,
+          "cpuPercent": 0.3,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116680,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 108396,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701369.6130571,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191576,
+          "cpuPercent": 0.8,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116680,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111220,
+          "cpuPercent": 0.7,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701370.704017,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191580,
+          "cpuPercent": 0.4,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116684,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111220,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701371.804018,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191584,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116684,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111220,
+          "cpuPercent": 0.1,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701372.898587,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191676,
+          "cpuPercent": 0.6,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116684,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111220,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701373.999201,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191676,
+          "cpuPercent": 0.4,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116684,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111296,
+          "cpuPercent": 1.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701375.098798,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191676,
+          "cpuPercent": 0.7,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111296,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701376.1998742,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191680,
+          "cpuPercent": 0.3,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111312,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701377.300171,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191744,
+          "cpuPercent": 0.4,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111364,
+          "cpuPercent": 0.1,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701378.397583,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191744,
+          "cpuPercent": 0.3,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111364,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701379.496756,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191744,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111468,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701380.591955,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191884,
+          "cpuPercent": 0.3,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111468,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701381.691458,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191980,
+          "cpuPercent": 0.3,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111468,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701382.777071,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191980,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111468,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701383.867028,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 191980,
+          "cpuPercent": 0.2,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111604,
+          "cpuPercent": 1.6,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701384.960481,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192048,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111604,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701386.0609732,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192048,
+          "cpuPercent": 0.3,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111604,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701387.1383731,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192048,
+          "cpuPercent": 0.7,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111604,
+          "cpuPercent": 0.1,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701388.235679,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192092,
+          "cpuPercent": 0.4,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111604,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701389.330718,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192092,
+          "cpuPercent": 0.2,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111652,
+          "cpuPercent": 0.3,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701390.427996,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192092,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111652,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701391.525774,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192092,
+          "cpuPercent": 0.4,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116700,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111652,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701392.6190012,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192148,
+          "cpuPercent": 0.8,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111652,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701393.716786,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192208,
+          "cpuPercent": 0.3,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111728,
+          "cpuPercent": 0.4,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701394.817955,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192212,
+          "cpuPercent": 0.8,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111728,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701395.922731,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192236,
+          "cpuPercent": 0.4,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111728,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701397.022367,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192236,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111728,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701398.114562,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192236,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 111728,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701399.21202,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192240,
+          "cpuPercent": 0.2,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 112868,
+          "cpuPercent": 3.3,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701400.3123012,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192312,
+          "cpuPercent": 0.8,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 112868,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701401.42501,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192312,
+          "cpuPercent": 0.1,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 112868,
+          "cpuPercent": 0.0,
+          "process": "node"
+        }
+      ]
+    },
+    {
+      "time": 1793701402.5262132,
+      "processes": [
+        {
+          "pid": 185,
+          "ppid": 182,
+          "rssKiB": 48912,
+          "cpuPercent": 0.0,
+          "process": "npm run test:e2e --runInBand media-restart.e2e-spec"
+        },
+        {
+          "pid": 203,
+          "ppid": 185,
+          "rssKiB": 192312,
+          "cpuPercent": 0.9,
+          "process": "node"
+        },
+        {
+          "pid": 286,
+          "ppid": 203,
+          "rssKiB": 116704,
+          "cpuPercent": 0.0,
+          "process": "node"
+        },
+        {
+          "pid": 292,
+          "ppid": 203,
+          "rssKiB": 112868,
+          "cpuPercent": 0.1,
+          "process": "node"
+        }
+      ]
+    }
+  ]
+}

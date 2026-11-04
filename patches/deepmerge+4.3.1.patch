@@ -1,0 +1,75 @@
+diff --git a/node_modules/deepmerge/dist/cjs.js b/node_modules/deepmerge/dist/cjs.js
+index 7c36cbd..4e41fe3 100644
+--- a/node_modules/deepmerge/dist/cjs.js
++++ b/node_modules/deepmerge/dist/cjs.js
+@@ -80,7 +80,7 @@ function mergeObject(target, source, options) {
+ 	var destination = {};
+ 	if (options.isMergeableObject(target)) {
+ 		getKeys(target).forEach(function(key) {
+-			destination[key] = cloneUnlessOtherwiseSpecified(target[key], options);
++			Object.defineProperty(destination, key, { value: cloneUnlessOtherwiseSpecified(target[key], options), enumerable: true, writable: true, configurable: true });
+ 		});
+ 	}
+ 	getKeys(source).forEach(function(key) {
+@@ -89,9 +89,9 @@ function mergeObject(target, source, options) {
+ 		}
+ 
+ 		if (propertyIsOnObject(target, key) && options.isMergeableObject(source[key])) {
+-			destination[key] = getMergeFunction(key, options)(target[key], source[key], options);
++			Object.defineProperty(destination, key, { value: getMergeFunction(key, options)(target[key], source[key], options), enumerable: true, writable: true, configurable: true });
+ 		} else {
+-			destination[key] = cloneUnlessOtherwiseSpecified(source[key], options);
++			Object.defineProperty(destination, key, { value: cloneUnlessOtherwiseSpecified(source[key], options), enumerable: true, writable: true, configurable: true });
+ 		}
+ 	});
+ 	return destination
+diff --git a/node_modules/deepmerge/dist/umd.js b/node_modules/deepmerge/dist/umd.js
+index 4071e7c..8023d36 100644
+--- a/node_modules/deepmerge/dist/umd.js
++++ b/node_modules/deepmerge/dist/umd.js
+@@ -84,7 +84,7 @@
+ 		var destination = {};
+ 		if (options.isMergeableObject(target)) {
+ 			getKeys(target).forEach(function(key) {
+-				destination[key] = cloneUnlessOtherwiseSpecified(target[key], options);
++				Object.defineProperty(destination, key, { value: cloneUnlessOtherwiseSpecified(target[key], options), enumerable: true, writable: true, configurable: true });
+ 			});
+ 		}
+ 		getKeys(source).forEach(function(key) {
+@@ -93,9 +93,9 @@
+ 			}
+ 
+ 			if (propertyIsOnObject(target, key) && options.isMergeableObject(source[key])) {
+-				destination[key] = getMergeFunction(key, options)(target[key], source[key], options);
++				Object.defineProperty(destination, key, { value: getMergeFunction(key, options)(target[key], source[key], options), enumerable: true, writable: true, configurable: true });
+ 			} else {
+-				destination[key] = cloneUnlessOtherwiseSpecified(source[key], options);
++				Object.defineProperty(destination, key, { value: cloneUnlessOtherwiseSpecified(source[key], options), enumerable: true, writable: true, configurable: true });
+ 			}
+ 		});
+ 		return destination
+diff --git a/node_modules/deepmerge/index.js b/node_modules/deepmerge/index.js
+index 77968ae..2fb0a31 100644
+--- a/node_modules/deepmerge/index.js
++++ b/node_modules/deepmerge/index.js
+@@ -55,7 +55,7 @@ function mergeObject(target, source, options) {
+ 	var destination = {}
+ 	if (options.isMergeableObject(target)) {
+ 		getKeys(target).forEach(function(key) {
+-			destination[key] = cloneUnlessOtherwiseSpecified(target[key], options)
++			Object.defineProperty(destination, key, { value: cloneUnlessOtherwiseSpecified(target[key], options), enumerable: true, writable: true, configurable: true })
+ 		})
+ 	}
+ 	getKeys(source).forEach(function(key) {
+@@ -64,9 +64,9 @@ function mergeObject(target, source, options) {
+ 		}
+ 
+ 		if (propertyIsOnObject(target, key) && options.isMergeableObject(source[key])) {
+-			destination[key] = getMergeFunction(key, options)(target[key], source[key], options)
++			Object.defineProperty(destination, key, { value: getMergeFunction(key, options)(target[key], source[key], options), enumerable: true, writable: true, configurable: true })
+ 		} else {
+-			destination[key] = cloneUnlessOtherwiseSpecified(source[key], options)
++			Object.defineProperty(destination, key, { value: cloneUnlessOtherwiseSpecified(source[key], options), enumerable: true, writable: true, configurable: true })
+ 		}
+ 	})
+ 	return destination

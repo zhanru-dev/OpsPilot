@@ -1,0 +1,110 @@
+{
+  "workload": {
+    "bytes": 104856576,
+    "parts": 20,
+    "fileWorkers": 3,
+    "activeFiles": 1,
+    "video": "4 seconds 640x360 H264, MP4 free-atom padding",
+    "browser": "156.0.8078.74",
+    "node": "v22.20.0"
+  },
+  "uploadMs": 4877,
+  "readyMs": 6775,
+  "partWindowMs": 2575,
+  "mibPerSecond": 38.83457220873786,
+  "processingMs": 1419,
+  "apiRssBytes": {
+    "min": 263970816,
+    "max": 326447104,
+    "samples": 26
+  },
+  "browserHeapBytes": {
+    "min": 8435664,
+    "max": 14530920,
+    "samples": 26
+  },
+  "animationFrameGapMs": {
+    "p95": 16.700000000000728,
+    "max": 16.800000000000182
+  },
+  "progressDomMutations": 20,
+  "progressDomMutationsPerSecond": 4.1008816895632565,
+  "previewCycles": 10,
+  "resourceSamples": [
+    {
+      "Documents": 12,
+      "JSEventListeners": 1020,
+      "Nodes": 1030,
+      "JSHeapUsedSize": 11072320
+    },
+    {
+      "Documents": 1,
+      "JSEventListeners": 371,
+      "Nodes": 690,
+      "JSHeapUsedSize": 7461860
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8080400
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8141868
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8187284
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8203660
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8256124
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8267812
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8279684
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8303484
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8339536
+    },
+    {
+      "Documents": 9,
+      "JSEventListeners": 381,
+      "Nodes": 704,
+      "JSHeapUsedSize": 8368768
+    }
+  ],
+  "retainedVideos": 0,
+  "hashMatch": true,
+  "limitations": "One local browser and padded file; CDP JS heap excludes native decoder/Blob memory, API RSS excludes worker/FFmpeg/MinIO, DOM mutations are not React render counts; forced GC between preview samples."
+}

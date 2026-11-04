@@ -1,0 +1,115 @@
+{
+  "observedDate": "2026-10-30",
+  "browser": "Chrome 156.0.8078.74",
+  "workload": "640x360 H264/AAC 24fps 800kbps; two viewers plus staff preview",
+  "finalBrowserResult": {
+    "passed": 3,
+    "failed": 0,
+    "duration": "2.1m"
+  },
+  "timingsMilliseconds": [
+    {
+      "name": "startup",
+      "ms": 6915
+    },
+    {
+      "name": "interruption-0",
+      "ms": 1328
+    },
+    {
+      "name": "publisher-recovery-0",
+      "ms": 6900
+    },
+    {
+      "name": "interruption-1",
+      "ms": 816
+    },
+    {
+      "name": "publisher-recovery-1",
+      "ms": 5895
+    },
+    {
+      "name": "media-restart",
+      "ms": 5901
+    },
+    {
+      "name": "api-restart",
+      "ms": 3945
+    }
+  ],
+  "playbackGrantsIssuedPerViewer": [
+    9,
+    7
+  ],
+  "mediaFailureStatusesDuringInjectedFaults": [
+    503,
+    503,
+    503,
+    503,
+    503,
+    503,
+    503,
+    503,
+    403,
+    403
+  ],
+  "mediaRateLimitResponses": 0,
+  "cleanup": {
+    "observations": [
+      2,
+      2,
+      2
+    ],
+    "requests": 54,
+    "failures": 14
+  },
+  "rendererSamples": {
+    "before": {
+      "heapBytes": 17830324,
+      "documents": 30,
+      "eventListeners": 1493,
+      "nodes": 1244
+    },
+    "after": {
+      "heapBytes": 26362968,
+      "documents": 17,
+      "eventListeners": 1444,
+      "nodes": 1807
+    },
+    "elapsedSeconds": 53.13910200004466,
+    "caveat": "Samples span full-document navigation and natural GC; task counters reset on navigation. Not a leak-free or CPU-utilization proof."
+  },
+  "supplementaryPointSample": {
+    "observedAt": "2026-10-30T11:58:25.306Z",
+    "api": "246904  12.0 00:34",
+    "apiUnits": "RSS KiB, ps CPU percent, elapsed",
+    "mediaMemory": "38.55MiB / 7.751GiB",
+    "mediaCpu": "2.02%",
+    "limitation": "Single point sample during final browser test, not a benchmark or peak"
+  },
+  "containerProbe": {
+    "apiReady": true,
+    "workerReady": true,
+    "webLogin": 200,
+    "authenticatedPersistenceAfterApiRestart": true,
+    "websocketAfterRestart": true,
+    "broadcastPersistenceAfterRestart": true,
+    "actualRtmpAndProtectedHlsAfterRestart": true,
+    "configuration": "production images with isolated local test configuration; TLS deployment not exercised"
+  },
+  "migrationProbe": {
+    "result": "PASS",
+    "originalTables": 40,
+    "fixtureRows": 5,
+    "originalColumnCountsAndDigestsUnchanged": true,
+    "newRevisionDefault": 0
+  },
+  "logScan": {
+    "result": "PASS",
+    "logFiles": 32,
+    "generatedSecretsChecked": 7,
+    "rawSecret": false,
+    "rawTicket": false,
+    "mediaLogBytes": 13794
+  }
+}

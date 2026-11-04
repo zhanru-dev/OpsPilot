@@ -1,0 +1,21 @@
+ok 1 - ACK and repeated/delayed events reconcile without skipping sequence gaps
+ok 2 - deletion wins over old ACK, history and create events
+ok 3 - a bounded historical window retains its oldest edge and tracks incoming unread IDs
+ok 4 - large live bursts bound rendering and leave displaced history reachable
+ok 5 - snapshot replacement cannot let delayed old events repopulate the window
+ok 6 - lost receipt remains the same intent through throttle, permission and conflict failures
+ok 7 - definite initial validation failures unlock corrections; ambiguous failures retain identity
+ok 8 - Retry-After supports seconds and HTTP dates without inventing invalid deadlines
+ok 9 - verified reply/approval/edit/pin updates retain text and original optimistic concurrency version
+ok 10 - verified absence, deletion, lost capabilities and authority replacement discard private edit state
+ok 11 - duplicate and out-of-order snapshots retain the newest canonical topic
+ok 12 - snapshots remove deleted parents and their replies together, filtering every projection
+ok 13 - unverified changed roots are hidden and duplicate or foreign notices do not corrupt state
+ok 14 - authority replacement cannot carry old private entities to another role and rejects foreign roots
+ok 15 - wire validation rejects malformed and unbounded snapshot payloads
+# tests 15
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# duration_ms 367.137245

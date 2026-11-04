@@ -11,9 +11,12 @@ import { RequestVerification } from "./request-verification";
 import type { PublicEvent, RegistrationEvent } from "./types";
 import { EventEntryHeading } from "./event-entry-heading";
 import { AttendeeLivePolls } from "./attendee-live-polls";
+import { ChatPanel } from "@/features/chat/chat-panel";
+import { TopicsPanel } from "@/features/topics/topics-panel";
 
 type AttendeeSession = {
   eventId: string;
+  registrationId: string;
   email: string;
   expiresAt: string;
   event: PublicEvent;
@@ -182,9 +185,25 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
                 <p className="text-sm">
                   Your attendee session is active for this event.
                 </p>
+                <a
+                  href={`/events/${eventId}/watch`}
+                  className="inline-flex rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Enter Watch Room
+                </a>
                 <AttendeeLivePolls
                   eventId={eventId}
                   onAccessLost={session.refetch}
+                />
+                <TopicsPanel
+                  eventId={eventId}
+                  mode="attendee"
+                  actorId={`attendee:${session.data.registrationId}`}
+                />
+                <ChatPanel
+                  eventId={eventId}
+                  mode="attendee"
+                  actorId={`attendee:${session.data.registrationId}`}
                 />
                 {logout.error ? (
                   <p role="alert" className="text-sm text-[var(--danger)]">

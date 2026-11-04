@@ -1,200 +1,226 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { MediaStatus, MediaUploadStatus } from '@prisma/client';
 import type { Job } from 'bullmq';
 import { AuditService } from '../audit/audit.service';
-import { DomainEventsService } from '../domain-events/domain-events.service';
+import { StorageService } from '../infrastructure/storage/storage.service';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   MAINTENANCE_QUEUE,
   MEDIA_CLEANUP_JOB,
 } from '../infrastructure/queues/queue.constants';
-import { StorageService } from '../infrastructure/storage/storage.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { ReadinessService } from '../readiness/readiness.service';
 
 @Injectable()
 @Processor(MAINTENANCE_QUEUE, { concurrency: 1 })
 export class MediaCleanupProcessor extends WorkerHost {
   private readonly logger = new Logger(MediaCleanupProcessor.name);
-
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly db: PrismaService,
     private readonly storage: StorageService,
-    private readonly config: ConfigService,
     private readonly audit: AuditService,
-    private readonly domainEvents: DomainEventsService,
-    private readonly readiness: ReadinessService,
   ) {
     super();
   }
-
   async process(job: Job) {
-    if (job.name !== MEDIA_CLEANUP_JOB) return;
-
-    const expiredUploads = await this.expirePendingUploads();
-    const expiredMedia = await this.expireRetainedDemoMedia();
-    this.logger.log(
-      JSON.stringify({
-        event: 'media.cleanup.completed',
-        expiredUploads,
-        expiredMedia,
-      }),
-    );
-    return { expiredUploads, expiredMedia };
+    if (job.name === MEDIA_CLEANUP_JOB) return this.reconcile();
   }
-
-  private async expirePendingUploads() {
-    const uploads = await this.prisma.mediaUpload.findMany({
+  async reconcile() {
+    // Expiry only owns unfinished transfers. Never auto-delete shared ready media.
+    const expired = await this.db.mediaUpload.findMany({
       where: {
-        status: MediaUploadStatus.PENDING,
+        status: { in: ['PENDING', 'FINALIZING'] },
         expiresAt: { lte: new Date() },
       },
-      include: { media: true },
       take: 100,
+      orderBy: [{ expiresAt: 'asc' }, { id: 'asc' }],
     });
-
-    let cleaned = 0;
-    for (const upload of uploads) {
-      try {
-        await this.storage.deleteObjects([upload.objectKey]);
-        await this.prisma.$transaction(async (transaction) => {
-          await transaction.mediaUpload.update({
-            where: { id: upload.id },
-            data: { status: MediaUploadStatus.EXPIRED },
-          });
-          await transaction.mediaAsset.updateMany({
-            where: {
-              id: upload.mediaId,
-              status: {
-                in: [MediaStatus.PENDING_UPLOAD, MediaStatus.UPLOADING],
-              },
-            },
-            data: {
-              status: MediaStatus.DELETED,
-              failureReason: 'The direct upload window expired.',
-            },
-          });
-          await this.audit.record(
-            {
-              workspaceId: upload.workspaceId,
-              action: 'media.upload_expired',
-              entityType: 'MediaAsset',
-              entityId: upload.mediaId,
-              summary: `Expired the upload window for ${upload.media.name}.`,
-              changes: { uploadId: upload.id },
-            },
-            transaction,
-          );
-          await this.domainEvents.record(
-            {
-              workspaceId: upload.workspaceId,
-              type: 'media.upload.expired',
-              aggregateType: 'MediaAsset',
-              aggregateId: upload.mediaId,
-              payload: { mediaId: upload.mediaId, uploadId: upload.id },
-            },
-            transaction,
-          );
+    for (const candidate of expired) {
+      await this.db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "MediaAsset" WHERE id=${candidate.mediaId} FOR UPDATE`;
+        const row = await tx.mediaUpload.findUnique({
+          where: { id: candidate.id },
         });
-        await this.refreshAttachedEvents(upload.mediaId, upload.workspaceId);
-        cleaned += 1;
-      } catch (error) {
-        this.logFailure('media.upload.cleanup_failed', upload.mediaId, error);
+        if (
+          !row ||
+          !['PENDING', 'FINALIZING'].includes(row.status) ||
+          row.expiresAt > new Date()
+        )
+          return;
+        await tx.mediaUpload.update({
+          where: { id: row.id },
+          data: { status: 'EXPIRED' },
+        });
+        await tx.mediaAsset.update({
+          where: { id: row.mediaId },
+          data: {
+            status: 'DELETED',
+            cleanupPending: true,
+            cleanupAfter: row.lastGrantExpiresAt ?? new Date(),
+            failureReason: 'The unfinished upload expired.',
+          },
+        });
+      });
+    }
+    const pending = await this.db.mediaAsset.findMany({
+      where: {
+        // A PUT admitted before grant expiry can settle after the first sweep.
+        // Retained tombstones remain eligible to collect these late objects.
+        AND: [
+          { OR: [{ cleanupPending: true }, { status: 'DELETED' }] },
+          {
+            OR: [{ cleanupAfter: null }, { cleanupAfter: { lte: new Date() } }],
+          },
+        ],
+      },
+      take: 100,
+      orderBy: [
+        { cleanupAttemptedAt: { sort: 'asc', nulls: 'first' } },
+        { id: 'asc' },
+      ],
+    });
+    let cleaned = 0;
+    for (const candidate of pending) {
+      // Persist scheduling before external work so failed entries cannot starve later work.
+      await this.db.mediaAsset.update({
+        where: { id: candidate.id },
+        data: { cleanupAttemptedAt: new Date() },
+      });
+      try {
+        await this.db.$transaction(
+          async (tx) => {
+            await tx.$queryRaw`SELECT id FROM "MediaAsset" WHERE id=${candidate.id} FOR UPDATE`;
+            const asset = await tx.mediaAsset.findUnique({
+              where: { id: candidate.id },
+              include: { uploads: true, variants: true },
+            });
+            if (
+              !asset ||
+              (!asset.cleanupPending && asset.status !== 'DELETED') ||
+              (asset.cleanupAfter && asset.cleanupAfter > new Date()) ||
+              !['DELETED', 'FAILED'].includes(asset.status)
+            )
+              return;
+            for (const upload of asset.uploads)
+              await this.storage.abortMultipartForKey(upload.objectKey);
+            const objects = await this.storage.listOwnedObjects(
+              asset.workspaceId,
+              asset.id,
+            );
+            await this.storage.deleteObjects([
+              ...objects,
+              ...asset.variants.map((v) => v.objectKey),
+              ...(asset.originalObjectKey ? [asset.originalObjectKey] : []),
+            ]);
+            await tx.mediaVariant.deleteMany({ where: { mediaId: asset.id } });
+            await tx.mediaAsset.update({
+              where: { id: asset.id },
+              data: { cleanupPending: false, originalObjectKey: null },
+            });
+            if (
+              asset.cleanupPending ||
+              objects.length ||
+              asset.variants.length ||
+              asset.originalObjectKey
+            ) {
+              await this.audit.record(
+                {
+                  workspaceId: asset.workspaceId,
+                  action: 'media.cleanup_completed',
+                  entityType: 'MediaAsset',
+                  entityId: asset.id,
+                  summary:
+                    'Removed objects for cancelled, expired or deleted media.',
+                },
+                tx,
+              );
+              cleaned++;
+            }
+          },
+          { timeout: 60000 },
+        );
+      } catch {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'media.cleanup_retry_pending',
+            mediaId: candidate.id,
+          }),
+        );
       }
     }
-    return cleaned;
-  }
-
-  private async expireRetainedDemoMedia() {
-    const retentionHours = Number(
-      this.config.get('MEDIA_DEMO_RETENTION_HOURS') ?? 24,
-    );
-    const cutoff = new Date(Date.now() - retentionHours * 60 * 60 * 1_000);
-    const assets = await this.prisma.mediaAsset.findMany({
+    // Reconcile terminal original/derivative objects and abandoned attempt outputs.
+    const terminal = await this.db.mediaAsset.findMany({
       where: {
         isSeeded: false,
-        status: { in: [MediaStatus.READY, MediaStatus.FAILED] },
-        createdAt: { lte: cutoff },
+        cleanupPending: false,
+        status: { in: ['READY', 'FAILED'] },
+        originalObjectKey: { not: null },
       },
-      include: { uploads: true, variants: true },
       take: 100,
+      orderBy: [
+        { cleanupAttemptedAt: { sort: 'asc', nulls: 'first' } },
+        { id: 'asc' },
+      ],
     });
-
-    let cleaned = 0;
-    for (const asset of assets) {
+    for (const candidate of terminal) {
+      await this.db.mediaAsset.update({
+        where: { id: candidate.id },
+        data: { cleanupAttemptedAt: new Date() },
+      });
       try {
-        await this.storage.deleteObjects([
-          ...(asset.originalObjectKey ? [asset.originalObjectKey] : []),
-          ...asset.variants.map((variant) => variant.objectKey),
-        ]);
-        await this.prisma.$transaction(async (transaction) => {
-          await transaction.mediaVariant.deleteMany({
-            where: { mediaId: asset.id },
-          });
-          await transaction.mediaUpload.updateMany({
-            where: { mediaId: asset.id },
-            data: { status: MediaUploadStatus.CANCELLED },
-          });
-          await transaction.mediaAsset.update({
-            where: { id: asset.id },
-            data: {
-              status: MediaStatus.DELETED,
-              processingProgress: 0,
-              originalObjectKey: null,
-              failureReason: 'Expired by the demo media retention policy.',
-            },
-          });
-          await this.audit.record(
-            {
-              workspaceId: asset.workspaceId,
-              action: 'media.retention_expired',
-              entityType: 'MediaAsset',
-              entityId: asset.id,
-              summary: `Expired ${asset.name} under the demo retention policy.`,
-              changes: { retentionHours },
-            },
-            transaction,
-          );
-          await this.domainEvents.record(
-            {
-              workspaceId: asset.workspaceId,
-              type: 'media.retention.expired',
-              aggregateType: 'MediaAsset',
-              aggregateId: asset.id,
-              payload: { mediaId: asset.id, retentionHours },
-            },
-            transaction,
-          );
-        });
-        await this.refreshAttachedEvents(asset.id, asset.workspaceId);
-        cleaned += 1;
-      } catch (error) {
-        this.logFailure('media.retention.cleanup_failed', asset.id, error);
+        await this.db.$transaction(
+          async (tx) => {
+            await tx.$queryRaw`SELECT id FROM "MediaAsset" WHERE id=${candidate.id} FOR UPDATE`;
+            const asset = await tx.mediaAsset.findUniqueOrThrow({
+              where: { id: candidate.id },
+              include: { variants: true },
+            });
+            if (
+              !['READY', 'FAILED'].includes(asset.status) ||
+              asset.cleanupPending ||
+              (await tx.mediaProcessingJob.count({
+                where: {
+                  mediaId: asset.id,
+                  status: { in: ['QUEUED', 'PROCESSING'] },
+                },
+              }))
+            )
+              return;
+            const keys = await this.storage.listOwnedObjects(
+              asset.workspaceId,
+              asset.id,
+            );
+            const keep = new Set([
+              asset.originalObjectKey,
+              ...asset.variants.map((v) => v.objectKey),
+            ]);
+            await this.storage.deleteObjects(
+              keys.filter((key) => !keep.has(key)),
+            );
+            if (
+              asset.status === 'READY' &&
+              (!keys.includes(asset.originalObjectKey!) ||
+                asset.variants.some((v) => !keys.includes(v.objectKey)))
+            ) {
+              await tx.mediaAsset.update({
+                where: { id: asset.id },
+                data: {
+                  status: 'FAILED',
+                  failureReason:
+                    'A required stored media object is missing. Retry processing if the original remains available.',
+                },
+              });
+            }
+          },
+          { timeout: 60000 },
+        );
+      } catch {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'media.object_reconcile_retry_pending',
+            mediaId: candidate.id,
+          }),
+        );
       }
     }
-    return cleaned;
-  }
-
-  private async refreshAttachedEvents(mediaId: string, workspaceId: string) {
-    const attachments = await this.prisma.eventMediaAsset.findMany({
-      where: { mediaId, event: { workspaceId } },
-      select: { eventId: true },
-    });
-    await Promise.all(
-      attachments.map(({ eventId }) =>
-        this.readiness.assessAndPersist(eventId, workspaceId),
-      ),
-    );
-  }
-
-  private logFailure(event: string, mediaId: string, error: unknown) {
-    this.logger.error(
-      JSON.stringify({
-        event,
-        mediaId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }),
-    );
+    return { expired: expired.length, cleaned };
   }
 }

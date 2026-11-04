@@ -1,0 +1,66 @@
+
+> opspilot-platform@2.0.0 db:deploy
+> prisma migrate deploy
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma config detected, skipping environment variable loading.
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "opspilot_final_audit_20261103_test", schema "public" at "127.0.0.1:5549"
+
+16 migrations found in prisma/migrations
+
+Applying migration `20260812232430_init`
+Applying migration `20260814173933_v1_1_media_reliability`
+Applying migration `20260814175000_v1_1_constraints`
+Applying migration `20260814194821_v1_2_ai_analytics_evidence`
+Applying migration `20260814203000_v1_1_trace_propagation`
+Applying migration `20260902230000_v2_live_operations`
+Applying migration `20260902231000_v2_live_polls`
+Applying migration `20260904135834_v2_registration_intake`
+Applying migration `20260904160955_attendee_email_verification`
+Applying migration `20260904172105_restricted_event_access`
+Applying migration `20261028095000_event_chat`
+Applying migration `20261029010000_event_topics`
+Applying migration `20261030010000_broadcast_sessions`
+Applying migration `20261031010000_media_event_correlation`
+Applying migration `20261031020000_media_multipart`
+Applying migration `20261102000000_media_snapshot_version`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20260812232430_init/
+    └─ migration.sql
+  └─ 20260814173933_v1_1_media_reliability/
+    └─ migration.sql
+  └─ 20260814175000_v1_1_constraints/
+    └─ migration.sql
+  └─ 20260814194821_v1_2_ai_analytics_evidence/
+    └─ migration.sql
+  └─ 20260814203000_v1_1_trace_propagation/
+    └─ migration.sql
+  └─ 20260902230000_v2_live_operations/
+    └─ migration.sql
+  └─ 20260902231000_v2_live_polls/
+    └─ migration.sql
+  └─ 20260904135834_v2_registration_intake/
+    └─ migration.sql
+  └─ 20260904160955_attendee_email_verification/
+    └─ migration.sql
+  └─ 20260904172105_restricted_event_access/
+    └─ migration.sql
+  └─ 20261028095000_event_chat/
+    └─ migration.sql
+  └─ 20261029010000_event_topics/
+    └─ migration.sql
+  └─ 20261030010000_broadcast_sessions/
+    └─ migration.sql
+  └─ 20261031010000_media_event_correlation/
+    └─ migration.sql
+  └─ 20261031020000_media_multipart/
+    └─ migration.sql
+  └─ 20261102000000_media_snapshot_version/
+    └─ migration.sql
+
+All migrations have been successfully applied.

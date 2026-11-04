@@ -29,6 +29,7 @@ import { configModuleOptions } from './config/environment';
 import { LivePollsModule } from './live-polls/live-polls.module';
 import { EventRegistrationsModule } from './event-registrations/event-registrations.module';
 import { EventInvitationsModule } from './event-invitations/event-invitations.module';
+import { ChatModule } from './event-chat/chat.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { EventInvitationsModule } from './event-invitations/event-invitations.mo
     ReadinessModule,
     EventsModule,
     LivePollsModule,
+    ChatModule,
     EventRegistrationsModule,
     EventInvitationsModule,
     AccessPoliciesModule,

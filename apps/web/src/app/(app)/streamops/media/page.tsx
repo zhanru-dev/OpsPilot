@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AudioLines,
@@ -10,7 +11,7 @@ import {
   Search,
   Upload,
 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,18 +19,11 @@ import { Dialog } from "@/components/ui/dialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api";
-import { uploadDirectly } from "@/lib/direct-upload";
+import { UploadPanel } from "@/features/media/upload-panel";
+import { MediaPreview } from "@/features/media/media-preview";
 import { canManageContent } from "@/lib/permissions";
-import type { MediaAsset } from "@/lib/types";
+import type { MediaAsset, WorkspaceRole } from "@/lib/types";
 import { formatBytes, formatDate, humanize } from "@/lib/utils";
-
-type UploadIntent = {
-  assetId: string;
-  uploadId: string;
-  uploadUrl: string;
-  expiresAt: string;
-  requiredHeaders: Record<string, string>;
-};
 
 type Playback = {
   url: string;
@@ -37,30 +31,61 @@ type Playback = {
   source: "SEEDED" | "PRIVATE_STORAGE";
 };
 
-type UploadStage =
-  "idle" | "authorising" | "uploading" | "finalising" | "queued";
-
 export default function MediaPage() {
-  const client = useQueryClient();
   const { user } = useAuth();
+  if (!user) return <LoadingState label="Checking media access" />;
+  return (
+    <MediaAccess
+      key={`${user.id}:${user.workspaceId}`}
+      identity={`${user.id}:${user.workspaceId}`}
+    />
+  );
+}
+function MediaAccess({ identity }: { identity: string }) {
+  const context = useQuery({
+    queryKey: ["media-context", identity],
+    queryFn: ({ signal }) =>
+      apiFetch<{ role: WorkspaceRole }>("/media-assets/context", { signal }),
+    refetchInterval: 5000,
+    retry: false,
+  });
+  if (context.error)
+    return (
+      <ErrorState
+        message={context.error.message}
+        retry={() => context.refetch()}
+      />
+    );
+  if (!context.data) return <LoadingState label="Checking media access" />;
+  return (
+    <MediaWorkspace
+      key={`${identity}:${context.data.role}`}
+      identity={identity}
+      role={context.data.role}
+    />
+  );
+}
+function MediaWorkspace({
+  identity,
+  role,
+}: {
+  identity: string;
+  role: WorkspaceRole;
+}) {
+  const client = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [uploadStage, setUploadStage] = useState<UploadStage>("idle");
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<MediaAsset | null>(null);
   const [playback, setPlayback] = useState<Playback | null>(null);
-  const mutable = canManageContent(user?.role);
+  const mutable = canManageContent(role);
 
   const query = useQuery({
-    queryKey: ["media", search, status],
-    queryFn: () =>
+    queryKey: ["media", identity, search, status],
+    queryFn: ({ signal }) =>
       apiFetch<{ items: MediaAsset[] }>(
         `/media-assets?${new URLSearchParams({ ...(search ? { search } : {}), ...(status ? { status } : {}) })}`,
+        { signal },
       ),
     refetchInterval: (result) =>
       result.state.data?.items.some((asset) =>
@@ -82,71 +107,58 @@ export default function MediaPage() {
     },
   });
 
-  const preview = useMutation({
-    mutationFn: (asset: MediaAsset) =>
-      apiFetch<Playback>(`/media-assets/${asset.id}/playback-url`, {
-        method: "POST",
-      }),
-    onSuccess: (result) => setPlayback(result),
+  const previewOwner = useRef({
+    generation: 0,
+    controller: new AbortController(),
   });
+  useEffect(() => () => previewOwner.current.controller.abort(), []);
+  const preview = useMutation({
+    gcTime: 0,
+    mutationFn: async (asset: MediaAsset) => {
+      previewOwner.current.controller.abort();
+      const current = {
+        generation: previewOwner.current.generation + 1,
+        controller: new AbortController(),
+      };
+      previewOwner.current = current;
+      const receipt = await apiFetch<Playback>(
+        `/media-assets/${asset.id}/playback-url`,
+        { method: "POST", signal: current.controller.signal },
+      );
+      return { receipt, generation: current.generation };
+    },
+    onSuccess: ({ receipt, generation }) => {
+      if (
+        previewOwner.current.generation === generation &&
+        !previewOwner.current.controller.signal.aborted
+      )
+        setPlayback(receipt);
+    },
+  });
+  const deletion = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/media-assets/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      setSelected(null);
+      setPlayback(null);
+      void client.invalidateQueries({ queryKey: ["media"] });
+      void client.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+  function clearPreview() {
+    previewOwner.current.controller.abort();
+    previewOwner.current = {
+      generation: previewOwner.current.generation + 1,
+      controller: new AbortController(),
+    };
+    setPlayback(null);
+    preview.reset();
+  }
 
   function selectAsset(asset: MediaAsset, loadPlayback = false) {
     setSelected(asset);
-    setPlayback(null);
-    preview.reset();
+    clearPreview();
     if (loadPlayback) preview.mutate(asset);
-  }
-
-  async function submitUpload(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!file || !name.trim()) return;
-    setUploadError(null);
-    setUploadProgress(0);
-    try {
-      const profile = uploadProfile(file);
-      setUploadStage("authorising");
-      const intent = await apiFetch<UploadIntent>("/media-assets/uploads", {
-        method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || undefined,
-          kind: profile.kind,
-          contentType: profile.contentType,
-          sizeBytes: file.size,
-        }),
-      });
-      setUploadStage("uploading");
-      await uploadDirectly(
-        intent.uploadUrl,
-        file,
-        intent.requiredHeaders,
-        setUploadProgress,
-      );
-      setUploadStage("finalising");
-      await apiFetch(`/media-assets/uploads/${intent.uploadId}/complete`, {
-        method: "POST",
-      });
-      setUploadStage("queued");
-      await Promise.all([
-        client.invalidateQueries({ queryKey: ["media"] }),
-        client.invalidateQueries({ queryKey: ["audit"] }),
-      ]);
-    } catch (error) {
-      setUploadStage("idle");
-      setUploadError(error instanceof Error ? error.message : "Upload failed.");
-    }
-  }
-
-  function closeUpload() {
-    if (["authorising", "uploading", "finalising"].includes(uploadStage))
-      return;
-    setUploadOpen(false);
-    setFile(null);
-    setName("");
-    setDescription("");
-    setUploadStage("idle");
-    setUploadProgress(0);
-    setUploadError(null);
   }
 
   return (
@@ -302,99 +314,15 @@ export default function MediaPage() {
         </div>
       )}
 
-      <Dialog
-        open={uploadOpen}
-        onClose={closeUpload}
-        title="Upload media"
-        description="MP4, MOV, MP3, WAV or M4A. Maximum 100 MB and 5 minutes."
-      >
-        {uploadStage === "queued" ? (
-          <div>
-            <div className="border-l-4 border-[var(--success)] bg-[var(--success-soft)] p-4">
-              <p className="font-bold text-[var(--success)]">
-                Processing queued
-              </p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                The private source upload is complete.
-              </p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <Button onClick={closeUpload}>Done</Button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={submitUpload} className="space-y-5">
-            <label className="block text-sm font-semibold">
-              Source file
-              <input
-                type="file"
-                required
-                accept=".mp4,.mov,.mp3,.wav,.m4a,video/mp4,video/quicktime,audio/mpeg,audio/wav,audio/mp4"
-                onChange={(event) => {
-                  const nextFile = event.target.files?.[0] ?? null;
-                  setFile(nextFile);
-                  if (nextFile && !name)
-                    setName(nextFile.name.replace(/\.[^.]+$/, ""));
-                }}
-                className="mt-2 block w-full rounded-md border border-[var(--border)] text-sm file:mr-4 file:border-0 file:border-r file:border-[var(--border)] file:bg-[var(--surface-muted)] file:px-4 file:py-3 file:font-semibold"
-              />
-            </label>
-            <label className="block text-sm font-semibold">
-              Asset name
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-                maxLength={200}
-                className="mt-2 h-10 w-full rounded-md border border-[var(--border)] px-3 font-normal"
-              />
-            </label>
-            <label className="block text-sm font-semibold">
-              Description{" "}
-              <span className="font-normal text-[var(--muted)]">
-                (optional)
-              </span>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                maxLength={500}
-                rows={3}
-                className="mt-2 w-full resize-y rounded-md border border-[var(--border)] p-3 font-normal"
-              />
-            </label>
-            {uploadStage !== "idle" ? (
-              <UploadProgress stage={uploadStage} progress={uploadProgress} />
-            ) : null}
-            {uploadError ? (
-              <p
-                role="alert"
-                className="border-l-4 border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]"
-              >
-                {uploadError}
-              </p>
-            ) : null}
-            <div className="flex justify-end gap-2 border-t border-[var(--border)] pt-5">
-              <Button type="button" variant="secondary" onClick={closeUpload}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                loading={uploadStage !== "idle"}
-                disabled={!file || !name.trim()}
-              >
-                <Upload className="size-4" /> Upload
-              </Button>
-            </div>
-          </form>
-        )}
-      </Dialog>
+      {mutable ? (
+        <UploadPanel open={uploadOpen} onClose={() => setUploadOpen(false)} />
+      ) : null}
 
       <Dialog
         open={Boolean(selected)}
         onClose={() => {
           setSelected(null);
-          setPlayback(null);
-          preview.reset();
+          clearPreview();
         }}
         title={selected?.name ?? "Media asset"}
         description={
@@ -404,16 +332,36 @@ export default function MediaPage() {
         }
       >
         {selected ? (
-          <MediaDetails
-            asset={selected}
-            playback={playback}
-            previewPending={preview.isPending}
-            previewError={preview.error}
-            retryPending={retry.isPending}
-            mutable={mutable}
-            onPreview={() => preview.mutate(selected)}
-            onRetry={() => retry.mutate(selected)}
-          />
+          <>
+            <MediaDetails
+              asset={selected}
+              playback={playback}
+              previewPending={preview.isPending}
+              previewError={preview.error}
+              retryPending={retry.isPending}
+              mutable={mutable}
+              onPreview={() => preview.mutate(selected)}
+              onRetry={() => retry.mutate(selected)}
+            />
+            {deletion.error ? (
+              <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
+                {deletion.error.message}
+              </p>
+            ) : null}
+            {mutable &&
+            !["UPLOADING", "PENDING_UPLOAD", "PROCESSING", "DELETED"].includes(
+              selected.status,
+            ) ? (
+              <Button
+                className="mt-4"
+                variant="danger"
+                loading={deletion.isPending}
+                onClick={() => deletion.mutate(selected.id)}
+              >
+                Delete asset
+              </Button>
+            ) : null}
+          </>
         ) : null}
       </Dialog>
     </>
@@ -421,12 +369,36 @@ export default function MediaPage() {
 }
 
 function AssetIdentity({ asset }: { asset: MediaAsset }) {
+  const thumbnail = useQuery({
+    queryKey: ["media-thumbnail", asset.id],
+    queryFn: ({ signal }) =>
+      apiFetch<Playback>(`/media-assets/${asset.id}/thumbnail-url`, {
+        method: "POST",
+        signal,
+      }),
+    enabled:
+      asset.status === "READY" &&
+      !asset.isSeeded &&
+      asset.kind === "VIDEO" &&
+      asset.variants?.some((v) => v.kind === "THUMBNAIL"),
+    staleTime: 60000,
+    retry: false,
+  });
   return (
     <div className="flex min-w-0 items-start gap-3">
       <span
         className={`flex size-10 shrink-0 items-center justify-center rounded-md ${asset.kind === "VIDEO" ? "bg-[#e8eef7] text-[var(--blue)]" : "bg-[var(--brand-soft)] text-[var(--brand)]"}`}
       >
-        {asset.kind === "VIDEO" ? (
+        {thumbnail.data ? (
+          <Image
+            unoptimized
+            src={thumbnail.data.url}
+            width={40}
+            height={40}
+            alt=""
+            className="size-10 rounded-md object-cover"
+          />
+        ) : asset.kind === "VIDEO" ? (
           <Film className="size-5" />
         ) : (
           <AudioLines className="size-5" />
@@ -521,29 +493,6 @@ function ProgressBar({
   );
 }
 
-function UploadProgress({
-  stage,
-  progress,
-}: {
-  stage: UploadStage;
-  progress: number;
-}) {
-  return (
-    <div aria-live="polite">
-      <div className="mb-2 flex justify-between text-xs font-semibold text-[var(--muted)]">
-        <span>{stageLabel(stage)}</span>
-        <span>{stage === "uploading" ? `${progress}%` : ""}</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded bg-[var(--surface-muted)]">
-        <div
-          className="h-full bg-[var(--brand)] transition-[width]"
-          style={{ width: `${stageProgress(stage, progress)}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function MediaDetails({
   asset,
   playback,
@@ -568,19 +517,11 @@ function MediaDetails({
       {previewPending ? (
         <LoadingState label="Signing private playback URL" />
       ) : playback ? (
-        asset.kind === "VIDEO" ? (
-          <video
-            src={playback.url}
-            controls
-            autoPlay
-            className="aspect-video w-full rounded-md bg-black"
-          />
-        ) : (
-          <div className="border border-[var(--border)] bg-[#f5f7f8] p-6">
-            <AudioLines className="mx-auto mb-5 size-10 text-[var(--brand)]" />
-            <audio src={playback.url} controls autoPlay className="w-full" />
-          </div>
-        )
+        <MediaPreview
+          key={`${asset.id}:${playback.url}`}
+          url={playback.url}
+          kind={asset.kind}
+        />
       ) : previewError ? (
         <ErrorState message={previewError.message} retry={onPreview} />
       ) : null}
@@ -659,37 +600,4 @@ function Metric({ label, value }: { label: string; value: string }) {
       <div className="mt-1 text-sm font-bold">{value}</div>
     </div>
   );
-}
-
-function uploadProfile(file: File) {
-  const extension = file.name.split(".").pop()?.toLowerCase();
-  if (extension === "mov")
-    return { kind: "VIDEO" as const, contentType: "video/quicktime" };
-  if (extension === "mp3")
-    return { kind: "AUDIO" as const, contentType: "audio/mpeg" };
-  if (extension === "wav")
-    return { kind: "AUDIO" as const, contentType: "audio/wav" };
-  if (extension === "m4a" || file.type === "audio/mp4")
-    return { kind: "AUDIO" as const, contentType: "audio/mp4" };
-  if (extension === "mp4")
-    return { kind: "VIDEO" as const, contentType: "video/mp4" };
-  throw new Error("Choose an MP4, MOV, MP3, WAV or M4A file.");
-}
-
-function stageLabel(stage: UploadStage) {
-  return {
-    idle: "",
-    authorising: "Authorising upload",
-    uploading: "Uploading directly",
-    finalising: "Validating source",
-    queued: "Processing queued",
-  }[stage];
-}
-
-function stageProgress(stage: UploadStage, uploadProgress: number) {
-  if (stage === "authorising") return 5;
-  if (stage === "uploading") return 10 + uploadProgress * 0.75;
-  if (stage === "finalising") return 92;
-  if (stage === "queued") return 100;
-  return 0;
 }

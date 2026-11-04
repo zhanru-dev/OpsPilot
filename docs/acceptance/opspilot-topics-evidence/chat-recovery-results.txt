@@ -1,0 +1,31 @@
+
+> opspilot-platform@2.0.0 test:chat:recovery
+> playwright test --config=playwright.chat-recovery.config.ts --output=.runtime/topics-acceptance/chat-recovery-results
+
+[WebServer] (node:62845) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:62846) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:62871) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:62874) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 1 worker
+
+(node:62875) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 e2e/chat-recovery.spec.ts:185:9 › staff recovers from a real PostgreSQL timeout during initial subscription without reloading (11.5s)
+  ✓   2 e2e/chat-recovery.spec.ts:185:9 › staff recovers from a real PostgreSQL timeout during reconnection without reloading (12.0s)
+  ✓   3 e2e/chat-recovery.spec.ts:270:7 › staff recovers from a transient gateway replay failure (4.2s)
+  ✓   4 e2e/chat-recovery.spec.ts:296:7 › staff renews a rejected one-use ticket without losing valid session access (3.0s)
+  ✓   5 e2e/chat-recovery.spec.ts:352:7 › staff tolerates a legacy gateway reporting a transient 503 as denied (2.8s)
+  ✓   6 e2e/chat-recovery.spec.ts:384:7 › staff cannot reconnect after session revocation and private history stays hidden (2.8s)
+  ✓   7 e2e/chat-recovery.spec.ts:185:9 › attendee recovers from a real PostgreSQL timeout during initial subscription without reloading (10.3s)
+  ✓   8 e2e/chat-recovery.spec.ts:185:9 › attendee recovers from a real PostgreSQL timeout during reconnection without reloading (12.0s)
+  ✓   9 e2e/chat-recovery.spec.ts:270:7 › attendee recovers from a transient gateway replay failure (5.1s)
+  ✓  10 e2e/chat-recovery.spec.ts:296:7 › attendee renews a rejected one-use ticket without losing valid session access (2.7s)
+  ✓  11 e2e/chat-recovery.spec.ts:352:7 › attendee tolerates a legacy gateway reporting a transient 503 as denied (2.4s)
+  ✓  12 e2e/chat-recovery.spec.ts:384:7 › attendee cannot reconnect after session revocation and private history stays hidden (2.4s)
+
+  12 passed (1.5m)

@@ -1,0 +1,13 @@
+{
+  "at": "2026-11-03T00:48:28.721Z",
+  "apiReady": 200,
+  "webLogin": 200,
+  "login": 200,
+  "identity": 200,
+  "mediaList": 200,
+  "existingAssets": 3,
+  "resumable": 200,
+  "events": 200,
+  "logout": 204,
+  "workerReady": true
+}

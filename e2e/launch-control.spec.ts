@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { WEB_URL } from "./support/env";
 
 test.afterAll(async () => {
   const prisma = new PrismaClient();
@@ -87,7 +88,7 @@ test("live poll responses update across manager and analyst sessions", async ({
   const analystContext = await browser.newContext();
   try {
     const analystPage = await analystContext.newPage();
-    await analystPage.goto("http://localhost:3000/login");
+    await analystPage.goto(`${WEB_URL}/login`);
     await analystPage
       .getByRole("button", { name: "Use Maya Chen demo account" })
       .click();
@@ -99,7 +100,7 @@ test("live poll responses update across manager and analyst sessions", async ({
         name: "Launch readiness at a glance",
       }),
     ).toBeVisible();
-    await analystPage.goto(`http://localhost:3000${livePath}`);
+    await analystPage.goto(`${WEB_URL}${livePath}`);
     await expect(analystPage.getByText("Live updates connected")).toBeVisible();
     await expect(
       analystPage.getByRole("button", { name: "New poll" }),
@@ -374,9 +375,15 @@ test("v1.1 reliability surfaces expose bounded media and webhook evidence", asyn
   const uploadDialog = page.getByRole("dialog", { name: "Upload media" });
   await expect(uploadDialog.getByLabel("Source file")).toBeVisible();
   await expect(
-    uploadDialog.getByText("Maximum 100 MB and 5 minutes."),
+    uploadDialog.getByText(
+      "MP4, MOV, MP3, WAV or M4A. Up to 100 MiB and 5 minutes each. Leaving this page pauses transfers; reselect files to resume.",
+    ),
   ).toBeVisible();
-  await uploadDialog.getByRole("button", { name: "Cancel" }).click();
+  await uploadDialog
+    .locator("form")
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
+  await expect(uploadDialog).toHaveCount(0);
 
   await page.goto("/integrations");
   await expect(

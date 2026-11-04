@@ -1,0 +1,10 @@
+{
+  "apiReady": true,
+  "workerReady": true,
+  "webLogin": 200,
+  "authenticatedPersistenceAfterApiRestart": true,
+  "websocketAfterRestart": true,
+  "broadcastPersistenceAfterRestart": true,
+  "actualRtmpAndProtectedHlsAfterRestart": true,
+  "configuration": "production images with isolated local test configuration; TLS deployment not exercised"
+}

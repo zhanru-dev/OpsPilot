@@ -1,0 +1,133 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.79kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 DONE 0.3s
+
+#3 docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#3 CACHED
+
+#4 [internal] load metadata for docker.io/library/node:22-bookworm-slim
+#4 DONE 0.2s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 216B done
+#5 DONE 0.0s
+
+#6 [dependencies  1/10] FROM docker.io/library/node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 786.10kB 0.0s done
+#7 DONE 0.0s
+
+#8 [dependencies  2/10] WORKDIR /app
+#8 CACHED
+
+#9 [dependencies  3/10] COPY package.json package-lock.json ./
+#9 CACHED
+
+#10 [dependencies  6/10] COPY packages/chat-contracts/package.json packages/chat-contracts/package.json
+#10 CACHED
+
+#11 [dependencies  9/10] COPY packages/media-contracts/package.json packages/media-contracts/package.json
+#11 CACHED
+
+#12 [dependencies  7/10] COPY packages/topics-contracts/package.json packages/topics-contracts/package.json
+#12 CACHED
+
+#13 [dependencies  4/10] COPY apps/api/package.json apps/api/package.json
+#13 CACHED
+
+#14 [dependencies  8/10] COPY packages/broadcast-contracts/package.json packages/broadcast-contracts/package.json
+#14 CACHED
+
+#15 [dependencies  5/10] COPY apps/web/package.json apps/web/package.json
+#15 CACHED
+
+#16 [dependencies 10/10] RUN npm ci --workspace=@opspilot/web --include-workspace-root --fetch-retries=5
+#16 CACHED
+
+#17 [builder 1/6] COPY apps/web ./apps/web
+#17 DONE 0.0s
+
+#18 [builder 2/6] COPY packages/chat-contracts ./packages/chat-contracts
+#18 DONE 0.0s
+
+#19 [builder 3/6] COPY packages/topics-contracts ./packages/topics-contracts
+#19 DONE 0.0s
+
+#20 [builder 4/6] COPY packages/broadcast-contracts ./packages/broadcast-contracts
+#20 DONE 0.0s
+
+#21 [builder 5/6] COPY packages/media-contracts ./packages/media-contracts
+#21 DONE 0.0s
+
+#22 [builder 6/6] RUN npm run build --workspace=@opspilot/web
+#22 0.353
+#22 0.353 > @opspilot/web@2.0.0 build
+#22 0.353 > next build
+#22 0.353
+#22 0.802 ▲ Next.js 16.4.3 (Turbopack)
+#22 0.845 ✓ Running next.config.ts took 42ms
+#22 0.862
+#22 0.897   Creating an optimized production build ...
+#22 6.891 ✓ Compiled successfully in 6.0s
+#22 6.896   Running TypeScript ...
+#22 15.53   Finished TypeScript in 8.6s ...
+#22 15.53   Collecting page data using 15 workers ...
+#22 17.40   Generating static pages using 15 workers (0/15) ...
+#22 18.07   Generating static pages using 15 workers (3/15)
+#22 18.07   Generating static pages using 15 workers (7/15)
+#22 18.34   Generating static pages using 15 workers (11/15)
+#22 18.35 ✓ Generating static pages using 15 workers (15/15) in 950ms
+#22 18.36   Finalizing page optimization ...
+#22 18.84
+#22 18.85 Route (app)
+#22 18.85 ┌ ○ /
+#22 18.85 ├ ○ /_not-found
+#22 18.85 ├ ○ /analytics
+#22 18.85 ├ ○ /audit-logs
+#22 18.85 ├ ○ /case-study
+#22 18.85 ├ ○ /dashboard
+#22 18.85 ├ ƒ /events/[id]/confirm
+#22 18.85 ├ ƒ /events/[id]/register
+#22 18.85 ├ ƒ /events/[id]/watch
+#22 18.85 ├ ○ /icon.svg
+#22 18.85 ├ ○ /integrations
+#22 18.85 ├ ○ /login
+#22 18.85 ├ ○ /settings
+#22 18.85 ├ ○ /streamops/events
+#22 18.85 ├ ƒ /streamops/events/[id]
+#22 18.85 ├ ƒ /streamops/events/[id]/invitations
+#22 18.85 ├ ƒ /streamops/events/[id]/live
+#22 18.85 ├ ƒ /streamops/events/[id]/registrations
+#22 18.85 ├ ○ /streamops/events/new
+#22 18.85 ├ ○ /streamops/live
+#22 18.85 └ ○ /streamops/media
+#22 18.85
+#22 18.85
+#22 18.85 ○  (Static)   prerendered as static content
+#22 18.85 ƒ  (Dynamic)  server-rendered on demand
+#22 18.85
+#22 DONE 19.1s
+
+#23 [runtime 3/5] COPY --from=builder --chown=node:node /app/apps/web/public ./apps/web/public
+#23 CACHED
+
+#24 [runtime 4/5] COPY --from=builder --chown=node:node /app/apps/web/.next/standalone ./
+#24 DONE 0.4s
+
+#25 [runtime 5/5] COPY --from=builder --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+#25 DONE 0.1s
+
+#26 exporting to image
+#26 exporting layers
+#26 exporting layers 0.6s done
+#26 writing image sha256:f7ffb8d1411edab48ecf8bfd3f32f83ba56ff9300965fe0afb4528b47024b285
+#26 writing image sha256:f7ffb8d1411edab48ecf8bfd3f32f83ba56ff9300965fe0afb4528b47024b285 done
+#26 naming to docker.io/library/opspilot-final-audit-web:20261103 done
+#26 DONE 0.6s

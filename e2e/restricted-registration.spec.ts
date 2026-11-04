@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { API_URL, MAILPIT_URL, eventLinkPattern } from "./support/env";
 
 async function emailText(request: APIRequestContext, messageId: string) {
   let id = "";
@@ -8,7 +9,7 @@ async function emailText(request: APIRequestContext, messageId: string) {
     .poll(
       async () => {
         const response = await request.get(
-          "http://localhost:8025/api/v1/messages",
+          `${MAILPIT_URL}/api/v1/messages`,
         );
         const inbox = (await response.json()) as {
           messages: { ID: string; MessageID: string }[];
@@ -22,7 +23,7 @@ async function emailText(request: APIRequestContext, messageId: string) {
     )
     .toBe(true);
   const response = await request.get(
-    `http://localhost:8025/api/v1/message/${id}`,
+    `${MAILPIT_URL}/api/v1/message/${id}`,
   );
   return ((await response.json()) as { Text: string }).Text;
 }
@@ -116,7 +117,7 @@ test("a manager invites a guest, verifies private access, and revokes the attend
     ).toEqual([]);
     const guest = await guestContext.newPage();
     const registrationUrl = invitationText.match(
-      /http:\/\/localhost:3000\/events\/[^\s]+/,
+      eventLinkPattern,
     )?.[0];
     expect(registrationUrl).toBeTruthy();
     await guest.goto(registrationUrl!);
@@ -153,7 +154,7 @@ test("a manager invites a guest, verifies private access, and revokes the attend
       `attendee-${verification.id}@opspilot.invalid`,
     );
     const confirmationUrl = verificationText.match(
-      /http:\/\/localhost:3000\/events\/[^\s]+/,
+      eventLinkPattern,
     )?.[0];
     await guest.goto(confirmationUrl!);
     await expect(
@@ -171,7 +172,7 @@ test("a manager invites a guest, verifies private access, and revokes the attend
     ).toBeVisible();
     expect(
       (
-        await guest.request.get("http://localhost:4100/api/v1/stream-events")
+        await guest.request.get(`${API_URL}/stream-events`)
       ).status(),
     ).toBe(401);
     await row.getByRole("button", { name: "Revoke invitation" }).click();

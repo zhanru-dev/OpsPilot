@@ -1,0 +1,54 @@
+[
+  {
+    "name": "empty",
+    "http": 400,
+    "status": "PASS"
+  },
+  {
+    "name": "oversized",
+    "http": 400,
+    "status": "PASS"
+  },
+  {
+    "name": "too-many-parts",
+    "http": 400,
+    "status": "PASS"
+  },
+  {
+    "name": "invalid-format",
+    "http": 400,
+    "status": "PASS"
+  },
+  {
+    "name": "exact-byte-boundary",
+    "sizeBytes": 146837,
+    "parts": 1,
+    "lastPartBytes": 146837,
+    "sha256": "272d394bacb30c063fcd653dddcbd115a3d8a048a88112b415c796d30adc4907",
+    "status": "PASS"
+  },
+  {
+    "name": "exact-byte-boundary",
+    "sizeBytes": 5242880,
+    "parts": 1,
+    "lastPartBytes": 5242880,
+    "sha256": "31fd78f5112979e0bab08645aba92995db289b2682b5d087c764b08985e52d44",
+    "status": "PASS"
+  },
+  {
+    "name": "exact-byte-boundary",
+    "sizeBytes": 10485760,
+    "parts": 2,
+    "lastPartBytes": 5242880,
+    "sha256": "a27e90ee45e7c14667ca902a3998da64b91a511c5daf514e6faf6a7574a04fc3",
+    "status": "PASS"
+  },
+  {
+    "name": "exact-byte-boundary",
+    "sizeBytes": 104857600,
+    "parts": 20,
+    "lastPartBytes": 5242880,
+    "sha256": "4dfd1aa04fca9dcfaec03967904ae31492ff7c138417ee5e6363f340ee1c8179",
+    "status": "PASS"
+  }
+]

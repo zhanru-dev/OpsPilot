@@ -1,0 +1,47 @@
+[WebServer] (node:81203) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:81204) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:81282) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:81295) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:81297) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 27 tests using 1 worker
+
+(node:81298) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 e2e/chat.spec.ts:163:5 › staff and email-admitted attendee chat, paginate, moderate, retry and reload (22.2s)
+  ✓   2 e2e/chat.spec.ts:360:5 › disconnect replay retains an older reading anchor across multiple pages and bounds a live burst (9.3s)
+  ✓   3 e2e/launch-control.spec.ts:32:5 › live poll responses update across manager and analyst sessions (11.8s)
+  ✓   4 e2e/launch-control.spec.ts:178:5 › operations manager completes the launch-readiness golden flow (6.1s)
+  ✓   5 e2e/launch-control.spec.ts:302:5 › analyst receives a read-only product surface (1.4s)
+  ✓   6 e2e/launch-control.spec.ts:348:5 › v1.1 reliability surfaces expose bounded media and webhook evidence (2.3s)
+  ✓   7 e2e/launch-control.spec.ts:412:5 › v1.2 analytics and AI assurance expose inspectable evidence (2.2s)
+  ✓   8 e2e/launch-control.spec.ts:448:5 › analyst can inspect analytics without operational controls (1.1s)
+  ✓   9 e2e/launch-control.spec.ts:470:5 › core operations pages do not overflow a mobile viewport (1.1s)
+  ✓  10 e2e/media-multipart.spec.ts:140:5 › reload resumes only missing parts, rejects a different same-size file, verifies stored hash and decodes preview (7.1s)
+  ✓  11 e2e/media-multipart.spec.ts:229:5 › lost completion response resolves one asset/job and a revoked writer loses transfer controls (6.0s)
+  ✓  12 e2e/media-multipart.spec.ts:298:5 › three reserved file workers leave the fourth queued; cancellation frees a slot and cannot publish (4.5s)
+{"workload":{"bytes":104856576,"parts":20,"fileWorkers":3,"activeFiles":1,"video":"4 seconds 640x360 H264, MP4 free-atom padding","browser":"156.0.8078.74","node":"v22.20.0"},"uploadMs":4909,"readyMs":6832,"partWindowMs":2585,"mibPerSecond":38.68434175531915,"processingMs":1522,"apiRssBytes":{"min":265396224,"max":354136064,"samples":27},"browserHeapBytes":{"min":8577432,"max":15416704,"samples":27},"animationFrameGapMs":{"p95":16.700000000000728,"max":16.800000000000182},"progressDomMutations":20,"progressDomMutationsPerSecond":4.074149521287431,"previewCycles":10,"resourceSamples":[{"Documents":12,"JSEventListeners":1033,"Nodes":2278,"JSHeapUsedSize":11514140},{"Documents":1,"JSEventListeners":371,"Nodes":1576,"JSHeapUsedSize":7630960},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8261448},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8318400},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8354712},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8376480},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8428332},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8445184},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8456160},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8474320},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8510788},{"Documents":9,"JSEventListeners":384,"Nodes":1635,"JSHeapUsedSize":8541596}],"retainedVideos":0,"hashMatch":true,"limitations":"One local browser and padded file; CDP JS heap excludes native decoder/Blob memory, API RSS excludes worker/FFmpeg/MinIO, DOM mutations are not React render counts; forced GC between preview samples."}
+  ✓  13 e2e/media-performance.spec.ts:18:5 › measures a near-limit real multipart upload and repeated preview teardown (18.3s)
+  ✓  14 e2e/media-processing.spec.ts:16:5 › real media upload completes, persists stored bytes and decodes a private preview (3.7s)
+  ✓  15 e2e/registration.spec.ts:5:5 › a guest registers, verifies an email, and signs out without workspace access (7.0s)
+  ✓  16 e2e/restricted-registration.spec.ts:30:5 › a manager invites a guest, verifies private access, and revokes the attendee session (15.7s)
+  ✓  17 e2e/topics.spec.ts:121:5 › admitted attendees and moderators submit, approve, reply, pin, edit, delete and configure real event questions (16.0s)
+  ✓  18 e2e/topics.spec.ts:316:7 › staff recovers real socket interruption and lost create response without duplicates (4.4s)
+  ✓  19 e2e/topics.spec.ts:316:7 › attendee recovers real socket interruption and lost create response without duplicates (9.2s)
+  ✓  20 e2e/topics.spec.ts:427:5 › lost reply receipts survive snapshot invalidation; delayed snapshots cannot resurrect deleted parents (6.4s)
+  ✓  21 e2e/topics.spec.ts:516:5 › keyset pagination and event switching discard stale responses and old private questions (2.0s)
+  ✓  22 e2e/topics.spec.ts:604:9 › staff question retains its operation through a lost receipt and real HTTP 429 (1.1m)
+  ✓  23 e2e/topics.spec.ts:604:9 › staff reply retains its operation through a lost receipt and real HTTP 429 (1.1m)
+  ✓  24 e2e/topics.spec.ts:604:9 › attendee question retains its operation through a lost receipt and real HTTP 429 (1.1m)
+  ✓  25 e2e/topics.spec.ts:604:9 › attendee reply retains its operation through a lost receipt and real HTTP 429 (1.1m)
+  ✓  26 e2e/topics.spec.ts:726:5 › incoming replies and remote edits retain drafts and require explicit version review (3.2s)
+  ✓  27 e2e/topics.spec.ts:842:5 › approval preserves an author's edit; permission changes and identity switching discard it (9.3s)
+
+  Slow test file: e2e/topics.spec.ts (5.2m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  27 passed (7.5m)

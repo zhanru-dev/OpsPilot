@@ -1,0 +1,91 @@
+{
+  "steps": [
+    {
+      "name": "staff password login into existing seeded workspace",
+      "ms": 831
+    },
+    {
+      "name": "event created through UI",
+      "ms": 1232,
+      "detail": {
+        "eventId": "ed875b5f-c415-4965-993b-8fa00911fa1d"
+      }
+    },
+    {
+      "name": "launch preparation and supported public admission policy configured",
+      "ms": 1924
+    },
+    {
+      "name": "new actual upload, MinIO SHA256 and BullMQ FFmpeg READY",
+      "ms": 3464,
+      "detail": {
+        "assetId": "cf52a6e7-80d1-4dd1-a9e0-2b430d368c6f",
+        "bytes": 222943,
+        "sha256": "ccadaea6ab9004f12bf4d453dfe015750454839207c841acfab2919cfee908f4",
+        "variants": [
+          "PREVIEW",
+          "THUMBNAIL"
+        ]
+      }
+    },
+    {
+      "name": "new asset attached, readiness 100, READY and LIVE via supported transitions",
+      "ms": 4284
+    },
+    {
+      "name": "two independent attendees admitted through delivered email and confirmation",
+      "ms": 15814
+    },
+    {
+      "name": "authorized RTMP H264 AAC, two real HLS decoders and advancing playback",
+      "ms": 24126,
+      "detail": {
+        "startupMs": 6922,
+        "before": {
+          "time": 0.833245,
+          "frames": 21
+        }
+      }
+    },
+    {
+      "name": "video coexists with real Chat moderation, pending private topic, approval, reply, pin and Poll vote",
+      "ms": 31168
+    },
+    {
+      "name": "actual malformed media reaches FAILED while Chat and HLS continue",
+      "ms": 39257,
+      "detail": {
+        "failedAssetId": "669763cd-e607-49d6-9745-566040cae73f"
+      }
+    },
+    {
+      "name": "fullscreen browser observation",
+      "ms": 39271,
+      "detail": {
+        "supported": true,
+        "entered": true,
+        "exited": true
+      }
+    },
+    {
+      "name": "effective audience capability changed and direct API bypass denied",
+      "ms": 40201
+    },
+    {
+      "name": "publisher outage permits new Chat, new approved topic and second vote; real playback recovers",
+      "ms": 53015,
+      "detail": {
+        "recoveryMs": 6908
+      }
+    },
+    {
+      "name": "attendee reload persists interactions, broadcast ends independently, event completes, operational review refreshes",
+      "ms": 55903
+    },
+    {
+      "name": "event archives through supported UI",
+      "ms": 56144
+    }
+  ],
+  "passed": true
+}

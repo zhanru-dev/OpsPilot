@@ -1,0 +1,36 @@
+
+> @opspilot/api@2.0.0 test:e2e
+> jest --config ./test/jest-e2e.json --runInBand media-restart.e2e-spec
+
+FAIL test/media-restart.e2e-spec.ts
+  Media recovery across actual API and worker process death
+    ✕ recovers a stored original after SIGKILL and fences a dead worker before publishing one completed result (1 ms)
+
+  ● Media recovery across actual API and worker process death › recovers a stored original after SIGKILL and fences a dead worker before publishing one completed result
+
+    Test child exited before expected boundary
+
+      39 |       if (found) return found;
+      40 |       if (child.exitCode !== null || child.signalCode !== null)
+    > 41 |         throw Error('Test child exited before expected boundary');
+         |               ^
+      42 |       await new Promise((r) => setTimeout(r, 50));
+      43 |     }
+      44 |     throw Error(`Missing child boundary: ${event}`);
+
+      at signal (media-restart.e2e-spec.ts:41:15)
+      at start (media-restart.e2e-spec.ts:58:19)
+      at Object.<anonymous> (media-restart.e2e-spec.ts:104:28)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        1.39 s
+Ran all test suites matching /media-restart.e2e-spec/i.
+npm error Lifecycle script `test:e2e` failed with error:
+npm error code 1
+npm error path /Users/ruzhan/computer_science/projects/OpsPilot/.runtime/final-system-acceptance/20261103/verify/apps/api
+npm error workspace @opspilot/api@2.0.0
+npm error location /Users/ruzhan/computer_science/projects/OpsPilot/.runtime/final-system-acceptance/20261103/verify/apps/api
+npm error command failed
+npm error command sh -c jest --config ./test/jest-e2e.json --runInBand media-restart.e2e-spec

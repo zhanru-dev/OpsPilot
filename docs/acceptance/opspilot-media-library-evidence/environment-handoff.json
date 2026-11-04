@@ -1,0 +1,29 @@
+{
+  "timeUTC": "2026-11-02T17:20:11.980224+00:00",
+  "ownedContainers": {
+    "opspilot-media-audit-20261102-mediamtx": "exited",
+    "opspilot-media-audit-20261102-minio": "exited",
+    "opspilot-media-audit-20261102-redis": "exited"
+  },
+  "retainedDatabase": "opspilot_media_audit_20261102_test",
+  "retainedBucket": "opspilot-media-audit-20261102 (in stopped audit MinIO container)",
+  "retainedImages": [
+    "opspilot-media-audit-api:20261102",
+    "opspilot-media-audit-worker:20261102",
+    "opspilot-media-audit-web:20261102"
+  ],
+  "retainedRuntime": ".runtime/media-library-acceptance/20261102/ (mode 0700; raw authenticated traces not committed)",
+  "auditApplicationPortsStillListening": "",
+  "originalDevelopmentHealth": {
+    "http://localhost:3000/login": 200,
+    "http://localhost:4100/api/v1/health/ready": 200
+  },
+  "sharedServicesStoppedOrReset": false,
+  "existingUploadsOrBucketsDeleted": false,
+  "notes": [
+    "Normal fixture cleanup was limited to owned assets/workspaces. Initial failed browser fixtures remain in the audit database/bucket.",
+    "Shared Mailpit retains unique test emails; no mailbox purge.",
+    "UUID migration probe database was dropped by its creator.",
+    "SIGKILL tests may retain OS temporary files; no broad temporary-directory removal was performed."
+  ]
+}
