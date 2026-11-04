@@ -13,6 +13,8 @@ COPY packages/chat-contracts/package.json packages/chat-contracts/package.json
 COPY packages/topics-contracts/package.json packages/topics-contracts/package.json
 COPY packages/broadcast-contracts/package.json packages/broadcast-contracts/package.json
 COPY packages/media-contracts/package.json packages/media-contracts/package.json
+COPY scripts/apply-development-patches.cjs scripts/apply-development-patches.cjs
+COPY patches ./patches
 RUN npm ci
 
 FROM dependencies AS builder

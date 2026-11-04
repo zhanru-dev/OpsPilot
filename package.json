@@ -47,15 +47,19 @@
     "test:media:state": "node --import tsx --test tests/media-queue.test.ts",
     "test:media:api": "npm run build --workspace=@opspilot/api && node scripts/with-media-test-env.mjs npm run test:e2e --workspace=@opspilot/api -- --runInBand media-multipart.e2e-spec media-processing.e2e-spec media-boundaries.e2e-spec media-restart.e2e-spec media-remediation.e2e-spec",
     "test:media:browser": "node scripts/with-media-test-env.mjs env E2E_PRODUCTION_WEB=1 playwright test e2e/media-processing.spec.ts e2e/media-multipart.spec.ts e2e/media-performance.spec.ts",
-    "media:test:setup": "node scripts/setup-media-test.mjs"
+    "media:test:setup": "node scripts/setup-media-test.mjs",
+    "postinstall": "node scripts/apply-development-patches.cjs",
+    "test:dependency-security": "node --test tests/dependency-security.test.cjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.62.1",
     "concurrently": "^9.2.1",
+    "patch-package": "8.0.1",
     "prisma": "6.19.3",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@nestjs/cli": "11.0.24"
   },
   "engines": {
     "node": ">=22.0.0",
@@ -63,6 +67,8 @@
   },
   "overrides": {
     "deepmerge-ts": "8.0.2",
-    "multer": "2.5.0"
+    "multer": "2.5.0",
+    "minimatch@>=9": "11.0.4",
+    "glob@>=9": "14.0.3"
   }
 }
