@@ -203,7 +203,12 @@ export default function IntegrationsPage() {
                 </article>
               ))}
             </div>
-            <div className="hidden overflow-x-auto rounded-md border border-[var(--border)] bg-white sm:block">
+            <div
+              role="region"
+              aria-label="Webhook endpoints table"
+              tabIndex={0}
+              className="hidden overflow-x-auto rounded-md border border-[var(--border)] bg-white sm:block"
+            >
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead className="bg-[#f7f9fa] text-[11px] uppercase text-[var(--muted)]">
                   <tr>
@@ -359,7 +364,12 @@ export default function IntegrationsPage() {
                 </article>
               ))}
             </div>
-            <div className="hidden overflow-x-auto rounded-md border border-[var(--border)] bg-white sm:block">
+            <div
+              role="region"
+              aria-label="Webhook deliveries table"
+              tabIndex={0}
+              className="hidden overflow-x-auto rounded-md border border-[var(--border)] bg-white sm:block"
+            >
               <table className="w-full min-w-[980px] text-left text-sm">
                 <thead className="bg-[#f7f9fa] text-[11px] uppercase text-[var(--muted)]">
                   <tr>

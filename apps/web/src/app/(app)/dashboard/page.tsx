@@ -159,7 +159,12 @@ export default function DashboardPage() {
               </Link>
             ))}
           </div>
-          <div className="hidden overflow-x-auto md:block">
+          <div
+            role="region"
+            aria-label="Upcoming events table"
+            tabIndex={0}
+            className="hidden overflow-x-auto md:block"
+          >
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="bg-[#f7f9fa] text-[11px] uppercase text-[var(--muted)]">
                 <tr>

@@ -148,7 +148,12 @@ export default function EventsPage() {
               </Link>
             ))}
           </div>
-          <div className="hidden overflow-x-auto md:block">
+          <div
+            role="region"
+            aria-label="Events table"
+            tabIndex={0}
+            className="hidden overflow-x-auto md:block"
+          >
             <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="bg-[#f7f9fa] text-[11px] uppercase text-[var(--muted)]">
                 <tr>
