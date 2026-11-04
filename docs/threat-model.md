@@ -1,5 +1,7 @@
 # OpsPilot v1.2 Threat Model
 
+> **历史文档（v1.2）。** 本文描述的是 2026 年 8 月 v1.2 时的架构，之后加入了观众身份、Chat、Topics、直播、分片媒体和统一的当前权限模型。当前架构请看 [学习手册 · 01 项目架构](learning/01-architecture.md) 和 [02 业务流程](learning/02-business-flows.md)。
+
 ## Scope
 
 This threat model covers the v1.2 web application, REST API, PostgreSQL database, Redis queues, private object storage, media worker, signed demo webhook flow and optional AI provider. It describes implemented controls and known boundaries; it is not a certification claim.

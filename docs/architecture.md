@@ -1,5 +1,7 @@
 # OpsPilot v1.2 Architecture
 
+> **历史文档（v1.2）。** 本文描述的是 2026 年 8 月 v1.2 时的架构，之后加入了观众身份、Chat、Topics、直播、分片媒体和统一的当前权限模型。当前架构请看 [学习手册 · 01 项目架构](learning/01-architecture.md) 和 [02 业务流程](learning/02-business-flows.md)。
+
 ## Purpose
 
 This document describes the implemented v1.2 system, its trust boundaries and the decisions that make the portfolio claims inspectable. Future-state ideas belong in `product-strategy.md`; this file stays grounded in running code.

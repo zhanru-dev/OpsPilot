@@ -84,6 +84,10 @@ See [Architecture](docs/architecture.md), [Threat Model](docs/threat-model.md), 
 | Quality    | ESLint, Jest, Supertest, Playwright and axe-core                                     |
 | Operations | BullMQ workers, FFmpeg/ffprobe, health metrics, OpenAPI 3.1 and Docker Compose       |
 
+## Learning Guide
+
+A Chinese study handbook with architecture and business-flow diagrams, a 23-lesson curriculum and a code-quality plan lives in [`docs/learning/`](docs/learning/README.md).
+
 ## Local Setup
 
 Requirements: Node.js 22+, npm 10+ and Docker Desktop.
