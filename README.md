@@ -108,6 +108,16 @@ npm run dev
 
 The API uses `4100` by default and remains configurable through the environment.
 
+### Object storage image
+
+Local development and CI use an S3-compatible MinIO server. The upstream `minio/minio`
+repository has been removed from Docker Hub, so the exact build verified by this project's
+media test suites (`RELEASE.2025-09-07T16-13-09Z`, unmodified, AGPL-3.0) is mirrored at
+`ghcr.io/zhanru-dev/minio`. This keeps test environments reproducible; that release no
+longer receives upstream updates. It is a local/test dependency only: the application talks
+to the S3 API through the AWS SDK, so a deployment should use managed S3 (or another
+maintained S3-compatible service) configured through the `S3_*` variables.
+
 ## Chat and Topics integration: isolated local environment
 
 The first Mudu integration slice adds Chat to existing StreamOps Live Operations and
