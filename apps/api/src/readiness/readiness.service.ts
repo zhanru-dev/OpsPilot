@@ -13,6 +13,22 @@ export type ReadinessCriterion = {
   evidence: string;
 };
 
+type AccessPolicyFacts = { mode: string; allowedDomains: string[] } | null;
+
+function accessPolicyEvidence(policy: AccessPolicyFacts, valid: boolean) {
+  if (valid)
+    return `${policy?.mode.replaceAll('_', ' ').toLowerCase()} access is configured.`;
+  if (policy?.mode === 'EMAIL_DOMAIN')
+    return 'Add at least one approved email domain.';
+  return 'No audience access policy is configured.';
+}
+
+// Hard blockers always win; otherwise only a perfect score is READY.
+function readinessStatus(blockerCount: number, score: number) {
+  if (blockerCount > 0) return 'BLOCKED' as const;
+  return score === 100 ? ('READY' as const) : ('AT_RISK' as const);
+}
+
 @Injectable()
 export class ReadinessService {
   constructor(
@@ -79,11 +95,7 @@ export class ReadinessService {
         maxScore: 25,
         passed: accessPolicyValid,
         hardBlocker: true,
-        evidence: accessPolicyValid
-          ? `${event.accessPolicy?.mode.replaceAll('_', ' ').toLowerCase()} access is configured.`
-          : event.accessPolicy?.mode === 'EMAIL_DOMAIN'
-            ? 'Add at least one approved email domain.'
-            : 'No audience access policy is configured.',
+        evidence: accessPolicyEvidence(event.accessPolicy, accessPolicyValid),
       },
       {
         key: 'content',
@@ -127,7 +139,7 @@ export class ReadinessService {
 
     return {
       score,
-      status: blockers.length ? 'BLOCKED' : score === 100 ? 'READY' : 'AT_RISK',
+      status: readinessStatus(blockers.length, score),
       criteria,
       blockers,
       ruleVersion: '1.0',

@@ -9,8 +9,8 @@ export function MediaPreview({
   url: string;
   kind: "VIDEO" | "AUDIO";
 }) {
-  const video = useRef<HTMLVideoElement>(null),
-    audio = useRef<HTMLAudioElement>(null);
+  const video = useRef<HTMLVideoElement>(null);
+  const audio = useRef<HTMLAudioElement>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
     const node = kind === "VIDEO" ? video.current : audio.current;

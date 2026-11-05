@@ -39,30 +39,25 @@ export function rewritePlaylist(text: string, base: string, ticket: string) {
       throw new BadRequestException('Invalid upstream media reference.');
     return `${base}/${file}?ticket=${encodeURIComponent(ticket)}${session ? `&session=${session}` : ''}`;
   };
-  return text
-    .split('\n')
-    .map((line) =>
-      line.startsWith('#')
-        ? line.replace(
-            /URI="([^"]+)"/g,
-            (_, uri: string) => `URI="${protect(uri)}"`,
-          )
-        : line.trim()
-          ? protect(line.trim())
-          : line,
-    )
-    .join('\n');
+  // Tag lines may carry URI="..." attributes; other non-empty lines are media URIs.
+  const rewriteLine = (line: string) => {
+    if (line.startsWith('#'))
+      return line.replace(
+        /URI="([^"]+)"/g,
+        (_, uri: string) => `URI="${protect(uri)}"`,
+      );
+    return line.trim() ? protect(line.trim()) : line;
+  };
+  return text.split('\n').map(rewriteLine).join('\n');
 }
 export function availability(
   firstLiveAt: Date | null,
   online: boolean,
   failed: boolean,
 ) {
-  return failed
-    ? ('UNKNOWN' as const)
-    : online
-      ? ('LIVE' as const)
-      : firstLiveAt
-        ? ('INTERRUPTED' as const)
-        : ('WAITING' as const);
+  // Order matters: an unreachable media server makes the state unknown, even
+  // if a publisher was previously seen.
+  if (failed) return 'UNKNOWN' as const;
+  if (online) return 'LIVE' as const;
+  return firstLiveAt ? ('INTERRUPTED' as const) : ('WAITING' as const);
 }

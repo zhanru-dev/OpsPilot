@@ -44,14 +44,20 @@ export class ApiError extends Error {
 export function retryAfterDeadline(value: string | null, now = Date.now()) {
   if (!value?.trim()) return null;
   const text = value.trim();
-  const deadline = /^\d+$/.test(text)
-    ? now + Number(text) * 1000
-    : /^[a-z]{3},/i.test(text)
-      ? Date.parse(text)
-      : NaN;
+  // Retry-After is either a number of seconds or an HTTP date.
+  let deadline = NaN;
+  if (/^\d+$/.test(text)) deadline = now + Number(text) * 1000;
+  else if (/^[a-z]{3},/i.test(text)) deadline = Date.parse(text);
   return Number.isFinite(deadline) && deadline <= 8.64e15
     ? Math.max(now, deadline)
     : null;
+}
+
+// NestJS sends `message` as a string, or as a list for validation errors.
+function errorMessage(message: unknown, status: number) {
+  if (typeof message === "string") return message;
+  if (Array.isArray(message)) return message.join(" ");
+  return `Request failed with status ${status}.`;
 }
 
 export async function apiFetch<T>(
@@ -72,12 +78,7 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const details = await response.json().catch(() => null);
-    const message =
-      typeof details?.message === "string"
-        ? details.message
-        : Array.isArray(details?.message)
-          ? details.message.join(" ")
-          : `Request failed with status ${response.status}.`;
+    const message = errorMessage(details?.message, response.status);
     throw new ApiError(
       message,
       response.status,

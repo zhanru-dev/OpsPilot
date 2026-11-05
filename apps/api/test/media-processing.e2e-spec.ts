@@ -38,14 +38,19 @@ async function until(check: () => Promise<boolean>) {
   throw new Error('Real media pipeline did not reach the expected state');
 }
 describe('Real media processing, correlation and recovery', () => {
-  let app: INestApplication<App>, worker: INestApplicationContext;
-  let db: PrismaService, store: StorageService, events: DomainEventsService;
+  let app: INestApplication<App>;
+  let worker: INestApplicationContext;
+  let db: PrismaService;
+  let store: StorageService;
+  let events: DomainEventsService;
   let manager: ReturnType<typeof request.agent>;
-  let queue: Queue<MediaProcessingJobData>, receiver: Server;
-  let directory: string, fixture: Buffer;
-  const ids: string[] = [],
-    endpoints: string[] = [],
-    extraEvents: string[] = [];
+  let queue: Queue<MediaProcessingJobData>;
+  let receiver: Server;
+  let directory: string;
+  let fixture: Buffer;
+  const ids: string[] = [];
+  const endpoints: string[] = [];
+  const extraEvents: string[] = [];
   const received = new Set<string>();
   const sharedTrace = `media-regression-${randomUUID()}`;
 
@@ -491,8 +496,8 @@ describe('Real media processing, correlation and recovery', () => {
     );
   });
   it('retries a real transcode after transaction failure without publishing duplicate variants', async () => {
-    const lifecycle = worker.get(DomainEventsService),
-      original = lifecycle.record.bind(lifecycle);
+    const lifecycle = worker.get(DomainEventsService);
+    const original = lifecycle.record.bind(lifecycle);
     let injected = false;
     const failure = jest
       .spyOn(lifecycle, 'record')

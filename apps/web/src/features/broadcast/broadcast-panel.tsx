@@ -1,12 +1,30 @@
 "use client";
 import { useState } from "react";
-import type { PublishGrant } from "@opspilot/broadcast-contracts";
+import type {
+  BroadcastSnapshot,
+  PublishGrant,
+} from "@opspilot/broadcast-contracts";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { useBroadcast } from "./use-broadcast";
 import { publishSchema } from "./protocol";
 import { LivePlayer } from "./live-player";
 type Props = { eventId: string; mode: "staff" | "attendee"; actorId: string };
+type Session = NonNullable<BroadcastSnapshot["session"]>;
+
+// Availability comes from the reconcile loop probing MediaMTX (media-utils.ts).
+const availabilityLabels: Record<Session["availability"], string> = {
+  WAITING: "Waiting for the publisher",
+  LIVE: "Receiving live video",
+  INTERRUPTED: "Publisher interrupted",
+  UNKNOWN: "Stream status is temporarily unknown",
+};
+
+function broadcastStatus(session: Session | null | undefined) {
+  if (!session) return "No broadcast prepared";
+  if (session.state === "ENDED") return "Broadcast ended";
+  return availabilityLabels[session.availability];
+}
 export function BroadcastPanel(props: Props) {
   return (
     <BroadcastScope
@@ -17,8 +35,8 @@ export function BroadcastPanel(props: Props) {
 }
 function BroadcastScope({ eventId, mode, actorId }: Props) {
   const live = useBroadcast(eventId, mode, actorId);
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [start, setStart] = useState<{
     clientOperationId: string;
     expectedRevision: number;
@@ -27,9 +45,9 @@ function BroadcastScope({ eventId, mode, actorId }: Props) {
     id: string;
     expectedRevision: number;
   } | null>(null);
-  const snapshot = live.snapshot,
-    session = snapshot?.session,
-    ctx = snapshot?.context;
+  const snapshot = live.snapshot;
+  const session = snapshot?.session;
+  const ctx = snapshot?.context;
   // Commands carry snapshot.revision; never send one while a newer snapshot is
   // requested or announced but not yet applied (SYS-BCAST-01).
   const locked = busy || live.refreshing;
@@ -123,31 +141,24 @@ function BroadcastScope({ eventId, mode, actorId }: Props) {
           {error ?? live.error}
         </p>
       )}
-      {!snapshot ? (
+      {!snapshot && (
         <p className="text-sm text-[var(--muted)]">
           Checking event access and broadcast status…
         </p>
-      ) : !snapshot.enabled ? (
+      )}
+      {snapshot && !snapshot.enabled && (
         <p className="text-sm text-[var(--muted)]">
           Live video is not enabled for this environment.
         </p>
-      ) : (
+      )}
+      {snapshot?.enabled && (
         <>
           <p
             role="status"
             data-testid="broadcast-status"
             className="text-sm font-medium"
           >
-            {!session
-              ? "No broadcast prepared"
-              : session.state === "ENDED"
-                ? "Broadcast ended"
-                : {
-                    WAITING: "Waiting for the publisher",
-                    LIVE: "Receiving live video",
-                    INTERRUPTED: "Publisher interrupted",
-                    UNKNOWN: "Stream status is temporarily unknown",
-                  }[session.availability]}
+            {broadcastStatus(session)}
           </p>
           {session?.cleanupPending && (
             <p className="text-xs text-[var(--muted)]">

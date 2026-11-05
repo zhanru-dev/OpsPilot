@@ -21,6 +21,14 @@ import { canManageEvents } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
 import type { EventInvitation, InvitationList } from "./types";
 
+// After 5 failed sends the worker gives up (attendee-mail.service.ts).
+function invitationMailStatus(invitation: EventInvitation) {
+  if (invitation.revokedAt) return "Access removed";
+  if (invitation.mailSentAt) return "Email sent";
+  if (invitation.mailAttemptCount >= 5) return "Email delivery failed";
+  return "Email queued";
+}
+
 export function EventInvitations({ eventId }: { eventId: string }) {
   const { user, loading } = useAuth();
   const roleCanManage = canManageEvents(user?.role);
@@ -170,13 +178,7 @@ export function EventInvitations({ eventId }: { eventId: string }) {
               <div className="text-xs leading-6">
                 <p>{invitation.revokedAt ? "Revoked" : "Active"}</p>
                 <p className="text-[var(--muted)]">
-                  {invitation.revokedAt
-                    ? "Access removed"
-                    : invitation.mailSentAt
-                      ? "Email sent"
-                      : invitation.mailAttemptCount >= 5
-                        ? "Email delivery failed"
-                        : "Email queued"}
+                  {invitationMailStatus(invitation)}
                 </p>
               </div>
               {canManage ? (

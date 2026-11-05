@@ -21,18 +21,18 @@ export function useBroadcast(
     reconnect: () => void;
   } | null>(null);
   useEffect(() => {
-    let active = true,
-      denied = false,
-      joined = false,
-      connecting = false,
-      syncing = false,
-      dirty = false;
-    let epoch = 0,
-      floor = 0,
-      authority = "";
-    let socket: Socket | undefined,
-      retry: ReturnType<typeof setTimeout> | undefined,
-      queued: ReturnType<typeof setTimeout> | undefined;
+    let active = true;
+    let denied = false;
+    let joined = false;
+    let connecting = false;
+    let syncing = false;
+    let dirty = false;
+    let epoch = 0;
+    let floor = 0;
+    let authority = "";
+    let socket: Socket | undefined;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let queued: ReturnType<typeof setTimeout> | undefined;
     const controllers = new Set<AbortController>();
     let waiters: (() => void)[] = [];
     // Resolve refresh() callers only when no fetch is running, queued or owed.

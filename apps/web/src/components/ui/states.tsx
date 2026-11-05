@@ -1,4 +1,5 @@
 import { AlertCircle, Inbox, LoaderCircle } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "./button";
 
 export function LoadingState({ label = "Loading" }: { label?: string }) {
@@ -44,4 +45,46 @@ export function EmptyState({
       <p className="max-w-md text-sm text-[var(--muted)]">{description}</p>
     </div>
   );
+}
+
+type QueryLike<T> = {
+  isLoading: boolean;
+  error: unknown;
+  data: T | undefined;
+  refetch: () => unknown;
+};
+
+// The four states every data view has: loading, failed, empty and ready.
+// Pass a React Query result; `children` renders only when data is present
+// and `isEmpty` (if given) says it is not empty.
+export function QueryState<T>({
+  query,
+  loadingLabel,
+  errorMessage,
+  isEmpty,
+  empty = null,
+  children,
+}: {
+  query: QueryLike<T>;
+  loadingLabel?: string;
+  errorMessage?: string;
+  isEmpty?: (data: T) => boolean;
+  empty?: ReactNode;
+  children: (data: T) => ReactNode;
+}) {
+  if (query.isLoading) return <LoadingState label={loadingLabel} />;
+  if (query.error)
+    return (
+      <ErrorState
+        message={
+          errorMessage ??
+          (query.error instanceof Error
+            ? query.error.message
+            : "The data could not be loaded.")
+        }
+        retry={() => void query.refetch()}
+      />
+    );
+  if (query.data === undefined || isEmpty?.(query.data)) return empty;
+  return children(query.data);
 }

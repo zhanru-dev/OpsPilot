@@ -29,7 +29,11 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
+      // Readability rules for a teaching codebase: one declaration per
+      // statement, and no nested ternaries (use early returns or a map).
+      'one-var': ['error', 'never'],
+      'no-nested-ternary': 'error',
     },
   },
 );

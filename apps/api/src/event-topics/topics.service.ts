@@ -136,6 +136,8 @@ function requireCapability(value: boolean) {
   if (!value)
     throw new ForbiddenException('This Topics operation is not permitted.');
 }
+// Optimistic concurrency: the client sends the version it last saw. If someone
+// else changed the topic since then, refuse instead of overwriting their change.
 function checkVersion(row: { version: number }, expected: number) {
   if (row.version !== expected)
     throw new ConflictException(
@@ -405,6 +407,8 @@ export class TopicsService {
     return this.write(eventId, principal, async (tx, ctx, next) => {
       requireCapability(ctx.capabilities.moderate);
       const row = await this.root(tx, ctx, id, true);
+      // Repeating an action that already took effect returns the current row,
+      // so retries after a lost response are safe (idempotent).
       if (action === 'delete' && row.deletedAt) return row;
       if (row.deletedAt) throw new NotFoundException('Topic is unavailable.');
       if (action === 'approve' && row.status === 'APPROVED') return row;
@@ -426,6 +430,8 @@ export class TopicsService {
         if (row.status !== 'APPROVED')
           throw new ConflictException('Approve the topic before pinning.');
         if ((data as PinTopicDto).pinned) {
+          // Pick the lowest free slot 1..7. The event row lock serialises
+          // moderators, and the unique (eventId, pinSlot) index is the backstop.
           const occupied = await tx.eventTopic.findMany({
             where: { eventId, pinSlot: { not: null } },
             select: { pinSlot: true },

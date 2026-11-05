@@ -1,35 +1,26 @@
 "use client";
 
-import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AudioLines,
-  Eye,
-  Film,
-  Info,
-  RefreshCw,
-  Search,
-  Upload,
-} from "lucide-react";
+import { Search, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  QueryState,
+} from "@/components/ui/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api";
 import { UploadPanel } from "@/features/media/upload-panel";
-import { MediaPreview } from "@/features/media/media-preview";
+import { AssetList } from "@/features/media/library/asset-list";
+import { MediaDetails } from "@/features/media/library/media-details";
+import type { Playback } from "@/features/media/library/types";
 import { canManageContent } from "@/lib/permissions";
 import type { MediaAsset, WorkspaceRole } from "@/lib/types";
-import { formatBytes, formatDate, humanize } from "@/lib/utils";
-
-type Playback = {
-  url: string;
-  expiresAt: string | null;
-  source: "SEEDED" | "PRIVATE_STORAGE";
-};
+import { formatBytes, humanize } from "@/lib/utils";
 
 export default function MediaPage() {
   const { user } = useAuth();
@@ -41,6 +32,9 @@ export default function MediaPage() {
     />
   );
 }
+// The media API re-checks the caller's role on every request. Polling the
+// context lets the page react within seconds if the role is changed or revoked,
+// and keying children by role resets all local state when it does.
 function MediaAccess({ identity }: { identity: string }) {
   const context = useQuery({
     queryKey: ["media-context", identity],
@@ -107,6 +101,10 @@ function MediaWorkspace({
     },
   });
 
+  // Only the most recent preview request may set the playback URL. Each
+  // request gets a new generation number and AbortController; opening another
+  // asset (or closing the dialog) aborts the old one and bumps the generation,
+  // so a slow response for asset A can never appear in asset B's dialog.
   const previewOwner = useRef({
     generation: 0,
     controller: new AbortController(),
@@ -199,125 +197,36 @@ function MediaWorkspace({
           <option value="UPLOADING">Uploading</option>
         </select>
       </section>
-      {query.isLoading ? (
-        <LoadingState label="Loading media assets" />
-      ) : query.error ? (
-        <ErrorState
-          message={
-            query.error instanceof Error
-              ? query.error.message
-              : "Media is unavailable."
-          }
-          retry={() => query.refetch()}
-        />
-      ) : !query.data?.items.length ? (
-        <EmptyState
-          title="No media assets"
-          description={
-            search || status
-              ? "No assets match the current filters."
-              : "This workspace has no media yet."
-          }
-        />
-      ) : (
-        <div className="overflow-hidden rounded-md border border-[var(--border)] bg-white">
-          <div className="divide-y divide-[var(--border)] md:hidden">
-            {query.data.items.map((asset) => (
-              <article key={asset.id} className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <AssetIdentity asset={asset} />
-                  <Badge value={asset.status} />
-                </div>
-                <ProgressBar asset={asset} className="mt-4" />
-                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[var(--muted)]">
-                  <span>
-                    {asset.durationSeconds ? `${asset.durationSeconds}s` : "--"}{" "}
-                    / {formatBytes(asset.sizeBytes)}
-                  </span>
-                  <AssetActions
-                    asset={asset}
-                    mutable={mutable}
-                    retrying={
-                      retry.isPending && retry.variables?.id === asset.id
-                    }
-                    previewing={preview.isPending && selected?.id === asset.id}
-                    onDetails={() => selectAsset(asset)}
-                    onPreview={() => selectAsset(asset, true)}
-                    onRetry={() => retry.mutate(asset)}
-                  />
-                </div>
-              </article>
-            ))}
-          </div>
-          <div
-            role="region"
-            aria-label="Media assets table"
-            tabIndex={0}
-            className="hidden overflow-x-auto md:block"
-          >
-            <table className="w-full min-w-[960px] text-left text-sm">
-              <thead className="bg-[#f7f9fa] text-[11px] uppercase text-[var(--muted)]">
-                <tr>
-                  <th className="px-5 py-3">Asset</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Progress</th>
-                  <th className="px-4 py-3">Media</th>
-                  <th className="px-4 py-3">Used by</th>
-                  <th className="px-5 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {query.data.items.map((asset) => (
-                  <tr
-                    key={asset.id}
-                    className="border-t border-[var(--border)]"
-                  >
-                    <td className="px-5 py-4">
-                      <AssetIdentity asset={asset} />
-                    </td>
-                    <td className="px-4 py-4">
-                      <Badge value={asset.status} />
-                    </td>
-                    <td className="w-44 px-4 py-4">
-                      <ProgressBar asset={asset} showValue />
-                    </td>
-                    <td className="px-4 py-4 text-xs text-[var(--muted)]">
-                      {asset.durationSeconds
-                        ? `${asset.durationSeconds}s`
-                        : "--"}{" "}
-                      / {formatBytes(asset.sizeBytes)}
-                    </td>
-                    <td className="max-w-56 truncate px-4 py-4 text-xs text-[var(--muted)]">
-                      {asset.events?.length
-                        ? asset.events
-                            .map((item) => item.event.title)
-                            .join(", ")
-                        : "Not attached"}
-                    </td>
-                    <td className="px-5 py-4">
-                      <AssetActions
-                        asset={asset}
-                        mutable={mutable}
-                        retrying={
-                          retry.isPending && retry.variables?.id === asset.id
-                        }
-                        previewing={
-                          preview.isPending && selected?.id === asset.id
-                        }
-                        onDetails={() => selectAsset(asset)}
-                        onPreview={() => selectAsset(asset, true)}
-                        onRetry={() => retry.mutate(asset)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <QueryState
+        query={query}
+        loadingLabel="Loading media assets"
+        errorMessage={
+          query.error instanceof Error ? undefined : "Media is unavailable."
+        }
+        isEmpty={(data) => !data.items.length}
+        empty={
+          <EmptyState
+            title="No media assets"
+            description={
+              search || status
+                ? "No assets match the current filters."
+                : "This workspace has no media yet."
+            }
+          />
+        }
+      >
+        {(data) => (
+          <AssetList
+            items={data.items}
+            mutable={mutable}
+            retryingId={retry.isPending ? (retry.variables?.id ?? null) : null}
+            previewingId={preview.isPending ? (selected?.id ?? null) : null}
+            onDetails={(asset) => selectAsset(asset)}
+            onPreview={(asset) => selectAsset(asset, true)}
+            onRetry={(asset) => retry.mutate(asset)}
+          />
+        )}
+      </QueryState>
 
       {mutable ? (
         <UploadPanel open={uploadOpen} onClose={() => setUploadOpen(false)} />
@@ -370,239 +279,5 @@ function MediaWorkspace({
         ) : null}
       </Dialog>
     </>
-  );
-}
-
-function AssetIdentity({ asset }: { asset: MediaAsset }) {
-  const thumbnail = useQuery({
-    queryKey: ["media-thumbnail", asset.id],
-    queryFn: ({ signal }) =>
-      apiFetch<Playback>(`/media-assets/${asset.id}/thumbnail-url`, {
-        method: "POST",
-        signal,
-      }),
-    enabled:
-      asset.status === "READY" &&
-      !asset.isSeeded &&
-      asset.kind === "VIDEO" &&
-      asset.variants?.some((v) => v.kind === "THUMBNAIL"),
-    staleTime: 60000,
-    retry: false,
-  });
-  return (
-    <div className="flex min-w-0 items-start gap-3">
-      <span
-        className={`flex size-10 shrink-0 items-center justify-center rounded-md ${asset.kind === "VIDEO" ? "bg-[#e8eef7] text-[var(--blue)]" : "bg-[var(--brand-soft)] text-[var(--brand)]"}`}
-      >
-        {thumbnail.data ? (
-          <Image
-            unoptimized
-            src={thumbnail.data.url}
-            width={40}
-            height={40}
-            alt=""
-            className="size-10 rounded-md object-cover"
-          />
-        ) : asset.kind === "VIDEO" ? (
-          <Film className="size-5" />
-        ) : (
-          <AudioLines className="size-5" />
-        )}
-      </span>
-      <div className="min-w-0">
-        <h2 className="truncate text-sm font-bold">{asset.name}</h2>
-        <p className="mt-1 max-w-md truncate text-xs text-[var(--muted)]">
-          {asset.failureReason ?? asset.description ?? humanize(asset.kind)}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function AssetActions({
-  asset,
-  mutable,
-  retrying,
-  previewing,
-  onDetails,
-  onPreview,
-  onRetry,
-}: {
-  asset: MediaAsset;
-  mutable: boolean;
-  retrying: boolean;
-  previewing: boolean;
-  onDetails: () => void;
-  onPreview: () => void;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="flex justify-end gap-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        title="View processing details"
-        onClick={onDetails}
-      >
-        <Info className="size-4" />
-      </Button>
-      {asset.status === "READY" ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          title="Play private preview"
-          loading={previewing}
-          onClick={onPreview}
-        >
-          <Eye className="size-4" />
-        </Button>
-      ) : null}
-      {asset.status === "FAILED" && mutable ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          loading={retrying}
-          onClick={onRetry}
-        >
-          <RefreshCw className="size-3" /> Retry
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function ProgressBar({
-  asset,
-  showValue = false,
-  className = "",
-}: {
-  asset: MediaAsset;
-  showValue?: boolean;
-  className?: string;
-}) {
-  const value = asset.status === "READY" ? 100 : asset.processingProgress;
-  return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <div className="h-1.5 w-full overflow-hidden rounded bg-[var(--surface-muted)]">
-        <div
-          className="h-full bg-[var(--brand)] transition-[width]"
-          style={{ width: `${value}%` }}
-        />
-      </div>
-      {showValue ? (
-        <span className="w-8 text-right text-xs tabular-nums text-[var(--muted)]">
-          {value}%
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function MediaDetails({
-  asset,
-  playback,
-  previewPending,
-  previewError,
-  retryPending,
-  mutable,
-  onPreview,
-  onRetry,
-}: {
-  asset: MediaAsset;
-  playback: Playback | null;
-  previewPending: boolean;
-  previewError: Error | null;
-  retryPending: boolean;
-  mutable: boolean;
-  onPreview: () => void;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="space-y-6">
-      {previewPending ? (
-        <LoadingState label="Signing private playback URL" />
-      ) : playback ? (
-        <MediaPreview
-          key={`${asset.id}:${playback.url}`}
-          url={playback.url}
-          kind={asset.kind}
-        />
-      ) : previewError ? (
-        <ErrorState message={previewError.message} retry={onPreview} />
-      ) : null}
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[var(--border)] bg-[var(--border)] sm:grid-cols-4">
-        <Metric label="Status" value={humanize(asset.status)} />
-        <Metric
-          label="Progress"
-          value={`${asset.status === "READY" ? 100 : asset.processingProgress}%`}
-        />
-        <Metric
-          label="Derivatives"
-          value={String(asset.variants?.length ?? (asset.previewUrl ? 1 : 0))}
-        />
-        <Metric
-          label="Attempts"
-          value={String(asset.processingJobs?.[0]?.attemptCount ?? 0)}
-        />
-      </div>
-      {asset.failureReason ? (
-        <p className="border-l-4 border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-          {asset.failureReason}
-        </p>
-      ) : null}
-      {asset.processingJobs?.[0] ? (
-        <section>
-          <h3 className="text-sm font-bold">Latest processing run</h3>
-          <div className="mt-3 overflow-hidden rounded-md border border-[var(--border)]">
-            {asset.processingJobs[0].attempts.length ? (
-              asset.processingJobs[0].attempts.map((attempt) => (
-                <div
-                  key={attempt.id}
-                  className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-4 py-3 last:border-b-0"
-                >
-                  <div>
-                    <p className="text-sm font-semibold">
-                      Attempt {attempt.attemptNumber}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">
-                      {formatDate(attempt.startedAt)}
-                      {attempt.failureCode ? ` / ${attempt.failureCode}` : ""}
-                    </p>
-                  </div>
-                  <Badge value={attempt.status} />
-                </div>
-              ))
-            ) : (
-              <p className="p-4 text-sm text-[var(--muted)]">
-                Waiting for the first worker attempt.
-              </p>
-            )}
-          </div>
-        </section>
-      ) : null}
-      <div className="flex justify-end gap-2 border-t border-[var(--border)] pt-5">
-        {asset.status === "READY" && !playback ? (
-          <Button onClick={onPreview} loading={previewPending}>
-            <Eye className="size-4" /> Play preview
-          </Button>
-        ) : null}
-        {asset.status === "FAILED" && mutable ? (
-          <Button variant="secondary" onClick={onRetry} loading={retryPending}>
-            <RefreshCw className="size-4" /> Retry processing
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white p-3">
-      <div className="text-[11px] font-semibold uppercase text-[var(--muted)]">
-        {label}
-      </div>
-      <div className="mt-1 text-sm font-bold">{value}</div>
-    </div>
   );
 }

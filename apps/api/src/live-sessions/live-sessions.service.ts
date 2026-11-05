@@ -28,6 +28,15 @@ const actorSelect = {
   avatarInitials: true,
 } satisfies Prisma.UserSelect;
 
+// Why a live stream closed. The client clears private data for "expired" and
+// "denied"; "unavailable" is a transient server failure and keeps the snapshot.
+function accessChangeReason(cause: unknown) {
+  if (cause instanceof UnauthorizedException) return 'expired';
+  if (cause instanceof ForbiddenException || cause instanceof NotFoundException)
+    return 'denied';
+  return 'unavailable';
+}
+
 @Injectable()
 export class LiveSessionsService {
   constructor(
@@ -166,15 +175,7 @@ export class LiveSessionsService {
             if (subscriber.closed) return;
             subscriber.next({
               type: 'access-changed',
-              data: {
-                reason:
-                  cause instanceof UnauthorizedException
-                    ? 'expired'
-                    : cause instanceof ForbiddenException ||
-                        cause instanceof NotFoundException
-                      ? 'denied'
-                      : 'unavailable',
-              },
+              data: { reason: accessChangeReason(cause) },
             });
             subscriber.complete();
           },

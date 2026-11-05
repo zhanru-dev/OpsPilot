@@ -100,6 +100,141 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
   };
   const event = eventQuery.data;
   const visibleEvent = (!session.error && session.data?.event) || event;
+  // What the attendee sees depends on where they are in the flow:
+  // closed event -> nothing to do; link token in the URL -> confirm it;
+  // active attendee session -> event room; otherwise -> ask for a new link.
+  function attendeeStep(event: RegistrationEvent) {
+    if (!event.registrationOpen) {
+      return (
+        <p className="mt-6">
+          This event has finished. Attendee access is closed.
+        </p>
+      );
+    }
+    if (token) {
+      return (
+        <>
+          <form onSubmit={submit} className="mt-8 max-w-xl space-y-5">
+            <ShieldCheck
+              className="size-8 text-[var(--brand)]"
+              aria-hidden="true"
+            />
+            <h2 className="text-xl font-bold">Confirm your registration</h2>
+            <fieldset disabled={verify.isPending} className="min-w-0 space-y-5">
+              {event.policy.requiresConsent ? (
+                <label className="flex items-start gap-3 text-sm leading-6">
+                  <input
+                    required
+                    type="checkbox"
+                    name="consent"
+                    className="mt-1 size-4 shrink-0 accent-[var(--brand)]"
+                  />
+                  <span>
+                    I agree to share my registration details with{" "}
+                    {event.restricted ? "the event organiser" : event.organiser}{" "}
+                    for this event.
+                  </span>
+                </label>
+              ) : null}
+              {verify.error ? (
+                <p role="alert" className="text-sm text-[var(--danger)]">
+                  {verify.error.message}
+                </p>
+              ) : null}
+              <Button type="submit" loading={verify.isPending}>
+                <ShieldCheck className="size-4" aria-hidden="true" />
+                Confirm registration
+              </Button>
+            </fieldset>
+          </form>
+          {verify.error ? <RequestVerification eventId={eventId} /> : null}
+        </>
+      );
+    }
+    if (session.data && !session.error) {
+      return (
+        <section className="mt-8 space-y-4">
+          <CheckCircle2
+            className="size-8 text-[var(--success)]"
+            aria-hidden="true"
+          />
+          <h2 className="text-xl font-bold">Email verified</h2>
+          <p className="break-words text-sm text-[var(--muted)]">
+            {session.data.email}
+          </p>
+          <p className="text-sm">
+            Your attendee session is active for this event.
+          </p>
+          <a
+            href={`/events/${eventId}/watch`}
+            className="inline-flex rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white"
+          >
+            Enter Watch Room
+          </a>
+          <AttendeeLivePolls eventId={eventId} onAccessLost={session.refetch} />
+          <TopicsPanel
+            eventId={eventId}
+            mode="attendee"
+            actorId={`attendee:${session.data.registrationId}`}
+          />
+          <ChatPanel
+            eventId={eventId}
+            mode="attendee"
+            actorId={`attendee:${session.data.registrationId}`}
+          />
+          {logout.error ? (
+            <p role="alert" className="text-sm text-[var(--danger)]">
+              {logout.error.message}
+            </p>
+          ) : null}
+          <Button
+            variant="secondary"
+            onClick={() => logout.mutate()}
+            loading={logout.isPending}
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            Sign out
+          </Button>
+        </section>
+      );
+    }
+    return (
+      <section className="mt-8">
+        <h2 className="text-xl font-bold">
+          {logout.isSuccess ? "Signed out" : "Verify your email"}
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+          Open the link in your verification email or request a new one below.
+        </p>
+        <RequestVerification eventId={eventId} />
+      </section>
+    );
+  }
+
+  function pageBody() {
+    if (eventQuery.isLoading || session.isLoading)
+      return <LoadingState label="Checking registration" />;
+    if (eventQuery.error || !event)
+      return (
+        <ErrorState
+          message="Attendee access is unavailable for this event."
+          retry={() => eventQuery.refetch()}
+        />
+      );
+    return (
+      <>
+        <EventEntryHeading event={visibleEvent!} />
+        {attendeeStep(event)}
+        <Link
+          href={`/events/${eventId}/register`}
+          className="mt-8 inline-block text-sm font-semibold text-[var(--brand)]"
+        >
+          Back to event registration
+        </Link>
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-[var(--border)]">
@@ -111,135 +246,7 @@ export function ConfirmAttendee({ eventId }: { eventId: string }) {
           OpsPilot
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-5 py-8 sm:py-12">
-        {eventQuery.isLoading || session.isLoading ? (
-          <LoadingState label="Checking registration" />
-        ) : eventQuery.error || !event ? (
-          <ErrorState
-            message="Attendee access is unavailable for this event."
-            retry={() => eventQuery.refetch()}
-          />
-        ) : (
-          <>
-            <EventEntryHeading event={visibleEvent!} />
-            {!event.registrationOpen ? (
-              <p className="mt-6">
-                This event has finished. Attendee access is closed.
-              </p>
-            ) : token ? (
-              <>
-                <form onSubmit={submit} className="mt-8 max-w-xl space-y-5">
-                  <ShieldCheck
-                    className="size-8 text-[var(--brand)]"
-                    aria-hidden="true"
-                  />
-                  <h2 className="text-xl font-bold">
-                    Confirm your registration
-                  </h2>
-                  <fieldset
-                    disabled={verify.isPending}
-                    className="min-w-0 space-y-5"
-                  >
-                    {event.policy.requiresConsent ? (
-                      <label className="flex items-start gap-3 text-sm leading-6">
-                        <input
-                          required
-                          type="checkbox"
-                          name="consent"
-                          className="mt-1 size-4 shrink-0 accent-[var(--brand)]"
-                        />
-                        <span>
-                          I agree to share my registration details with{" "}
-                          {event.restricted
-                            ? "the event organiser"
-                            : event.organiser}{" "}
-                          for this event.
-                        </span>
-                      </label>
-                    ) : null}
-                    {verify.error ? (
-                      <p role="alert" className="text-sm text-[var(--danger)]">
-                        {verify.error.message}
-                      </p>
-                    ) : null}
-                    <Button type="submit" loading={verify.isPending}>
-                      <ShieldCheck className="size-4" aria-hidden="true" />
-                      Confirm registration
-                    </Button>
-                  </fieldset>
-                </form>
-                {verify.error ? (
-                  <RequestVerification eventId={eventId} />
-                ) : null}
-              </>
-            ) : session.data && !session.error ? (
-              <section className="mt-8 space-y-4">
-                <CheckCircle2
-                  className="size-8 text-[var(--success)]"
-                  aria-hidden="true"
-                />
-                <h2 className="text-xl font-bold">Email verified</h2>
-                <p className="break-words text-sm text-[var(--muted)]">
-                  {session.data.email}
-                </p>
-                <p className="text-sm">
-                  Your attendee session is active for this event.
-                </p>
-                <a
-                  href={`/events/${eventId}/watch`}
-                  className="inline-flex rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white"
-                >
-                  Enter Watch Room
-                </a>
-                <AttendeeLivePolls
-                  eventId={eventId}
-                  onAccessLost={session.refetch}
-                />
-                <TopicsPanel
-                  eventId={eventId}
-                  mode="attendee"
-                  actorId={`attendee:${session.data.registrationId}`}
-                />
-                <ChatPanel
-                  eventId={eventId}
-                  mode="attendee"
-                  actorId={`attendee:${session.data.registrationId}`}
-                />
-                {logout.error ? (
-                  <p role="alert" className="text-sm text-[var(--danger)]">
-                    {logout.error.message}
-                  </p>
-                ) : null}
-                <Button
-                  variant="secondary"
-                  onClick={() => logout.mutate()}
-                  loading={logout.isPending}
-                >
-                  <LogOut className="size-4" aria-hidden="true" />
-                  Sign out
-                </Button>
-              </section>
-            ) : (
-              <section className="mt-8">
-                <h2 className="text-xl font-bold">
-                  {logout.isSuccess ? "Signed out" : "Verify your email"}
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                  Open the link in your verification email or request a new one
-                  below.
-                </p>
-                <RequestVerification eventId={eventId} />
-              </section>
-            )}
-            <Link
-              href={`/events/${eventId}/register`}
-              className="mt-8 inline-block text-sm font-semibold text-[var(--brand)]"
-            >
-              Back to event registration
-            </Link>
-          </>
-        )}
-      </main>
+      <main className="mx-auto max-w-3xl px-5 py-8 sm:py-12">{pageBody()}</main>
     </div>
   );
 }

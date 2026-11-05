@@ -36,6 +36,26 @@ const navigation = [
   { href: "/settings", label: "Workspace", icon: Settings },
 ];
 
+// The live-room page sits under /streamops/events/:id/live but belongs to the
+// "Live Operations" item, so it must not also highlight "Events".
+function isActiveLink(href: string, pathname: string) {
+  const inLiveRoom =
+    pathname.startsWith("/streamops/events/") && pathname.endsWith("/live");
+  if (href === "/streamops/live") return pathname === href || inLiveRoom;
+  if (pathname === href) return true;
+  if (href === "/streamops/events")
+    return !inLiveRoom && pathname.startsWith(`${href}/`);
+  return href !== "/dashboard" && pathname.startsWith(`${href}/`);
+}
+
+function healthIndicator(health: { isSuccess: boolean; isError: boolean }) {
+  if (health.isSuccess)
+    return { label: "API operational", className: "text-[var(--success)]" };
+  if (health.isError)
+    return { label: "API unavailable", className: "text-[var(--danger)]" };
+  return { label: "Checking API", className: "text-[var(--muted)]" };
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
@@ -51,6 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
+  const apiHealth = healthIndicator(health);
   if (loading || !user)
     return (
       <div className="min-h-screen bg-[var(--background)]">
@@ -91,17 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-label="Primary navigation"
       >
         {navigation.map(({ href, label, icon: Icon }) => {
-          const liveRoomPath =
-            pathname.startsWith("/streamops/events/") &&
-            pathname.endsWith("/live");
-          const active =
-            href === "/streamops/live"
-              ? pathname === href || liveRoomPath
-              : href === "/streamops/events"
-                ? !liveRoomPath &&
-                  (pathname === href || pathname.startsWith(`${href}/`))
-                : pathname === href ||
-                  (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+          const active = isActiveLink(href, pathname);
           return (
             <Link
               key={href}
@@ -168,20 +179,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Menu className="size-5" />
             </Button>
             <div className="hidden items-center gap-2 text-xs font-semibold text-[var(--muted)] sm:flex">
-              <Activity
-                className={`size-4 ${
-                  health.isSuccess
-                    ? "text-[var(--success)]"
-                    : health.isError
-                      ? "text-[var(--danger)]"
-                      : "text-[var(--muted)]"
-                }`}
-              />
-              {health.isSuccess
-                ? "API operational"
-                : health.isError
-                  ? "API unavailable"
-                  : "Checking API"}
+              <Activity className={`size-4 ${apiHealth.className}`} />
+              {apiHealth.label}
             </div>
           </div>
           <div className="flex items-center gap-3">

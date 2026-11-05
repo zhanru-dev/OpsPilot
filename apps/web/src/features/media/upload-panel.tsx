@@ -16,15 +16,15 @@ export function UploadPanel({
   open: boolean;
   onClose: () => void;
 }) {
-  const client = useQueryClient(),
-    manager = useRef<UploadQueue | null>(null),
-    completed = useRef(new Set<string>());
-  const [tasks, setTasks] = useState<Task[]>([]),
-    [files, setFiles] = useState<File[]>([]),
-    [name, setName] = useState(""),
-    [description, setDescription] = useState(""),
-    [error, setError] = useState<string | null>(null),
-    [batch, setBatch] = useState<string[]>([]);
+  const client = useQueryClient();
+  const manager = useRef<UploadQueue | null>(null);
+  const completed = useRef(new Set<string>());
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [batch, setBatch] = useState<string[]>([]);
   useEffect(() => {
     const controller = new AbortController();
     const queue = new UploadQueue(uploadApi, (next) => {
@@ -201,8 +201,8 @@ const TaskRow = memo(function TaskRow({
     100,
     Math.floor((100 * task.transferred) / task.size),
   );
-  const resumable = ["paused", "failed"].includes(task.state),
-    terminal = ["cancelled", "processing"].includes(task.state);
+  const resumable = ["paused", "failed"].includes(task.state);
+  const terminal = ["cancelled", "processing"].includes(task.state);
   return (
     <article
       data-upload-id={task.id}

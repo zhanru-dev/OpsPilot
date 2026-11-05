@@ -342,8 +342,8 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
       ).toBe('READY');
     });
     it('enforces current staff/attendee identities, event isolation and restricted callbacks', async () => {
-      const current = await active(),
-        id = current.session!.id;
+      const current = await active();
+      const id = current.session!.id;
       await request(app.getHttpServer()).get(path()).expect(401);
       await manager.get(path(foreignEventId)).expect(403);
       await guest.get(path(otherEventId, true)).expect(401);
@@ -385,8 +385,8 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
       expect(raw.status).toBe(401);
     });
     it('delivers authenticated snapshots to independent clients, recovers missed state and isolates commands', async () => {
-      const a = await joined(),
-        b = await joined(true);
+      const a = await joined();
+      const b = await joined(true);
       b.disconnect();
       const before = await snapshot();
       const notice = once<BroadcastSnapshot>(a, 'broadcast.snapshot');
@@ -457,8 +457,8 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
         where: { workspaceId_userId: { workspaceId, userId } },
         data: { role: 'CONTENT_OPERATOR' },
       });
-      const child = await publish(id),
-        start = Date.now();
+      const child = await publish(id);
+      const start = Date.now();
       try {
         const current = await snapshot();
         expect(current.context.capabilities.manage).toBe(false);
@@ -547,8 +547,8 @@ import { AttendeeTokenService } from '../src/attendee-access/attendee-token.serv
       const result = (
         await manager.post(`${path()}/sessions/${id}/playback`).expect(201)
       ).body as PlaybackGrant;
-      const config = app.get(ConfigService),
-        original = config.get<string>('BROADCAST_HLS_URL');
+      const config = app.get(ConfigService);
+      const original = config.get<string>('BROADCAST_HLS_URL');
       let hang = false;
       const server = createServer((_req, res) => {
         if (!hang) res.writeHead(503).end('upstream outage');

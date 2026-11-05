@@ -32,6 +32,11 @@ import { BroadcastPanel } from "@/features/broadcast/broadcast-panel";
 import { TopicsPanel } from "@/features/topics/topics-panel";
 
 type ConnectionState = "connecting" | "live" | "reconnecting";
+const connectionLabels: Record<ConnectionState, string> = {
+  live: "Live updates connected",
+  connecting: "Connecting to live updates",
+  reconnecting: "Reconnecting to live updates",
+};
 
 function formatRuntime(startedAt: string, endedAt: string | null, now: number) {
   const end = endedAt ? new Date(endedAt).getTime() : now;
@@ -94,8 +99,8 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
   }, [eventId, queryClient]);
 
   useEffect(() => {
-    let active = true,
-      recovering = false;
+    let active = true;
+    let recovering = false;
     const abort = new AbortController();
     let retry: ReturnType<typeof setTimeout> | undefined;
     const key = ["live-session", eventId];
@@ -167,7 +172,8 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
           { signal: abort.signal },
         );
         if (!active) return;
-        if (snapshot.event.id === eventId) queryClient.setQueryData(key, snapshot);
+        if (snapshot.event.id === eventId)
+          queryClient.setQueryData(key, snapshot);
       } catch (cause) {
         if (!active) return;
         if (deniedStatus(cause)) {
@@ -197,9 +203,11 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
     source.addEventListener("access-changed", (event) => {
       let reason: unknown;
       try {
-        reason = (JSON.parse((event as MessageEvent<string>).data) as {
-          reason?: unknown;
-        }).reason;
+        reason = (
+          JSON.parse((event as MessageEvent<string>).data) as {
+            reason?: unknown;
+          }
+        ).reason;
       } catch {
         reason = undefined;
       }
@@ -317,11 +325,7 @@ function LiveSessionScope({ eventId }: { eventId: string }) {
             )}
           />
           <span className="text-sm font-semibold">
-            {connection === "live"
-              ? "Live updates connected"
-              : connection === "connecting"
-                ? "Connecting to live updates"
-                : "Reconnecting to live updates"}
+            {connectionLabels[connection]}
           </span>
         </div>
         <div className="flex items-center gap-2">

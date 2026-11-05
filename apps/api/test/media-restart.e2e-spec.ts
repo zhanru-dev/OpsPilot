@@ -18,11 +18,13 @@ describe('Media recovery across actual API and worker process death', () => {
   const db = new PrismaClient();
   const children: ChildProcess[] = [];
   const signals = new Map<ChildProcess, Signal[]>();
-  let assetId: string | undefined,
-    directory: string,
-    upload: UploadReceipt,
-    bytes: Buffer;
-  let api: ChildProcess, cookie: string, url: string;
+  let assetId: string | undefined;
+  let directory: string;
+  let upload: UploadReceipt;
+  let bytes: Buffer;
+  let api: ChildProcess;
+  let cookie: string;
+  let url: string;
   let storage: StorageService;
   const redis = new URL(process.env.REDIS_URL!);
   const queue = new Queue('media-processing', {

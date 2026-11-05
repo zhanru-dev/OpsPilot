@@ -6,11 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(
-  value: string,
-  withTime = true,
-  timeZone?: string,
-) {
+export function formatDate(value: string, withTime = true, timeZone?: string) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",

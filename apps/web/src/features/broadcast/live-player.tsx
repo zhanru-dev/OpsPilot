@@ -16,19 +16,19 @@ export const LivePlayer = memo(function LivePlayer({
   mode: "staff" | "attendee";
 }) {
   const video = useRef<HTMLVideoElement>(null);
-  const [attempt, setAttempt] = useState(0),
-    [state, setState] = useState("loading"),
-    [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState("loading");
+  const [error, setError] = useState<string | null>(null);
   const consecutiveFailures = useRef(0);
   const wantsPause = useRef(false);
   useEffect(() => {
     const node = video.current;
     if (!node) return;
-    let active = true,
-      hls: Hls | null = null,
-      ticket: string | null = null,
-      refreshQueued = false,
-      played = false;
+    let active = true;
+    let hls: Hls | null = null;
+    let ticket: string | null = null;
+    let refreshQueued = false;
+    let played = false;
     const controller = new AbortController();
     const timers = new Set<ReturnType<typeof setTimeout>>();
     const listeners: [string, EventListener][] = [];

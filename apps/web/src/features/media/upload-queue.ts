@@ -193,8 +193,8 @@ export class UploadQueue {
     )
       return;
     this.invalidate(id);
-    const generation = this.generations.get(id),
-      controller = new AbortController();
+    const generation = this.generations.get(id);
+    const controller = new AbortController();
     this.controllers.set(id, controller);
     this.patch(id, { state: "cancelling", error: undefined });
     try {
@@ -240,8 +240,8 @@ export class UploadQueue {
     }
   }
   private async work(id: string) {
-    const controller = new AbortController(),
-      generation = this.generations.get(id) ?? 0;
+    const controller = new AbortController();
+    const generation = this.generations.get(id) ?? 0;
     this.generations.set(id, generation);
     this.controllers.set(id, controller);
     const owns = () =>
@@ -251,8 +251,8 @@ export class UploadQueue {
       if (!owns()) throw Error("Upload scope changed.");
     };
     try {
-      const t = this.tasks.get(id)!,
-        file = this.files.get(id);
+      const t = this.tasks.get(id)!;
+      const file = this.files.get(id);
       let u = t.upload;
       if (file) {
         const hashes = await this.hash(file, controller.signal);

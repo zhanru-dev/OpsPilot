@@ -24,6 +24,13 @@ const transitionMap: Record<EventStatus, EventStatus[]> = {
   CANCELLED: [EventStatus.ARCHIVED],
 };
 
+// Transitions that integrations (webhooks) are notified about.
+const transitionEventTypes: Partial<Record<EventStatus, string>> = {
+  READY: 'event.ready',
+  LIVE: 'event.started',
+  COMPLETED: 'event.completed',
+};
+
 @Injectable()
 export class EventsService {
   constructor(
@@ -270,14 +277,7 @@ export class EventsService {
         },
         transaction,
       );
-      const domainEventType =
-        nextStatus === EventStatus.READY
-          ? 'event.ready'
-          : nextStatus === EventStatus.LIVE
-            ? 'event.started'
-            : nextStatus === EventStatus.COMPLETED
-              ? 'event.completed'
-              : null;
+      const domainEventType = transitionEventTypes[nextStatus] ?? null;
       if (domainEventType) {
         await this.domainEvents.record(
           {
