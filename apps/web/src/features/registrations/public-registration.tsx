@@ -58,6 +58,158 @@ export function PublicRegistration({ eventId }: { eventId: string }) {
     });
   };
 
+  // After a successful submission the form is replaced by next steps.
+  function registrationStep(event: RegistrationEvent) {
+    if (registration.isSuccess)
+      return (
+        <section role="status" className="py-4">
+          <CheckCircle2
+            className="size-8 text-[var(--success)]"
+            aria-hidden="true"
+          />
+          <h2 className="mt-4 text-xl font-bold">Registration received</h2>
+          <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+            If your email address is eligible, a verification link will arrive
+            shortly. Links expire after 15 minutes. Your event access is not
+            confirmed until you verify your email.
+          </p>
+          <RequestVerification
+            eventId={eventId}
+            email={registration.variables?.email}
+            initialCooldown={60}
+          />
+        </section>
+      );
+    if (!event.registrationOpen)
+      return (
+        <section className="py-4">
+          <h2 className="text-xl font-bold">Registration closed</h2>
+          <p className="mt-3 text-sm text-[var(--muted)]">
+            This event has finished.
+          </p>
+        </section>
+      );
+    return (
+      <form onSubmit={submit} className="max-w-xl">
+        <h2 className="mb-6 text-xl font-bold">Register for this event</h2>
+        <fieldset
+          disabled={registration.isPending}
+          className="min-w-0 space-y-5"
+        >
+          <label className="block text-sm">
+            <span className="font-semibold">Full name</span>
+            <input
+              required
+              name="name"
+              autoComplete="name"
+              maxLength={100}
+              pattern=".*\S.*"
+              className="mt-2 block h-11 w-full rounded-md border border-[var(--border)] px-3 font-normal"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="font-semibold">Email address</span>
+            <input
+              required
+              type="email"
+              name="email"
+              autoComplete="email"
+              maxLength={254}
+              className="mt-2 block h-11 w-full rounded-md border border-[var(--border)] px-3 font-normal"
+            />
+          </label>
+          {event.policy.collectCompany ? (
+            <label className="block text-sm">
+              <span className="font-semibold">Company (optional)</span>
+              <input
+                name="company"
+                autoComplete="organization"
+                maxLength={120}
+                className="mt-2 block h-11 w-full rounded-md border border-[var(--border)] px-3 font-normal"
+              />
+            </label>
+          ) : null}
+          {event.policy.collectJobTitle ? (
+            <label className="block text-sm">
+              <span className="font-semibold">Job title (optional)</span>
+              <input
+                name="jobTitle"
+                autoComplete="organization-title"
+                maxLength={120}
+                className="mt-2 block h-11 w-full rounded-md border border-[var(--border)] px-3 font-normal"
+              />
+            </label>
+          ) : null}
+          {event.policy.requiresConsent ? (
+            <label className="flex items-start gap-3 text-sm leading-6">
+              <input
+                type="checkbox"
+                name="consent"
+                required
+                className="mt-1 size-4 shrink-0 accent-[var(--brand)]"
+              />
+              <span>
+                I agree to share my registration details with{" "}
+                {event.restricted ? "the event organiser" : event.organiser} for
+                this event.
+              </span>
+            </label>
+          ) : null}
+          {registration.error ? (
+            <p role="alert" className="text-sm text-[var(--danger)]">
+              {registration.error.message}
+            </p>
+          ) : null}
+          <Button type="submit" loading={registration.isPending}>
+            <Send className="size-4" /> Register
+          </Button>
+        </fieldset>
+      </form>
+    );
+  }
+
+  function pageBody() {
+    if (eventQuery.isLoading) return <LoadingState label="Loading event" />;
+    if (eventQuery.error || !event)
+      return (
+        <ErrorState
+          message="Registration is unavailable for this event."
+          retry={() => eventQuery.refetch()}
+        />
+      );
+    return (
+      <>
+        <EventEntryHeading event={event} />
+        {!event.restricted ? (
+          <>
+            <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-[var(--muted)]">
+              {event.description}
+            </p>
+            <dl className="my-6 grid gap-4 border-y border-[var(--border)] py-5 sm:grid-cols-2">
+              <div>
+                <dt className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                  <CalendarDays className="size-4" /> Starts
+                </dt>
+                <dd className="mt-2 text-sm font-semibold">
+                  {formatDate(event.scheduledStart, true, event.timezone)}
+                </dd>
+              </div>
+              <div>
+                <dt className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                  <Clock3 className="size-4" /> Ends ({event.timezone})
+                </dt>
+                <dd className="mt-2 text-sm font-semibold">
+                  {formatDate(event.scheduledEnd, true, event.timezone)}
+                </dd>
+              </div>
+            </dl>
+          </>
+        ) : null}
+        {registrationStep(event)}
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-[var(--border)]">
@@ -69,155 +221,7 @@ export function PublicRegistration({ eventId }: { eventId: string }) {
           OpsPilot
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-5 py-8 sm:py-12">
-        {eventQuery.isLoading ? (
-          <LoadingState label="Loading event" />
-        ) : eventQuery.error || !event ? (
-          <ErrorState
-            message="Registration is unavailable for this event."
-            retry={() => eventQuery.refetch()}
-          />
-        ) : (
-          <>
-            <EventEntryHeading event={event} />
-            {!event.restricted ? (
-              <>
-                <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-[var(--muted)]">
-                  {event.description}
-                </p>
-                <dl className="my-6 grid gap-4 border-y border-[var(--border)] py-5 sm:grid-cols-2">
-                  <div>
-                    <dt className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                      <CalendarDays className="size-4" /> Starts
-                    </dt>
-                    <dd className="mt-2 text-sm font-semibold">
-                      {formatDate(event.scheduledStart, true, event.timezone)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                      <Clock3 className="size-4" /> Ends ({event.timezone})
-                    </dt>
-                    <dd className="mt-2 text-sm font-semibold">
-                      {formatDate(event.scheduledEnd, true, event.timezone)}
-                    </dd>
-                  </div>
-                </dl>
-              </>
-            ) : null}
-            {registration.isSuccess ? (
-              <section role="status" className="py-4">
-                <CheckCircle2
-                  className="size-8 text-[var(--success)]"
-                  aria-hidden="true"
-                />
-                <h2 className="mt-4 text-xl font-bold">
-                  Registration received
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                  If your email address is eligible, a verification link will
-                  arrive shortly. Links expire after 15 minutes. Your event
-                  access is not confirmed until you verify your email.
-                </p>
-                <RequestVerification
-                  eventId={eventId}
-                  email={registration.variables?.email}
-                  initialCooldown={60}
-                />
-              </section>
-            ) : !event.registrationOpen ? (
-              <section className="py-4">
-                <h2 className="text-xl font-bold">Registration closed</h2>
-                <p className="mt-3 text-sm text-[var(--muted)]">
-                  This event has finished.
-                </p>
-              </section>
-            ) : (
-              <form onSubmit={submit} className="max-w-xl">
-                <h2 className="mb-6 text-xl font-bold">
-                  Register for this event
-                </h2>
-                <fieldset
-                  disabled={registration.isPending}
-                  className="min-w-0 space-y-5"
-                >
-                  <label className="block text-sm">
-                    <span className="font-semibold">Full name</span>
-                    <input
-                      required
-                      name="name"
-                      autoComplete="name"
-                      maxLength={100}
-                      pattern=".*\S.*"
-                      className="mt-2 block h-11 w-full rounded-md border border-[var(--border)] px-3 font-normal"
-                    />
-                  </label>
-                  <label className="block text-sm">
-                    <span className="font-semibold">Email address</span>
-                    <input
-                      required
-                      type="email"
-                      name="email"
-                      autoComplete="email"
-                      maxLength={254}
-                      className="mt-2 block h-11 w-full rounded-md border border-[var(--border)] px-3 font-normal"
-                    />
-                  </label>
-                  {event.policy.collectCompany ? (
-                    <label className="block text-sm">
-                      <span className="font-semibold">Company (optional)</span>
-                      <input
-                        name="company"
-                        autoComplete="organization"
-                        maxLength={120}
-                        className="mt-2 block h-11 w-full rounded-md border border-[var(--border)] px-3 font-normal"
-                      />
-                    </label>
-                  ) : null}
-                  {event.policy.collectJobTitle ? (
-                    <label className="block text-sm">
-                      <span className="font-semibold">
-                        Job title (optional)
-                      </span>
-                      <input
-                        name="jobTitle"
-                        autoComplete="organization-title"
-                        maxLength={120}
-                        className="mt-2 block h-11 w-full rounded-md border border-[var(--border)] px-3 font-normal"
-                      />
-                    </label>
-                  ) : null}
-                  {event.policy.requiresConsent ? (
-                    <label className="flex items-start gap-3 text-sm leading-6">
-                      <input
-                        type="checkbox"
-                        name="consent"
-                        required
-                        className="mt-1 size-4 shrink-0 accent-[var(--brand)]"
-                      />
-                      <span>
-                        I agree to share my registration details with{" "}
-                        {event.restricted
-                          ? "the event organiser"
-                          : event.organiser}{" "}
-                        for this event.
-                      </span>
-                    </label>
-                  ) : null}
-                  {registration.error ? (
-                    <p role="alert" className="text-sm text-[var(--danger)]">
-                      {registration.error.message}
-                    </p>
-                  ) : null}
-                  <Button type="submit" loading={registration.isPending}>
-                    <Send className="size-4" /> Register
-                  </Button>
-                </fieldset>
-              </form>
-            )}
-          </>
-        )}
-      </main>
+      <main className="mx-auto max-w-3xl px-5 py-8 sm:py-12">{pageBody()}</main>
     </div>
   );
 }

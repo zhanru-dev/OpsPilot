@@ -68,6 +68,12 @@ export class ChatService {
       watermark: number,
     ) => Promise<T>,
   ) {
+    // Every Chat operation runs in one transaction:
+    // 1. lock the event row (writers exclusively, readers shared) so sequence
+    //    numbers are assigned one at a time and a concurrent revocation cannot
+    //    interleave with this read or write;
+    // 2. re-check the caller's current authority inside that lock;
+    // 3. hand the current chat sequence (the "watermark") to the operation.
     return this.prisma
       .$transaction(async (tx) => {
         if (write)
@@ -116,16 +122,14 @@ export class ChatService {
       'read',
       false,
       async (tx, context, watermark) => {
+        // `after` pages forward (replay), `before` pages back (older history).
         const forward = query.after !== undefined;
+        let createdSequence: { gt?: number; lt?: number } | undefined;
+        if (forward) createdSequence = { gt: query.after };
+        else if (query.before !== undefined)
+          createdSequence = { lt: query.before };
         const rows = await tx.eventChatMessage.findMany({
-          where: {
-            eventId,
-            createdSequence: forward
-              ? { gt: query.after }
-              : query.before !== undefined
-                ? { lt: query.before }
-                : undefined,
-          },
+          where: { eventId, createdSequence },
           orderBy: { createdSequence: forward ? 'asc' : 'desc' },
           take: query.limit,
         });
@@ -213,6 +217,9 @@ export class ChatService {
       'send',
       true,
       async (tx, context, sequence) => {
+        // Idempotency: the client picks clientMessageId before sending. A retry
+        // after a lost acknowledgement finds the stored message and returns it
+        // instead of creating a duplicate. Reusing the ID for other text is a bug.
         const existing = await tx.eventChatMessage.findUnique({
           where: {
             eventId_authorKey_clientMessageId: {
@@ -229,6 +236,8 @@ export class ChatService {
             );
           return { message: messageDto(existing), context };
         }
+        // Each change gets the next per-event sequence number and a journal row.
+        // Clients replay the journal "after" the last sequence they saw.
         const next = sequence + 1;
         const row = await tx.eventChatMessage.create({
           data: {
@@ -276,6 +285,8 @@ export class ChatService {
         if (!existing) throw new NotFoundException('Message is unavailable.');
         if (existing.deletedAt)
           return { message: messageDto(existing), context };
+        // Soft delete ("tombstone"): keep the row so replay can tell clients
+        // to remove it, but drop the text immediately.
         const next = sequence + 1;
         const row = await tx.eventChatMessage.update({
           where: { id: messageId },

@@ -67,24 +67,24 @@ export default function AuditLogsPage() {
         {items.length ? (
           <div className="divide-y divide-[var(--border)]">
             {items.map((item) => (
-            <article
-              key={item.id}
-              className="grid gap-3 px-5 py-4 sm:grid-cols-[44px_1fr_auto] sm:items-center"
-            >
-              <span className="flex size-9 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[10px] font-bold">
-                {item.actor?.avatarInitials ?? "SY"}
-              </span>
-              <div>
-                <p className="text-sm font-semibold">{item.summary}</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">
-                  {item.actor?.name ?? "System"} · {humanize(item.action)} ·{" "}
-                  {item.entityType}
-                </p>
-              </div>
-              <time className="text-xs text-[var(--muted)]">
-                {formatDate(item.createdAt)}
-              </time>
-            </article>
+              <article
+                key={item.id}
+                className="grid gap-3 px-5 py-4 sm:grid-cols-[44px_1fr_auto] sm:items-center"
+              >
+                <span className="flex size-9 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[10px] font-bold">
+                  {item.actor?.avatarInitials ?? "SY"}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold">{item.summary}</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {item.actor?.name ?? "System"} · {humanize(item.action)} ·{" "}
+                    {item.entityType}
+                  </p>
+                </div>
+                <time className="text-xs text-[var(--muted)]">
+                  {formatDate(item.createdAt)}
+                </time>
+              </article>
             ))}
           </div>
         ) : (

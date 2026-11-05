@@ -104,8 +104,8 @@ export class MultipartService {
         throw new ConflictException(
           'Too many unfinished uploads. Finish or cancel existing uploads first.',
         );
-      const assetId = randomUUID(),
-        uploadId = randomUUID();
+      const assetId = randomUUID();
+      const uploadId = randomUUID();
       const objectKey = `workspaces/${user.workspaceId}/media/${assetId}/original.${profile.extension}`;
       await tx.mediaAsset.create({
         data: {
@@ -412,10 +412,10 @@ export class MultipartService {
       const path = join(directory, 'source');
       await this.storage.downloadToFile(row.objectKey, path);
       const hashes = manifest(row).hashes;
-      let number = 0,
-        offset = 0,
-        total = 0,
-        part = createHash('sha256');
+      let number = 0;
+      let offset = 0;
+      let total = 0;
+      let part = createHash('sha256');
       const full = createHash('sha256');
       for await (const raw of createReadStream(path)) {
         const chunk = raw as Buffer;

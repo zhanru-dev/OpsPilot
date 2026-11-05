@@ -11,8 +11,20 @@ import {
 import { ArrowDown, MessageSquareText, RefreshCw, Trash2 } from "lucide-react";
 import type { Message } from "@opspilot/chat-contracts";
 import { Button } from "@/components/ui/button";
-import { orderedMessages } from "./state";
+import { orderedMessages, type PendingMessage } from "./state";
 import { useChat, type ChatMode } from "./use-chat";
+
+// Shown under a message that has not been confirmed by the server yet.
+const pendingLabels: Record<PendingMessage["status"], string> = {
+  sending: "Sending…",
+  uncertain: "Delivery unconfirmed",
+  rejected: "Not sent",
+};
+
+function authorLabel(message: Message, own: boolean) {
+  if (own) return "You";
+  return message.author.kind === "staff" ? "Event team" : "Attendee";
+}
 
 export function ChatPanel({
   eventId,
@@ -286,11 +298,7 @@ function ChatScope({
                   {pending.text}
                 </p>
                 <span className="text-xs text-[var(--muted)]">
-                  {pending.status === "sending"
-                    ? "Sending…"
-                    : pending.status === "uncertain"
-                      ? "Delivery unconfirmed"
-                      : "Not sent"}
+                  {pendingLabels[pending.status]}
                 </span>
                 {pending.status !== "sending" && (
                   <div role="alert">
@@ -435,11 +443,7 @@ const MessageRow = memo(function MessageRow({
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <b>{message.author.name}</b>
           <span className="text-[var(--muted)]">
-            {own
-              ? "You"
-              : message.author.kind === "staff"
-                ? "Event team"
-                : "Attendee"}
+            {authorLabel(message, own)}
           </span>
           <time className="text-[var(--muted)]" dateTime={message.createdAt}>
             {new Date(message.createdAt).toLocaleTimeString([], {

@@ -33,6 +33,35 @@ export function AttendeeLivePolls({
   }, [onAccessLost, query.error]);
   const polls = query.data?.polls ?? [];
   const visiblePoll = polls.find((poll) => poll.status === "OPEN") ?? polls[0];
+
+  function pollBody() {
+    if (query.isLoading)
+      return (
+        <p className="mt-5 text-sm text-[var(--muted)]">
+          Checking for a live poll...
+        </p>
+      );
+    if (query.error)
+      return (
+        <p role="alert" className="mt-4 text-sm text-[var(--danger)]">
+          Live polls could not be loaded. Refresh your attendee session.
+        </p>
+      );
+    if (visiblePoll)
+      return (
+        <AttendeePollCard
+          key={visiblePoll.id}
+          eventId={eventId}
+          poll={visiblePoll}
+          onAccessLost={onAccessLost}
+        />
+      );
+    return (
+      <p className="mt-5 border-y border-[var(--border)] py-5 text-sm text-[var(--muted)]">
+        No poll is open right now.
+      </p>
+    );
+  }
   return (
     <section
       aria-labelledby="attendee-live-poll-heading"
@@ -64,26 +93,7 @@ export function AttendeeLivePolls({
           <RefreshCw className="size-4" />
         </Button>
       </header>
-      {query.isLoading ? (
-        <p className="mt-5 text-sm text-[var(--muted)]">
-          Checking for a live poll...
-        </p>
-      ) : query.error ? (
-        <p role="alert" className="mt-4 text-sm text-[var(--danger)]">
-          Live polls could not be loaded. Refresh your attendee session.
-        </p>
-      ) : visiblePoll ? (
-        <AttendeePollCard
-          key={visiblePoll.id}
-          eventId={eventId}
-          poll={visiblePoll}
-          onAccessLost={onAccessLost}
-        />
-      ) : (
-        <p className="mt-5 border-y border-[var(--border)] py-5 text-sm text-[var(--muted)]">
-          No poll is open right now.
-        </p>
-      )}
+      {pollBody()}
     </section>
   );
 }

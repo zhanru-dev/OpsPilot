@@ -14,15 +14,15 @@ export function WatchRoom({ eventId }: { eventId: string }) {
   return <WatchScope key={eventId} eventId={eventId} />;
 }
 function WatchScope({ eventId }: { eventId: string }) {
-  const [session, setSession] = useState<Attendee | null>(null),
-    [error, setError] = useState<string | null>(null),
-    [loaded, setLoaded] = useState(false);
+  const [session, setSession] = useState<Attendee | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const client = useQueryClient();
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    let active = true,
-      running = false,
-      identity = "";
+    let active = true;
+    let running = false;
+    let identity = "";
     const controllers = new Set<AbortController>();
     const clear = () => {
       setSession(null);
@@ -109,9 +109,8 @@ function WatchScope({ eventId }: { eventId: string }) {
             {error}
           </p>
         )}
-        {!loaded ? (
-          <p>Checking attendee admission…</p>
-        ) : !session ? (
+        {!loaded && <p>Checking attendee admission…</p>}
+        {loaded && !session && (
           <div className="space-y-3 rounded-lg bg-white p-5">
             <p>
               Use your existing event registration and verification to enter.
@@ -128,7 +127,8 @@ function WatchScope({ eventId }: { eventId: string }) {
               </Button>
             </div>
           </div>
-        ) : (
+        )}
+        {loaded && session && (
           <div
             key={session.registrationId}
             className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]"

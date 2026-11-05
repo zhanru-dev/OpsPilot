@@ -91,14 +91,16 @@ export default function DashboardPage() {
         eyebrow="Operations overview"
         title="Launch readiness at a glance"
         description="Prioritise the events that need intervention before their audience is affected."
-        actions={canManageEvents(user?.role) ? (
-          <Link
-            href="/streamops/events/new"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-[var(--brand)] px-4 text-sm font-semibold text-white hover:bg-[var(--brand-strong)]"
-          >
-            <RadioTower className="size-4" /> New event
-          </Link>
-        ) : null}
+        actions={
+          canManageEvents(user?.role) ? (
+            <Link
+              href="/streamops/events/new"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-[var(--brand)] px-4 text-sm font-semibold text-white hover:bg-[var(--brand-strong)]"
+            >
+              <RadioTower className="size-4" /> New event
+            </Link>
+          ) : null
+        }
       />
       <section
         className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
@@ -148,7 +150,9 @@ export default function DashboardPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="truncate text-sm font-bold">{event.title}</h3>
+                    <h3 className="truncate text-sm font-bold">
+                      {event.title}
+                    </h3>
                     <p className="mt-1 text-xs text-[var(--muted)]">
                       {formatDate(event.scheduledStart, true, event.timezone)}
                     </p>
@@ -190,11 +194,7 @@ export default function DashboardPage() {
                       </div>
                     </td>
                     <td className="px-4 py-4 text-xs text-[var(--muted)]">
-                      {formatDate(
-                        event.scheduledStart,
-                        true,
-                        event.timezone,
-                      )}
+                      {formatDate(event.scheduledStart, true, event.timezone)}
                     </td>
                     <td className="px-4 py-4">
                       <Badge value={event.status} />

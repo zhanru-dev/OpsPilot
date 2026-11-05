@@ -45,6 +45,13 @@ type ErrorReportResponse = {
 
 const ranges = [7, 14, 30] as const;
 
+// The deterministic rules always decide; the AI provider can only advise.
+function providerStatus(flag: FeatureFlagState | undefined) {
+  if (flag?.effective) return "AVAILABLE";
+  if (flag?.enabled) return "FALLBACK";
+  return "DISABLED";
+}
+
 export default function AnalyticsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -283,15 +290,7 @@ export default function AnalyticsPage() {
           </div>
           <div className="mt-5 flex items-center justify-between border-y border-[var(--border)] py-4">
             <span className="text-sm font-semibold">Grounded provider</span>
-            <Badge
-              value={
-                aiFlag?.effective
-                  ? "AVAILABLE"
-                  : aiFlag?.enabled
-                    ? "FALLBACK"
-                    : "DISABLED"
-              }
-            />
+            <Badge value={providerStatus(aiFlag)} />
           </div>
           <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
             {aiFlag?.reason ?? "Loading provider state."}

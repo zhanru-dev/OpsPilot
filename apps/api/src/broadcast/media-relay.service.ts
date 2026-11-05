@@ -31,18 +31,19 @@ export class MediaRelayService {
   ) {
     if (!safeFile(file) || (reader !== undefined && !safeId(reader)))
       throw new BadRequestException('Invalid media path.');
-    const key = principalKey(principal),
-      count = this.owners.get(key) ?? 0;
+    const key = principalKey(principal);
+    const count = this.owners.get(key) ?? 0;
     if (this.slots >= 64 || count >= 8)
       throw new HttpException('Too many concurrent media requests.', 429);
     // Reserve before the first await; release in every outcome, including client abort.
     this.slots++;
     this.owners.set(key, count + 1);
-    const controller = new AbortController(),
-      close = () => controller.abort();
+    const controller = new AbortController();
+    const close = () => controller.abort();
     const timeout = setTimeout(close, 15000);
     response.once('close', close);
-    let source: Readable | undefined, sourceFailure: Error | undefined;
+    let source: Readable | undefined;
+    let sourceFailure: Error | undefined;
     try {
       await this.broadcasts.playbackAccess(eventId, id, ticket, principal);
       const upstream = await this.media.hls(

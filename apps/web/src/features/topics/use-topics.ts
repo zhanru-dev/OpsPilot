@@ -58,15 +58,15 @@ export function useTopics(
     setBusy(false);
   }
   useEffect(() => {
-    let active = true,
-      denied = false,
-      joined = false,
-      connecting = false,
-      syncing = false,
-      writing = false,
-      dirty = false;
-    let epoch = 0,
-      target = 20;
+    let active = true;
+    let denied = false;
+    let joined = false;
+    let connecting = false;
+    let syncing = false;
+    let writing = false;
+    let dirty = false;
+    let epoch = 0;
+    let target = 20;
     let canonical = emptyTopics();
     let current: TopicContext | null = null;
     let socket: Socket | undefined;

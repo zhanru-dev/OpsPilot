@@ -19,13 +19,16 @@ const workspaceId = '11111111-1111-4111-8111-111111111111';
 const userId = '22222222-2222-4222-8222-222222222221';
 const base = '/api/v1/media-assets';
 describe('Media security and storage recovery boundaries', () => {
-  let app: INestApplication<App>, db: PrismaService, storage: StorageService;
-  let manager: ReturnType<typeof request.agent>,
-    admin: ReturnType<typeof request.agent>;
-  let dir: string, file: string;
-  const ids: string[] = [],
-    workspaces: string[] = [],
-    events: string[] = [];
+  let app: INestApplication<App>;
+  let db: PrismaService;
+  let storage: StorageService;
+  let manager: ReturnType<typeof request.agent>;
+  let admin: ReturnType<typeof request.agent>;
+  let dir: string;
+  let file: string;
+  const ids: string[] = [];
+  const workspaces: string[] = [];
+  const events: string[] = [];
   beforeAll(async () => {
     if (!new URL(process.env.DATABASE_URL!).pathname.endsWith('_test'))
       throw Error('Isolated database required');
@@ -72,8 +75,8 @@ describe('Media security and storage recovery boundaries', () => {
     await rm(dir, { recursive: true, force: true });
   });
   async function ready(wid = workspaceId) {
-    const id = randomUUID(),
-      key = `workspaces/${wid}/media/${id}/original.mp4`;
+    const id = randomUUID();
+    const key = `workspaces/${wid}/media/${id}/original.mp4`;
     await storage.uploadFile(key, file, 'video/mp4');
     const asset = await db.mediaAsset.create({
       data: {
@@ -118,11 +121,11 @@ describe('Media security and storage recovery boundaries', () => {
       data: { name: 'Isolated media foreign', slug: randomUUID() },
     });
     workspaces.push(foreign.id);
-    const a = await ready(),
-      other = await ready(foreign.id),
-      one = await event(),
-      two = await event(),
-      outside = await event(foreign.id);
+    const a = await ready();
+    const other = await ready(foreign.id);
+    const one = await event();
+    const two = await event();
+    const outside = await event(foreign.id);
     const upload = await db.mediaUpload.create({
       data: {
         mediaId: other.id,
@@ -227,8 +230,8 @@ describe('Media security and storage recovery boundaries', () => {
   it('retries cleanup after storage deletion succeeds but the database transaction rolls back', async () => {
     const a = await ready();
     await manager.delete(`${base}/${a.id}`).expect(200);
-    const audit = app.get(AuditService),
-      original = audit.record.bind(audit);
+    const audit = app.get(AuditService);
+    const original = audit.record.bind(audit);
     const failure = jest
       .spyOn(audit, 'record')
       .mockImplementation((input, tx) => {

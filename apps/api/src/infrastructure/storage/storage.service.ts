@@ -332,7 +332,8 @@ export class StorageService implements OnModuleInit {
   }
 
   async abortMultipartForKey(key: string) {
-    let keyMarker: string | undefined, uploadMarker: string | undefined;
+    let keyMarker: string | undefined;
+    let uploadMarker: string | undefined;
     do {
       const page = await this.internalClient.send(
         new ListMultipartUploadsCommand({

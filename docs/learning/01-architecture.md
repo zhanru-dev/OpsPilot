@@ -165,17 +165,18 @@ flowchart LR
     Pub["events/[id]/<br/>register · confirm · watch（观众区）"]
   end
   subgraph Features["features/（业务功能）"]
-    FE["events/<br/>Launch Control"]
+    FE["events/launch-control/<br/>容器 + 面板 + actions hook"]
     FLO["live-operations/<br/>运营室 + Polls"]
     FC["chat/<br/>use-chat · state · chat-panel"]
     FT["topics/"]
     FB["broadcast/<br/>use-broadcast · live-player（hls.js）"]
-    FM["media/<br/>upload-queue · upload-panel"]
+    FM["media/<br/>upload-queue · upload-panel · library/"]
+    FI["integrations/<br/>endpoint/delivery 列表与对话框"]
     FR["registrations/"]
     FA["auth/"]
   end
   subgraph Shared["共享"]
-    Comp["components/ UI 组件"]
+    Comp["components/ UI 组件<br/>含 QueryState 四态视图"]
     Lib["lib/api.ts<br/>fetch 封装 + 自动 refresh"]
   end
   SO --> FE
@@ -187,9 +188,12 @@ flowchart LR
   Pub --> FT
   Pub --> FB
   SO --> FM
+  AppG --> FI
   Features --> Lib
   Routes --> Comp
 ```
+
+页面文件（`app/**/page.tsx`）只负责取数据和组合；具体的列表、卡片、对话框放在 `features/<功能>/` 下，每个文件只做一件事。
 
 运营室（`events/[id]/live`）和观众的观看页（`events/[id]/watch`）复用同一套 Chat、Topics、Broadcast 组件，通过 `mode: "staff" | "attendee"` 区分身份。
 

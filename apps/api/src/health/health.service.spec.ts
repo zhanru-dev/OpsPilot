@@ -8,11 +8,11 @@ import { StorageService } from '../infrastructure/storage/storage.service';
 
 jest.mock('ioredis', () => jest.fn());
 describe('Bounded readiness independently of worker retry policy', () => {
-  const connect = jest.fn(),
-    ping = jest.fn(),
-    disconnect = jest.fn();
-  const database = jest.fn(),
-    storage = jest.fn();
+  const connect = jest.fn();
+  const ping = jest.fn();
+  const disconnect = jest.fn();
+  const database = jest.fn();
+  const storage = jest.fn();
   let service: HealthService;
   beforeEach(() => {
     jest.useFakeTimers();

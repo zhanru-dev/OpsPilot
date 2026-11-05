@@ -15,11 +15,7 @@ import {
   toDateTimeLocal,
   zonedDateTimeToIso,
 } from "@/lib/utils";
-import type {
-  ContentBlock,
-  EventDetail,
-  WorkspaceMember,
-} from "./launch-control-types";
+import type { ContentBlock, EventDetail, WorkspaceMember } from "./types";
 
 const inputClass =
   "mt-2 h-10 w-full rounded-md border border-[var(--border)] bg-white px-3 text-sm";
@@ -125,7 +121,10 @@ export function EventDetailsDialog({
               required
               name="scheduledStart"
               type="datetime-local"
-              defaultValue={toDateTimeLocal(event.scheduledStart, event.timezone)}
+              defaultValue={toDateTimeLocal(
+                event.scheduledStart,
+                event.timezone,
+              )}
               className={inputClass}
             />
           </label>
@@ -194,7 +193,11 @@ export function EventDetailsDialog({
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={loading} disabled={workspace.isLoading}>
+          <Button
+            type="submit"
+            loading={loading}
+            disabled={workspace.isLoading}
+          >
             Save changes
           </Button>
         </div>
@@ -311,7 +314,10 @@ export function AccessDialog({
               event.accessPolicy?.collectJobTitle ?? false,
             ],
           ].map(([name, label, checked]) => (
-            <label key={String(name)} className="flex items-center gap-3 text-sm">
+            <label
+              key={String(name)}
+              className="flex items-center gap-3 text-sm"
+            >
               <input
                 name={String(name)}
                 type="checkbox"
@@ -371,13 +377,16 @@ export function MediaDialog({
       title="Attach ready media"
       description="Choose an approved asset from the workspace Media Library."
     >
-      {assets.isLoading ? (
-        <LoadingState />
-      ) : assets.error ? (
-        <ErrorState message="Ready media could not be loaded." retry={() => assets.refetch()} />
-      ) : (
+      {assets.isLoading ? <LoadingState /> : null}
+      {assets.error ? (
+        <ErrorState
+          message="Ready media could not be loaded."
+          retry={() => assets.refetch()}
+        />
+      ) : null}
+      {assets.data && !assets.error ? (
         <div className="space-y-3">
-          {assets.data?.items.map((asset) => {
+          {assets.data.items.map((asset) => {
             const isAttached = attachedMediaIds.includes(asset.id);
             return (
               <button
@@ -418,7 +427,7 @@ export function MediaDialog({
             </p>
           ) : null}
         </div>
-      )}
+      ) : null}
     </Dialog>
   );
 }
@@ -483,7 +492,11 @@ export function ContentDialog({
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm font-semibold">
           Block type
-          <select name="type" defaultValue={block?.type ?? "HERO"} className={inputClass}>
+          <select
+            name="type"
+            defaultValue={block?.type ?? "HERO"}
+            className={inputClass}
+          >
             {["HERO", "AGENDA", "SPEAKER", "RESOURCE", "ANNOUNCEMENT"].map(
               (value) => (
                 <option key={value}>{value}</option>

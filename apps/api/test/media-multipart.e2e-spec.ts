@@ -23,9 +23,11 @@ jest.setTimeout(90000);
 const base = '/api/v1/media-assets/multipart';
 const digest = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 describe('Multipart media with real PostgreSQL and MinIO', () => {
-  let app: INestApplication<App>, db: PrismaService, storage: StorageService;
-  let owner: ReturnType<typeof request.agent>,
-    second: ReturnType<typeof request.agent>;
+  let app: INestApplication<App>;
+  let db: PrismaService;
+  let storage: StorageService;
+  let owner: ReturnType<typeof request.agent>;
+  let second: ReturnType<typeof request.agent>;
   const ids: string[] = [];
   const bytes = Buffer.alloc(PART_BYTES * 2 + 171, 73);
   beforeAll(async () => {
@@ -177,8 +179,8 @@ describe('Multipart media with real PostgreSQL and MinIO', () => {
     await request(app.getHttpServer()).get(`${base}/${row.id}`).expect(401);
     await second.get(`${base}/${row.id}`).expect(403);
     await part(row.id, 1);
-    const uid = '22222222-2222-4222-8222-222222222221',
-      wid = '11111111-1111-4111-8111-111111111111';
+    const uid = '22222222-2222-4222-8222-222222222221';
+    const wid = '11111111-1111-4111-8111-111111111111';
     const member = await db.workspaceMembership.findUniqueOrThrow({
       where: { workspaceId_userId: { workspaceId: wid, userId: uid } },
     });

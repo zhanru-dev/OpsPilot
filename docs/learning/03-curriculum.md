@@ -60,9 +60,10 @@
 - **概念**：App Router、客户端组件、React Query、带 cookie 的 fetch、401 自动续期、多标签页用 Web Locks 串行续期。
 - **文件**：`apps/web/src/app/layout.tsx`、`app/(app)/layout.tsx`、`lib/api.ts`（109）、`features/auth/auth-provider.tsx`（57）。
 
-### 第 7 课 · Launch Control 页面（约 3 节，建议先整理代码，见 [04](04-code-quality.md)）
-- **概念**：页面怎样组合查询、变更和对话框；乐观更新和错误提示。
-- **文件**：`features/events/launch-control.tsx`（932）、`launch-control-dialogs.tsx`（540）。
+### 第 7 课 · Launch Control 页面（约 3 节）
+- **概念**：“容器组件 + 展示组件”的拆分；页面怎样组合查询、变更和对话框；变更成功后让哪些查询失效；错误提示。
+- **文件**：`features/events/launch-control/` 目录：容器 `launch-control.tsx`（约 250）、写操作 hook `use-launch-control-actions.ts`、各个面板（`readiness-panel.tsx`、`runbook-panel.tsx`、`recommendations-panel.tsx` 等，每个 20–250 行）、`dialogs.tsx`。
+- **顺带学习**：`components/ui/states.tsx` 里的 `QueryState`，统一处理“加载中 / 出错 / 空 / 有数据”四种状态。
 
 ---
 
@@ -97,7 +98,7 @@
 
 ### 第 13 课 · Topics：审核规则与并发（约 3 节）
 - **概念**：乐观并发（`expectedVersion`）、数据库约束和行锁共同保证不变量、草稿与远端更新冲突。
-- **文件**：`event-topics/topics.service.ts`（622）、`features/topics/state.ts`、`drafts.ts`、`use-topics.ts`（418）、`topics-panel.tsx`（739）。
+- **文件**：`event-topics/topics.service.ts`（628）、`features/topics/state.ts`、`drafts.ts`、`use-topics.ts`（418）；界面拆成 `topics-panel.tsx`（列表与筛选）、`topic-card.tsx`（单个问题）、`composer.tsx`（提问/回复表单与重试）、`settings-form.tsx`、`topic-ui.ts`。
 - **配图**：[02-business-flows.md §2.7](02-business-flows.md#27-topics--qa提问审核置顶)。
 
 ### 第 14 课 · Polls（约 1 节）

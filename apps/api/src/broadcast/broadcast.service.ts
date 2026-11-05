@@ -229,6 +229,8 @@ export class BroadcastService implements OnModuleInit, OnModuleDestroy {
       'start',
       async (tx, _ctx, revision) => {
         if (principal.kind !== 'staff') throw denied();
+        // Idempotent start: the same clientOperationId returns the session it
+        // already created, even if the revision has moved on since.
         const existing = await tx.broadcastSession.findUnique({
           where: {
             eventId_creatorId_clientOperationId: {
@@ -239,6 +241,8 @@ export class BroadcastService implements OnModuleInit, OnModuleDestroy {
           },
         });
         if (existing) return existing;
+        // Every broadcast change bumps StreamEvent.broadcastRevision. A stale
+        // expectedRevision means the operator acted on an outdated screen.
         if (revision !== data.expectedRevision)
           throw new ConflictException(
             'Broadcast changed. Refresh before starting.',
@@ -291,6 +295,9 @@ export class BroadcastService implements OnModuleInit, OnModuleDestroy {
     void this.reconcile();
     return this.snapshot(eventId, principal);
   }
+  // Ending revokes every publish/playback grant in the same transaction, so a
+  // relay or MediaMTX callback after this commit is refused. The publisher is
+  // disconnected asynchronously by reconcile() (cleanupPending).
   private async retire(tx: Prisma.TransactionClient, row: BroadcastSession) {
     await tx.broadcastGrant.deleteMany({ where: { sessionId: row.id } });
     return tx.broadcastSession.update({
@@ -448,6 +455,10 @@ export class BroadcastService implements OnModuleInit, OnModuleDestroy {
     });
     return { ok: true };
   }
+  // Called by MediaMTX (not by browsers) before it accepts any RTMP publish,
+  // HLS read or API call. The Basic header proves the caller is our MediaMTX;
+  // the body says who wants to do what. Only the relay's own credential may
+  // read HLS; publishers must present a live, unexpired publish grant.
   async mediaAuth(header: unknown, input: unknown) {
     this.enabled();
     const expected = `Basic ${Buffer.from(`mediamtx:${this.media.secret()}`).toString('base64')}`;
@@ -479,8 +490,8 @@ export class BroadcastService implements OnModuleInit, OnModuleDestroy {
       where: { id },
     });
     if (!session) throw denied();
-    const digest = hash(data.password),
-      connectionId = data.id;
+    const digest = hash(data.password);
+    const connectionId = data.id;
     return this.access(
       session.eventId,
       id,
@@ -507,6 +518,9 @@ export class BroadcastService implements OnModuleInit, OnModuleDestroy {
       });
     return this.running;
   }
+  // Every 2 s: ask MediaMTX which sessions have a live publisher, derive
+  // availability (WAITING/LIVE/INTERRUPTED/UNKNOWN) and kick publishers of
+  // ended sessions. Changes bump the revision and notify subscribers.
   private async reconcileBatch() {
     const rows = await this.db.broadcastSession.findMany({
       where: { OR: [{ state: 'ACTIVE' }, { cleanupPending: true }] },
@@ -525,9 +539,9 @@ export class BroadcastService implements OnModuleInit, OnModuleDestroy {
     });
   }
   private async observe(captured: BroadcastSession) {
-    let online = false,
-      failed = false,
-      sourceId: string | null = null;
+    let online = false;
+    let failed = false;
+    let sourceId: string | null = null;
     try {
       const path = await this.media.path(captured.id);
       sourceId = path?.source?.id ?? null;
@@ -573,8 +587,8 @@ export class BroadcastService implements OnModuleInit, OnModuleDestroy {
         await this.retire(tx, current);
         return true;
       }
-      const next = availability(current.firstLiveAt, online, failed),
-        cleanupPending = current.state === 'ENDED' && failed;
+      const next = availability(current.firstLiveAt, online, failed);
+      const cleanupPending = current.state === 'ENDED' && failed;
       const different =
         current.availability !== next ||
         current.sourceId !== sourceId ||

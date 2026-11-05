@@ -4,9 +4,9 @@ import { spawn } from 'node:child_process';
 export function runCommand(command: string, args: string[]) {
   return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
     const child = spawn(command, args, { windowsHide: true });
-    let stdout = '',
-      stderr = '',
-      failure: Error | undefined;
+    let stdout = '';
+    let stderr = '';
+    let failure: Error | undefined;
     const stop = (message: string) => {
       failure = new Error(message);
       child.kill('SIGKILL');

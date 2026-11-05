@@ -19,15 +19,19 @@ async function until(check: () => boolean, timeout = 6000) {
 }
 
 describe('Current staff authority at original REST and live SSE boundaries', () => {
-  let app: INestApplication<Server>, db: PrismaService, base: string;
-  const workspaceId = randomUUID(),
-    userId = randomUUID(),
-    adminId = randomUUID(),
-    eventId = randomUUID();
-  const foreignWorkspaceId = randomUUID(),
-    foreignEventId = randomUUID();
+  let app: INestApplication<Server>;
+  let db: PrismaService;
+  let base: string;
+  const workspaceId = randomUUID();
+  const userId = randomUUID();
+  const adminId = randomUUID();
+  const eventId = randomUUID();
+  const foreignWorkspaceId = randomUUID();
+  const foreignEventId = randomUUID();
   const password = 'IsolatedAuthorityTest123!';
-  let cookie: string, sessionId: string, adminCookie: string;
+  let cookie: string;
+  let sessionId: string;
+  let adminCookie: string;
   const controllers: AbortController[] = [];
   const membership = { workspaceId_userId: { workspaceId, userId } };
   async function login(id = userId) {
@@ -319,15 +323,16 @@ describe('Current staff authority at original REST and live SSE boundaries', () 
     expect(live.done).toBe(false);
   });
   it('holds membership through an in-flight snapshot and closes before post-revocation data', async () => {
-    const service = app.get(LiveSessionsService),
-      original = service.getForEvent.bind(service);
-    let signal!: () => void, release!: () => void;
+    const service = app.get(LiveSessionsService);
+    const original = service.getForEvent.bind(service);
+    let signal!: () => void;
+    let release!: () => void;
     const entered = new Promise<void>((r) => {
-        signal = r;
-      }),
-      gate = new Promise<void>((r) => {
-        release = r;
-      });
+      signal = r;
+    });
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
     jest
       .spyOn(service, 'getForEvent')
       .mockImplementationOnce(async (...args) => {
@@ -411,13 +416,14 @@ describe('Current staff authority at original REST and live SSE boundaries', () 
   });
   it('cannot rotate a session revoked while the next token hash is being prepared', async () => {
     const original = db.session.updateMany.bind(db.session);
-    let signal!: () => void, release!: () => void;
+    let signal!: () => void;
+    let release!: () => void;
     const entered = new Promise<void>((r) => {
-        signal = r;
-      }),
-      gate = new Promise<void>((r) => {
-        release = r;
-      });
+      signal = r;
+    });
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
     jest.spyOn(db.session, 'updateMany').mockImplementationOnce((args) => {
       // Only delay dispatch; the write and its compare-and-swap remain real PG.
       const delayed = (async () => {

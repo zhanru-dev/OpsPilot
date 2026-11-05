@@ -113,14 +113,14 @@ export class AccessPoliciesController {
     allowedDomains: string[];
     requiresConsent: boolean;
   }) {
+    const accessByMode: Record<string, string> = {
+      PUBLIC: 'Anyone with the event link can watch.',
+      EMAIL_DOMAIN: `Viewers must use an email address from ${policy.allowedDomains.join(', ')}.`,
+      INVITE_ONLY: 'Only invited viewers can watch.',
+    };
     const access =
-      policy.mode === 'PUBLIC'
-        ? 'Anyone with the event link can watch.'
-        : policy.mode === 'EMAIL_DOMAIN'
-          ? `Viewers must use an email address from ${policy.allowedDomains.join(', ')}.`
-          : policy.mode === 'INVITE_ONLY'
-            ? 'Only invited viewers can watch.'
-            : 'Viewers must complete registration before watching.';
+      accessByMode[policy.mode] ??
+      'Viewers must complete registration before watching.';
     return `${access}${policy.requiresConsent ? ' Consent is required during entry.' : ''}`;
   }
 

@@ -43,17 +43,19 @@ type Signal = {
   message?: string;
 };
 describe('Acceptance remediation with real storage, queue and live workers', () => {
-  let app: INestApplication<App>,
-    db: PrismaService,
-    store: StorageService,
-    audit: AuditService;
-  let queue: Queue<MediaProcessingJobData>, cleanup: MediaCleanupProcessor;
-  let manager: ReturnType<typeof request.agent>,
-    admin: ReturnType<typeof request.agent>;
-  let dir: string, bytes: Buffer;
-  const ids: string[] = [],
-    children: ChildProcess[] = [],
-    pendingRequests: ClientRequest[] = [];
+  let app: INestApplication<App>;
+  let db: PrismaService;
+  let store: StorageService;
+  let audit: AuditService;
+  let queue: Queue<MediaProcessingJobData>;
+  let cleanup: MediaCleanupProcessor;
+  let manager: ReturnType<typeof request.agent>;
+  let admin: ReturnType<typeof request.agent>;
+  let dir: string;
+  let bytes: Buffer;
+  const ids: string[] = [];
+  const children: ChildProcess[] = [];
+  const pendingRequests: ClientRequest[] = [];
   const signals = new Map<ChildProcess, Signal[]>();
   const slowTimers = new Set<NodeJS.Timeout>();
   beforeAll(async () => {
@@ -415,8 +417,8 @@ describe('Acceptance remediation with real storage, queue and live workers', () 
     await manager.post(`${base}/multipart/${u.id}/complete`).expect(409);
   });
   it('collects a real PUT admitted before expiry that finishes after deletion cleanup', async () => {
-    const config = app.get(ConfigService),
-      ttl = config.get<number>('MEDIA_UPLOAD_URL_TTL_SECONDS');
+    const config = app.get(ConfigService);
+    const ttl = config.get<number>('MEDIA_UPLOAD_URL_TTL_SECONDS');
     config.set('MEDIA_UPLOAD_URL_TTL_SECONDS', 10);
     let u: Intent;
     try {
@@ -487,8 +489,8 @@ describe('Acceptance remediation with real storage, queue and live workers', () 
   it('advances past 100 healthy delayed jobs and a failing item without changing their business timestamps', async () => {
     const jobs = Array.from({ length: 102 }, () => randomUUID()).sort();
     for (let i = 0; i < jobs.length; i++) {
-      const mediaId = randomUUID(),
-        id = jobs[i];
+      const mediaId = randomUUID();
+      const id = jobs[i];
       ids.push(mediaId);
       await db.mediaAsset.create({
         data: {
@@ -540,8 +542,8 @@ describe('Acceptance remediation with real storage, queue and live workers', () 
     async (barrier) => {
       const u = await intent();
       await complete(u).expect(201);
-      const a = await start(u.assetId, barrier),
-        held = await signal(a, 'held');
+      const a = await start(u.assetId, barrier);
+      const held = await signal(a, 'held');
       expect(a.exitCode).toBeNull();
       const old = await db.mediaProcessingJob.findUniqueOrThrow({
         where: { uploadId: u.uploadId },
